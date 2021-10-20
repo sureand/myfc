@@ -65,7 +65,10 @@ ROM *parse_rom(const FILE *fp)
     if(!header) return NULL;
 
     ROM *rom = make_rom();
-    if(!rom) return NULL;
+    if(!rom) {
+        FREE(header);
+        return NULL;
+    }
 
     //假如包含Trainer数据, 先跳过
     if(header->type == 1) fseek(fp, 512, SEEK_CUR);
@@ -75,11 +78,15 @@ ROM *parse_rom(const FILE *fp)
 
     rom->body = (BYTE*)calloc(len1 + len2, 1);
     if(!rom->body) {
+        FREE(header);
+        FREE(rom);
         fprintf(stderr, "error, malloc failed!\n");
         exit(-1);
     }
 
     if(!fread(rom->body, len1 + len2, 1, fp)) {
+        FREE(header);
+        FREE(rom);
         fprintf(stderr, "read nes rom error!\n");
         exit(-1);
     }
