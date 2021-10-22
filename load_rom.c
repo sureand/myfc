@@ -78,25 +78,25 @@ ROM *parse_rom(const FILE *fp)
 
     rom->body = (BYTE*)calloc(len1 + len2, 1);
     if(!rom->body) {
-        FREE(header);
-        FREE(rom);
         fprintf(stderr, "error, malloc failed!\n");
-        exit(-1);
+        goto ERR_EXIT;
     }
 
     if(!fread(rom->body, len1 + len2, 1, fp)) {
-        FREE(header);
-        FREE(rom);
         fprintf(stderr, "read nes rom error!\n");
-        exit(-1);
+        goto ERR_EXIT;
     }
 
     rom->prg_rom = rom->body;
     rom->chr_rom = rom->body + len1;
-
     rom->header = header;
 
     return rom;
+
+ERR_EXIT:
+    FREE(header);
+    FREE(rom);
+    return NULL;
 }
 
 ROM *load_rom(const char *path)
@@ -110,13 +110,12 @@ ROM *load_rom(const char *path)
     }
 
     ROM *rom = parse_rom(fp);
+    fclose(fp);
+
     if(!rom) {
-        fclose(fp);
         fprintf(stderr, "parse rom failed!\n", path);
         return NULL;
     }
-
-    fclose(fp);
 
     return rom;
 }
