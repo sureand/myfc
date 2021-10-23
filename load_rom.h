@@ -1,9 +1,6 @@
 #ifndef __HEADER__LOAD_ROM__
 #define __HEADER__LOAD_ROM__
 #include "common.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
 
 #define HEADER_LEN (16)
 

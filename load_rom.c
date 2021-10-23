@@ -1,5 +1,6 @@
 #include "common.h"
 #include "load_rom.h"
+#include "disasm.h"
 #include <assert.h>
 
 #define FREE(p) \
@@ -71,7 +72,10 @@ ROM *parse_rom(const FILE *fp)
     }
 
     //假如包含Trainer数据, 先跳过
-    if(header->type == 1) fseek(fp, 512, SEEK_CUR);
+    if(header->type == 1) {
+        fprintf(stdout, "skip trainer data!\n");
+        fseek(fp, 512, SEEK_CUR);
+    }
 
     size_t len1 = header->prg_rom_count * 0x4000;
     size_t len2 = header->chr_rom_count * 0x2000;
