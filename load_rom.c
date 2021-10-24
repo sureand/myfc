@@ -136,6 +136,8 @@ int load_data(const char *path)
 
     printf("PRG:%dk, CHR:%dK\n", prg_size, chr_size);
 
+    show_code(rom);
+
     FREE(rom->header);
     FREE(rom);
 

@@ -9,11 +9,11 @@
 #endif
 
 #ifndef BYTE
-#define BYTE unsigned char
+#define BYTE uint8_t
 #endif
 
 #ifndef WORD
-#define WORD unsigned short
+#define WORD uint16_t
 #endif
 
 #endif
