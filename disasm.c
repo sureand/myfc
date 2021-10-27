@@ -81,7 +81,7 @@ void init_code()
     op(71, "ADC", 2, 5)
     op(75, "ADC", 2, 4)
     op(76, "ROR", 3, 6)
-    op(78, "SEI", 3, 2)
+    op(78, "SEI", 1, 2)
     op(79, "ADC", 3, 4)
     op(7D, "ADC", 3, 4)
     op(7E, "ROR", 3, 7)
@@ -172,8 +172,6 @@ void init_code()
     op(F9, "SBC", 3, 4)
     op(FD, "SBC", 3, 4)
     op(FE, "INC", 3, 7)
-
-    //code_maps[0x]
 }
 
 void display(BYTE *data, size_t count)

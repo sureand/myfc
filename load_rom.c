@@ -1,6 +1,8 @@
 #include "common.h"
 #include "load_rom.h"
+#include "string.h"
 #include "disasm.h"
+#include "cpu.h"
 #include <assert.h>
 
 #define FREE(p) \
@@ -26,7 +28,7 @@ ROM *make_rom()
     return rom;
 }
 
-ROM_HEADER *parse_header(const FILE *fp)
+ROM_HEADER *parse_header(FILE *fp)
 {
     assert(fp);
 
@@ -60,7 +62,7 @@ ROM_HEADER *parse_header(const FILE *fp)
     return rom_header;
 }
 
-ROM *parse_rom(const FILE *fp)
+ROM *parse_rom(FILE *fp)
 {
     ROM_HEADER *header = parse_header(fp);
     if(!header) return NULL;
@@ -117,7 +119,7 @@ ROM *load_rom(const char *path)
     fclose(fp);
 
     if(!rom) {
-        fprintf(stderr, "parse rom failed!\n", path);
+        fprintf(stderr, "parse rom %s failed!\n", path);
         return NULL;
     }
 
@@ -134,7 +136,7 @@ int load_data(const char *path)
     size_t prg_size = (header->prg_rom_count * 0x4000) >> 10;
     size_t chr_size = (header->prg_rom_count * 0x2000) >> 10;
 
-    printf("PRG:%dk, CHR:%dK\n", prg_size, chr_size);
+    printf("PRG:%zuk, CHR:%zuK\n", prg_size, chr_size);
 
     show_code(rom);
 
