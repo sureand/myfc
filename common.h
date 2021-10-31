@@ -105,7 +105,7 @@ typedef struct {
     BYTE Y; //变址寄存器
 
     //状态寄存器
-    BYTE PSW;
+    BYTE P;
 
     BYTE reversed; //保留, 用来作为结构体对齐使用
 

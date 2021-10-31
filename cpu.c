@@ -11,7 +11,7 @@ static inline BYTE test_bit(BYTE data, BYTE nr)
 
 static inline BYTE test_flag(BYTE flag)
 {
-    return test_bit(cpu.PSW, flag);
+    return test_bit(cpu.P, flag);
 }
 
 static INLINE_VOID set_bit(volatile BYTE *addr, BYTE nr)
@@ -26,14 +26,25 @@ static INLINE_VOID clear_bit(volatile BYTE *addr, BYTE nr)
 
 static INLINE_VOID set_flag(BYTE flag)
 {
-    set_bit(&cpu.PSW, flag);
+    set_bit(&cpu.P, flag);
 }
 
 static INLINE_VOID clear_flag(BYTE flag)
 {
-    clear_bit(&cpu.PSW, flag);
+    clear_bit(&cpu.P, flag);
 }
 
+static INLINE_VOID push(BYTE data)
+{
+    write_byte(cpu.SP, data);
+    --cpu.SP;
+}
+
+static inline BYTE pop()
+{
+    ++cpu.SP;
+    return read_byte(cpu.SP);
+}
 
 /**
  * 指令设计开始
@@ -41,14 +52,154 @@ static INLINE_VOID clear_flag(BYTE flag)
  * 因此需要识别指令长度, 调整 IP 的值
  */
 
+INLINE_VOID jump(WORD address)
+{
+    PC = read_word(address);
+}
+
+static inline WORD IRQ_vector()
+{
+    return read_word(0xFFFE);
+}
+
+//立即寻址
+static inline WORD immediate_addressing()
+{
+    WORD addr = PC + 1;
+    return addr;
+}
+
+//间接 X 寻址
+static inline WORD indirext_x_address(WORD address)
+{
+    BYTE addr1 = read_byte(address + cpu.X);
+    BYTE addr2 = read_byte(address + cpu.X + 1);
+    WORD addr = (addr2 << 8) | addr1;
+
+    return addr;
+}
+
+//绝对寻址
+static inline WORD absolute_addressing()
+{
+    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr2 = read_byte(PC + 2);
+    WORD addr = (addr2 << 8 | addr1);
+
+    return addr;
+}
+
+//零页寻址
+static inline WORD zero_absolute_addressing()
+{
+    BYTE addr = read_byte(PC + 2);
+    return (addr & 0xFF);
+}
+
+//绝对 X 变址
+static inline WORD absolute_X_indexed_addressing()
+{
+    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr2 = read_byte(PC + 2);
+    WORD addr = (addr2 >> 8) | addr1;
+
+    return (addr + cpu.X);
+}
+
+//绝对 Y 变址
+static inline WORD absolute_X_indexed_addressing()
+{
+    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr2 = read_byte(PC + 2);
+    WORD addr = (addr2 >> 8) | addr1;
+
+    return (addr + cpu.Y);
+}
+
+//零页 X 间接寻址
+static inline WORD zero_X_indexed_addressing()
+{
+    BYTE addr = read_byte(PC + 1);
+    addr += cpu.X;
+
+    return (addr & 0xFF);
+}
+
+//零页 Y 间接 寻址
+static inline WORD absolute_X_indexed_addressing()
+{
+    BYTE addr = read_byte(PC + 1);
+    addr += cpu.Y;
+
+    return (addr & 0xFF);
+}
+
+//间接寻址
+static inline WORD indirect_addressing()
+{
+    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr2 = read_byte(PC + 2);
+
+    WORD addr = (addr2 << 8) | addr1;
+    return read_word(addr);
+}
+
+//间接 x 变址寻址
+static inline WORD indirect_x_indexed_addressing()
+{
+    BYTE base_addr = read_byte(PC + 1);
+
+    BYTE addr1= read_byte(cpu.X + base_addr);
+    BYTE addr2= read_byte(cpu.X + base_addr + 1);
+
+    WORD addr = (addr2 << 8) | addr1;
+    return addr2;
+}
+
+//间接 Y 变址寻址
+static inline WORD indirect_x_indexed_addressing()
+{
+    BYTE addr1 = read_byte(PC + 1);
+    addr1 &= 0xFF;
+
+    BYTE addr2 = addr1 + 1;
+    WORD addr = (read_byte(addr2) << 8) || read_byte(addr1);
+
+    return addr;
+}
+
+//相对寻址
+static inline WORD relative_addressing()
+{
+    BYTE addr = (char)read_byte(PC + 1);
+    addr = PC + addr;
+
+    return addr;
+}
+
+//BRK 中断
 INLINE_VOID BRK_00()
 {
+    //CPU 会把PC + 1 这条指令用作填充作用, 并且直接忽略
+    PC++;
+    push(PC >> 8);
+    push(PC & 0xFF);
 
+    //设置中断标志
+    set_flag(BRK);
+    push(cpu.P);
+    set_flag(INT);
+
+    //跳到0xFFFE 运行
+    jump(IRQ_vector());
 }
 
 INLINE_VOID ORA_01()
 {
+    WORD base_addr = read_word(PC + 1);
+    WORD addr = indirext_x_address(base_addr);
 
+    cpu.A = cpu.A || read_byte(addr);
 }
 
 INLINE_VOID ORA_05()
@@ -63,12 +214,15 @@ INLINE_VOID ASL_06()
 
 INLINE_VOID PHP_08()
 {
-    
+    push(cpu.P);
 }
 
 INLINE_VOID ORA_09()
 {
-    
+    BYTE bt = read_byte(PC + 1);
+    ++PC;
+
+    cpu.A = cpu.A || bt;
 }
 
 INLINE_VOID ASL_0A()
@@ -86,7 +240,6 @@ INLINE_VOID ASL_0E()
     
 }
 
-/* */
 INLINE_VOID BPL_10()
 {
     WORD addr = read_word(PC + 1);
@@ -331,7 +484,7 @@ INLINE_VOID ROR_66()
 
 INLINE_VOID PLA_68()
 {
-
+    cpu.A = pop();
 }
 
 INLINE_VOID ADC_69()
@@ -764,7 +917,6 @@ INLINE_VOID INC_EE()
     
 }
 
-
 INLINE_VOID BEQ_F0()
 {
     
@@ -797,7 +949,9 @@ INLINE_VOID SBC_F9()
 
 INLINE_VOID SBC_FD()
 {
-    
+    BYTE bt = read_byte(PC + 1);
+    cpu.A -= bt;
+
 }
 
 INLINE_VOID INC_FE()
@@ -819,19 +973,13 @@ void execute_code()
     }
 }
 
-inline void do_brk()
-{
-    //BYTE op = do_read_byte()
-    printf("do_brk\n");
-}
-
 void init_cpu()
 {
     cpu.IP = 0xC004;
     cpu.SP = 0xFF;
     cpu.X = 0;
     cpu.Y = 0;
-    cpu.PSW = 0;
+    cpu.P = 0;
 }
 
 void read_code(WORD addr)
