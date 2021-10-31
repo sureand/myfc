@@ -1,6 +1,7 @@
 #ifndef __FC_COMMON_HEADER__
 #define __FC_COMMON_HEADER__
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -69,7 +70,7 @@ typedef struct
 }_MEM;
 
 
-static _MEM *global_mem;
+_MEM *global_mem;
 
 //CPU 相关
 /*
@@ -88,14 +89,14 @@ Z:零标志，结果是否为0,为0则Z=1,否则Z=0
 C:进位标志,结果最高位有进位则C=1,否则C=0
 */
 
-#define NEG   (1 << 7)
-#define OF    (1 << 6)
-#define EX    (1 << 5)
-#define BRK   (1 << 4)
-#define DEC   (1 << 3)
-#define INT   (1 << 2)
-#define ZERO  (1 << 1)
-#define CARRY (1 << 0)
+#define NEG   (7)
+#define OF    (6)
+#define EX    (5)
+#define BRK   (4)
+#define DEC   (3)
+#define INT   (2)
+#define ZERO  (1)
+#define CARRY (0)
 
 typedef struct {
     WORD IP; //指令寄存器
@@ -113,7 +114,7 @@ typedef struct {
 
 #define INLINE_VOID inline void
 
-static _CPU cpu;
+_CPU cpu;
 
 #define PC (cpu.IP)
 

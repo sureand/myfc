@@ -1,5 +1,5 @@
 CFLAGS=-Wall -Werror -Wno-strict-aliasing -std=gnu11 -g -I -O0
-OBJS=load_rom.o disasm.o memory.o cpu.o
+OBJS=cpu.o load_rom.o memory.o disasm.o
 LIBS=-lm
 
 fc: load_rom.h disasm.h memory.h cpu.h main.o $(OBJS)
