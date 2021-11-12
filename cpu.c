@@ -49,8 +49,8 @@ void display_reg()
     int inter_flag = test_flag(INT);
     int zero_flag = test_flag(ZERO);
     int carry_flag = test_flag(CARRY);
-    printf("NEG:[%d], OF:[%d], EX:[%d], BRK:[%d], DEC:[%d], INT:[%d], ZERO:[%d], CARRY:[%d] %d\n", 
-        neg_flag, of_flag, ex_flag, brk_flag, dec_flag, inter_flag, zero_flag, carry_flag, cpu.P);
+    printf("NEG:[%d], OF:[%d], EX:[%d], BRK:[%d], DEC:[%d], INT:[%d], ZERO:[%d], CARRY:[%d] \n", 
+        neg_flag, of_flag, ex_flag, brk_flag, dec_flag, inter_flag, zero_flag, carry_flag);
 }
 
 static void set_nz(char value)
@@ -76,9 +76,8 @@ static void set_nz(char value)
 
 static void push(BYTE data)
 {
-    ++PC;
-
-    printf("push: %02X\n", data);
+    printf("push data:%02X\n", data);
+    getchar();
 
     write_byte(cpu.SP, data);
     --cpu.SP;
@@ -86,9 +85,11 @@ static void push(BYTE data)
 
 static inline BYTE pop()
 {
-    ++PC;
+    BYTE bt = read_byte(++cpu.SP);
+    printf("pop data:%02X\n", bt);
+    getchar();
 
-    return read_byte(++cpu.SP);
+    return bt;
 }
 
 /**
@@ -176,7 +177,7 @@ static inline WORD absolute_X_indexed_addressing()
     BYTE addr2 = read_byte(PC + 2);
     PC += 3;
 
-    WORD addr = (addr2 >> 8) | addr1;
+    WORD addr = (addr2 << 8) | addr1;
 
     return (addr + cpu.X);
 }
@@ -409,11 +410,21 @@ void ASL_1E()
 //TODO
 void JSR_20()
 {
+    WORD cur_pc = PC;
     BYTE *bp = (BYTE*)&PC;
     push(*(bp + 1));
     push(*(bp));
 
-    ++PC;
+    BYTE addr1 = read_byte(cur_pc + 1);
+    BYTE addr2 = read_byte(cur_pc + 2);
+    WORD addr = addr2 << 8 | addr1;
+    PC = addr;
+
+    printf("read addr1:%02X, addr2:%02X\n", addr1, addr2);
+
+    printf("jump to:%4X\n", PC);
+
+    getchar();
 }
 
 void AND_21()
@@ -894,6 +905,7 @@ void STY_8C()
 {
     WORD addr = zero_absolute_addressing();
     write_byte(addr, cpu.Y);
+    ++PC;
 }
 
 void STA_8D()
@@ -1075,12 +1087,11 @@ void LDX_AE()
 void BCS_B0()
 {
     char of = (char)read_byte(PC + 1);
-    if(test_flag(CARRY)) {
-        PC += of;
-        return;
-    }
+    PC += 2;
 
-    ++PC;
+    if(!test_flag(CARRY)) return;
+
+    PC += of;
 }
 
 void LDA_B1()
@@ -1133,6 +1144,7 @@ void LDA_B9()
 
 void TSX_BA()
 {
+    ++PC;
     cpu.X = cpu.SP;
 }
 
@@ -1147,6 +1159,7 @@ void LDY_BC()
 void LDA_BD()
 {
     WORD addr = absolute_X_indexed_addressing();
+
     BYTE bt = read_byte(addr);
 
     cpu.A = bt;
@@ -1338,13 +1351,12 @@ void CPX_E0()
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
+    ++PC;
 
-    PC += 3;
+    char ret = cpu.X - bt;
+    set_nz(ret);
 
-    cpu.X = cpu.X - bt;
-
-    set_nz(cpu.X);
-    set_flag(CARRY);
+    if(ret >= 0) set_flag(CARRY);
 }
 
 void SBC_E1()
@@ -1705,7 +1717,7 @@ void execute_code()
 void init_cpu()
 {
     cpu.IP = 0xC004;
-    cpu.SP = 0xFF;
+    cpu.SP = 0xFD;
     cpu.X = 0;
     cpu.Y = 0;
     cpu.P = 0;
@@ -1729,19 +1741,30 @@ void parse_code()
 
     PC = addr;
 
+    int state = 0;
     while(addr) {
         BYTE code = read_byte(addr);
         if(!code_maps[code].op_name) {
             printf("addr:%04X, code:%02X \n", addr, code);
             break;
         }
-        printf("PC:%02X, A:%02X, X:%02X, Y:%02X, code:%s_%02X, len:%d\n", 
-            cpu.IP, cpu.A, cpu.X, cpu.Y, code_maps[code].op_name, code, code_maps[code].op_len);
+        printf("PC:%02X, A:%02X, X:%02X, Y:%02X, P:%02X, SP:%02X, code:%s_%02X, len:%d\n", 
+            cpu.IP, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, code_maps[code].op_name, code, code_maps[code].op_len);
+        display_reg();
+        printf("\n");
 
         code_maps[code].op_func();
         addr = PC;
-        display_reg();
-        printf("\n");
+
+        (void)state;
+        /*
+        if(addr == 0xC06C) {
+            state = 1;
+        }
+        if(state)
+        getchar();
+        */
+        
 
        // getchar();
         //addr += code_maps[code].op_len;
@@ -1751,6 +1774,8 @@ void parse_code()
 
 void show_code(ROM *rom)
 {
+    init_cpu();
+
     init_code();
 
     _MEM *mem = (_MEM*)malloc(sizeof(_MEM));
@@ -1767,13 +1792,6 @@ void show_code(ROM *rom)
 
     parse_code();
 
-    /*
-
-    - $FFFA-FFFB = NMI  ' 这里 - 指的是地址，不是减号'
-    - $FFFC-FFFD = RESET
-    - $FFFE-FFFF = IRQ/BRK
-
-    */
 
     BYTE addr1 = read_byte(0xFFFE);
     BYTE addr2 = read_byte(0xFFFF);
