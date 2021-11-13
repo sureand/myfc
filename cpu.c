@@ -80,7 +80,7 @@ static void set_nz(short value)
     }
 
     //正数, 清空负数和 0 标记
-    if(value > 0) {
+    if(value > 0 && value <= 0x7F) {
         clear_flag(NEG);
         clear_flag(ZERO);
         return;
@@ -93,17 +93,13 @@ static void set_nz(short value)
 
 static void set_carry(short value)
 {
-    if(value <= 0) return;
+    if(value <= 0 || value > 0x7F) return;
 
     set_flag(CARRY);
 }
 
 static void push(BYTE data)
 {
-    printf("push data:%02X\n", data);
-
-    getchar();
-
     write_byte(cpu.SP, data);
     --cpu.SP;
 }
@@ -111,8 +107,6 @@ static void push(BYTE data)
 static inline BYTE pop()
 {
     BYTE bt = read_byte(++cpu.SP);
-    printf("pop data:%02X\n", bt);
-
     return bt;
 }
 
@@ -139,7 +133,7 @@ static inline WORD IRQ_vector()
 static inline WORD immediate_addressing()
 {
     WORD addr = PC + 1;
-    ++PC;
+    PC += 2;
 
     return addr;
 }
@@ -223,6 +217,7 @@ static inline WORD zero_X_indexed_addressing()
 {
     BYTE addr = read_byte(PC + 1);
     addr += cpu.X;
+    PC += 2;
 
     return (addr & 0xFF);
 }
@@ -232,6 +227,7 @@ static inline WORD zero_Y_indexed_addressing()
 {
     BYTE addr = read_byte(PC + 1);
     addr += cpu.Y;
+    PC += 2;
 
     return (addr & 0xFF);
 }
@@ -249,13 +245,14 @@ static inline WORD indirect_addressing()
 //间接 x 变址寻址
 static inline WORD indirect_X_indexed_addressing()
 {
-    BYTE base_addr = read_byte(PC + 1);
+    BYTE addr1 = read_byte(PC + 1);
+    addr1 &= 0xFF;
 
-    BYTE addr1 = read_byte(cpu.X + base_addr);
-    BYTE addr2 = read_byte(cpu.X + base_addr + 1);
+    BYTE addr2 = addr1 + 1;
+    WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
+    PC += 2;
 
-    WORD addr = (addr2 << 8) | addr1;
-    return addr;
+    return addr + cpu.X;
 }
 
 //间接 Y 变址寻址
@@ -266,17 +263,20 @@ static inline WORD indirect_Y_indexed_addressing()
 
     BYTE addr2 = addr1 + 1;
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
+    PC += 2;
 
     return addr + cpu.Y;
 }
 
 static inline WORD relative_addressing()
 {
-    BYTE addr = (char)read_byte(PC + 1);
+    //先算下一条指令的地址, 再算偏移
+    char of = (char)read_byte(PC + 1);
+    PC += 2;
 
-    if(!test_flag(ZERO)) { return PC - addr; }
+    WORD addr = PC + of;
 
-    return PC + addr;
+    return addr;
 }
 
 //BRK 中断
@@ -300,29 +300,31 @@ void ORA_01()
 {
     WORD addr = indirect_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    ++PC;
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ORA_05()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    ++PC;
-
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ASL_06()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    ++PC;
 
     bt <<= 1;
-
     write_byte(addr, bt);
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void PHP_08()
@@ -337,42 +339,47 @@ void ORA_09()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ASL_0A()
 {
     cpu.A <<= 1;
+
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void ORA_0D()
 {
     WORD addr = absolute_addressing();
-    BYTE bt = read_byte(addr);
+    char bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ASL_0E()
 {
     WORD addr = absolute_addressing();
     
-    BYTE bt = read_byte(addr);
+    char bt = read_byte(addr);
     bt <<= 1;
 
     write_byte(addr, bt);
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void BPL_10()
 {
-    char of = read_byte(PC + 1);
-    PC += 2;
-
-    //TODO
-    set_flag(NEG);
-
+    WORD addr = relative_addressing();
     if(test_flag(NEG)) return;
 
-    PC += of;
+    PC = addr;
 }
 
 void ORA_11()
@@ -381,6 +388,8 @@ void ORA_11()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ORA_15()
@@ -389,6 +398,8 @@ void ORA_15()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ASL_16()
@@ -399,6 +410,9 @@ void ASL_16()
     bt <<= 1;
 
     write_byte(addr, bt);
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void CLC_18()
@@ -413,6 +427,8 @@ void ORA_19()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ORA_1D()
@@ -421,6 +437,8 @@ void ORA_1D()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A || bt;
+
+    set_nz(cpu.A);
 }
 
 void ASL_1E()
@@ -432,7 +450,6 @@ void ASL_1E()
     write_byte(addr, bt);
 }
 
-//TODO
 void JSR_20()
 {
     WORD cur_pc = PC;
@@ -447,10 +464,6 @@ void JSR_20()
     BYTE addr2 = read_byte(cur_pc + 2);
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
-
-    printf("read addr1:%02X, addr2:%02X\n", addr1, addr2);
-
-    printf("jump to:%4X\n", PC);
 }
 
 void AND_21()
@@ -459,6 +472,8 @@ void AND_21()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 //TODO:
@@ -476,6 +491,8 @@ void AND_25()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void ROL_26()
@@ -483,6 +500,9 @@ void ROL_26()
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
     bt <<= 1;
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void PLP_28()
@@ -496,11 +516,16 @@ void AND_29()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void ROL_2A()
 {
     cpu.A <<= 1;
+
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 //TODO
@@ -515,6 +540,8 @@ void AND_2D()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void ROL_2E()
@@ -524,17 +551,17 @@ void ROL_2E()
 
     bt <<= 1;
     write_byte(addr, bt);
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void BMI_30()
 {
-    char addr = (char)read_byte(PC + 1);
-    if(test_flag(NEG)) {
-        PC += addr;
-        return;
-    }
+    WORD addr = relative_addressing();
+    if(!test_flag(NEG)) return;
 
-    ++PC;
+    PC = addr;
 }
 
 void AND_31()
@@ -543,6 +570,8 @@ void AND_31()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void AND_35()
@@ -551,16 +580,20 @@ void AND_35()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void ROL_36()
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     bt <<= 1;
 
     write_byte(addr, bt);
+
+    set_nz(bt);
+    set_carry(bt);
 }
 
 void SEC_38()
@@ -572,16 +605,18 @@ void AND_39()
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void AND_3D()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A && bt;
+
+    set_nz(cpu.A);
 }
 
 void ROL_3E()
@@ -612,6 +647,8 @@ void EOR_41()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void EOR_45()
@@ -620,6 +657,8 @@ void EOR_45()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void LSR_46()
@@ -642,11 +681,14 @@ void EOR_49()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+    set_nz(cpu.A);
 }
 
 void LSR_4A()
 {
     cpu.A >>= 1;
+
+    ++PC;
 }
 
 void JMP_4C()
@@ -661,6 +703,8 @@ void EOR_4D()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void LSR_4E()
@@ -683,6 +727,8 @@ void EOR_51()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void EOR_55()
@@ -691,6 +737,8 @@ void EOR_55()
     BYTE bt = read_byte(addr);
 
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void LSR_56()
@@ -707,12 +755,13 @@ void CLI_58()
     clear_flag(INT);
 }
 
-//TODO
 void EOR_59()
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void EOR_5D()
@@ -720,6 +769,8 @@ void EOR_5D()
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
+
+    set_nz(cpu.A);
 }
 
 void LSR_5E()
@@ -737,9 +788,6 @@ void RTS_60()
     BYTE addr2 = pop();
 
     WORD addr = addr2 << 8 | addr1;
-
-    printf("addr1:%02X, addr2:%02X, return :%04X\n", addr1, addr2, addr + 1);
-
     PC = addr + 1;
 }
 
@@ -751,6 +799,7 @@ void ADC_61()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
+    set_nz(ret);
     set_carry(ret);
 }
 
@@ -762,6 +811,7 @@ void ADC_65()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
+    set_nz(ret);
     set_carry(ret);
 }
 
@@ -777,6 +827,7 @@ void ROR_66()
 void PLA_68()
 {
     cpu.A = pop();
+    ++PC;
 }
 
 void ADC_69()
@@ -794,6 +845,7 @@ void ADC_69()
 void ROR_6A()
 {
     cpu.A >>= 1;
+    ++PC;
 }
 
 void JMP_6C()
@@ -809,6 +861,7 @@ void ADC_6D()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
+    set_nz(bt);
     set_carry(ret);
 }
 
@@ -833,6 +886,7 @@ void ADC_71()
     short x = cpu.A + bt;
     cpu.A = x;
 
+    set_nz(bt);
     set_carry(x);
 }
 
@@ -843,6 +897,7 @@ void ADC_75()
     short x = cpu.A + bt;
     cpu.A = x;
 
+    set_nz(x);
     set_carry(x);
 }
 
@@ -870,6 +925,7 @@ void ADC_79()
     short x = cpu.A + bt;
     cpu.A = x;
 
+    set_nz(x);
     set_carry(x);
 }
 
@@ -880,6 +936,7 @@ void ADC_7D()
     short x = cpu.A + bt;
     cpu.A = x;
 
+    set_nz(x);
     set_carry(x);
 }
 
@@ -920,27 +977,28 @@ void STX_86()
 void DEY_88()
 {
     cpu.Y -= 1;
-    ++PC;
-
     set_nz(cpu.Y);
+
+    ++PC;
 }
 
 void TXA_8A()
 {
     cpu.Y -= 1;
+    set_nz(cpu.Y);
+
+    ++PC;
 }
 
 void STY_8C()
 {
-    WORD addr = zero_absolute_addressing();
+    WORD addr = absolute_addressing();
     write_byte(addr, cpu.Y);
-    ++PC;
 }
 
 void STA_8D()
 {
     WORD addr = absolute_addressing();
-    printf("STA_8D next_PC:%04X, addr:%04X\n", PC, addr);
     write_byte(addr, cpu.A);
 }
 
@@ -953,12 +1011,10 @@ void STX_8E()
 
 void BCC_90()
 {
-    char of = read_byte(PC + 1);
-    if(test_flag(CARRY)) {
-        PC += of;
-        return;
-    }
-    ++PC;
+    WORD addr = relative_addressing();
+    if(!test_flag(CARRY)) return;
+
+    PC = addr;
 }
 
 void STA_91()
@@ -988,6 +1044,9 @@ void STX_96()
 void TYA_98()
 {
     cpu.A = cpu.Y;
+    set_nz(cpu.A);
+
+    ++PC;
 }
 
 void STA_99()
@@ -998,9 +1057,9 @@ void STA_99()
 
 void TXS_9A()
 {
-    ++PC;
-
     cpu.SP = cpu.X;
+
+    ++PC;
 }
 
 void STA_9D()
@@ -1012,32 +1071,25 @@ void STA_9D()
 void LDY_A0()
 {
     WORD addr = immediate_addressing();
-    ++PC;
+    cpu.Y = read_byte(addr);
 
-    BYTE bt = read_byte(addr);
-    set_nz(bt);
-
-    cpu.Y = bt;
+    set_nz(cpu.Y);
 }
 
 void LDA_A1()
 {
     WORD addr = indirect_X_indexed_addressing();
-    BYTE bt = read_byte(addr);
-    ++PC;
+    cpu.A = read_byte(addr);
 
-    cpu.A= bt;
+    set_nz(cpu.A);
 }
 
 void LDX_A2()
 {
     WORD addr = immediate_addressing();
-    BYTE bt = read_byte(addr);
-    ++PC;
+    cpu.X = read_byte(addr);
 
-    set_nz(bt);
-
-    cpu.X = bt;
+    set_nz(cpu.X);
 }
 
 void LDY_A4()
@@ -1046,6 +1098,8 @@ void LDY_A4()
     BYTE bt = read_byte(addr);
 
     cpu.Y = bt;
+
+    set_nz(bt);
 }
 
 void LDA_A5()
@@ -1061,142 +1115,130 @@ void LDA_A5()
 void LDX_A6()
 {
     WORD addr = zero_absolute_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.X = read_byte(addr);
 
-    cpu.X = bt;
+    set_nz(cpu.X);
 }
 
 void TAY_A8()
 {
     cpu.Y = cpu.A;
+
+    ++PC;
 }
 
 void LDA_A9()
 {
     WORD addr = immediate_addressing();
-    BYTE bt = read_byte(addr);
-    ++PC;
+    cpu.A = read_byte(addr);
 
-    set_nz(bt);
-
-    cpu.A = bt;
+    set_nz(cpu.A);
 }
 
 void TAX_AA()
 {
     cpu.X = cpu.A;
+
+    ++PC;
 }
 
 void LDY_AC()
 {
     WORD addr = absolute_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.Y = read_byte(addr);
 
-    cpu.Y = bt;
+    set_nz(cpu.Y);
 }
 
 void LDA_AD()
 {
     WORD addr = absolute_addressing();
+    cpu.A = read_byte(addr);
 
-    BYTE bt = read_byte(addr);
-    set_nz(bt);
-
-    cpu.A = bt;
+    set_nz(cpu.A);
 }
 
 void LDX_AE()
 {
     WORD addr = absolute_addressing();
-    ++PC;
+    cpu.X = read_byte(addr);
 
-    BYTE bt = read_byte(addr);
-
-    cpu.X = bt;
+    set_nz(cpu.X);
 }
 
 void BCS_B0()
 {
-    char of = (char)read_byte(PC + 1);
-    PC += 2;
+    WORD addr = relative_addressing();
 
     if(!test_flag(CARRY)) return;
 
-    PC += of;
+    PC  = addr;
 }
 
 void LDA_B1()
 {
     WORD addr = indirect_Y_indexed_addressing();
-    PC += 2;
 
-    BYTE bt = read_byte(addr);
-
-    printf("LDA_B1 readbyte :%02X\n", bt);
-
-    set_nz(bt);
-
-    cpu.A = bt;
+    cpu.A = read_byte(addr);
+    set_nz(cpu.A);
 }
 
 void LDY_B4()
 {
     WORD addr = zero_X_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.Y = read_byte(addr);
 
-    cpu.Y = bt;
+    set_nz(cpu.Y);
 }
 
 void LDA_B5()
 {
     WORD addr = zero_X_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.A = read_byte(addr);
 
-    cpu.A = bt;
+    set_nz(cpu.A);
 }
 
 void LDX_B6()
 {
     WORD addr = zero_Y_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.X = read_byte(addr);
 
-    cpu.X = bt;
+    set_nz(cpu.X);
 }
 
 void CLV_B8()
 {
     clear_flag(OF);
+    ++PC;
 }
 
 void LDA_B9()
 {
     WORD addr = absolute_Y_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.A = read_byte(addr);
 
-    cpu.A = bt;
+    set_nz(cpu.A);
 }
 
 void TSX_BA()
 {
-    ++PC;
     cpu.X = cpu.SP;
+    ++PC;
 }
 
 void LDY_BC()
 {
     WORD addr = absolute_X_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.Y = read_byte(addr);
 
-    cpu.Y = bt;
+    set_nz(cpu.Y);
 }
 
 void LDA_BD()
 {
     WORD addr = absolute_X_indexed_addressing();
-
-    BYTE bt = read_byte(addr);
-
-    cpu.A = bt;
+    cpu.A = read_byte(addr);
 
     set_nz(cpu.A);
 }
@@ -1204,9 +1246,9 @@ void LDA_BD()
 void LDX_BE()
 {
     WORD addr = absolute_Y_indexed_addressing();
-    BYTE bt = read_byte(addr);
+    cpu.X  = read_byte(addr);
 
-    cpu.X = bt;
+    set_nz(cpu.X);
 }
 
 void CPY_C0()
@@ -1215,7 +1257,8 @@ void CPY_C0()
     BYTE bt = read_byte(addr);
     char ret = cpu.Y - bt;
 
-    if (ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CMP_C1()
@@ -1224,8 +1267,8 @@ void CMP_C1()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
-
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CPY_C4()
@@ -1234,7 +1277,8 @@ void CPY_C4()
     BYTE bt = read_byte(addr);
     char ret = cpu.Y - bt;
 
-    if(ret < 0 ) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CMP_C5()
@@ -1243,6 +1287,7 @@ void CMP_C5()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
+    set_nz(ret);
     set_carry(ret);
 }
 
@@ -1265,12 +1310,7 @@ void INY_C8()
 void CMP_C9()
 {
     WORD addr = immediate_addressing();
-    ++PC;
-
     BYTE bt = read_byte(addr);
-
-    printf("CMP_C9: %02X\n", bt);
-
     char ret = cpu.A - bt;
 
     set_nz(ret);
@@ -1280,18 +1320,19 @@ void CMP_C9()
 void DEX_CA()
 {
     cpu.X -= 1;
-    ++PC;
-
     set_nz(cpu.X);
+
+    ++PC;
 }
 
 void CPY_CC()
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
-    char ret = cpu.Y- bt;
+    char ret = cpu.Y - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CMP_CD()
@@ -1300,7 +1341,8 @@ void CMP_CD()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void DEC_CE()
@@ -1311,21 +1353,13 @@ void DEC_CE()
     write_byte(addr, bt - 1);
 }
 
-
 void BNE_D0()
 {
-    char of = read_byte(PC + 1);
-    WORD last = PC;
+    WORD addr = relative_addressing();
+    printf("BNE PC:%04X, addr:%04X\n", PC, addr);
+    if(test_flag(ZERO)) return;
 
-    PC += 2;
-
-    BYTE zf = test_flag(ZERO);
-
-    printf("PC:%04X, next:%4X\n", last, zf ? PC : PC + of);
-
-    if(zf) return;
-
-    PC += of;
+    PC = addr;
 }
 
 void CMP_D1()
@@ -1334,7 +1368,8 @@ void CMP_D1()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CMP_D5()
@@ -1343,7 +1378,8 @@ void CMP_D5()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void DEC_D6()
@@ -1357,7 +1393,6 @@ void DEC_D6()
 void CLD_D8()
 {
     ++PC;
-
     clear_flag(DEC);
 }
 
@@ -1367,69 +1402,68 @@ void CMP_D9()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CMP_DD()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    char ret = cpu.X - bt;
+    char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void DEC_DE()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    char ret = cpu.X - bt;
+    cpu.X -= bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.X);
+    set_carry(cpu.X);
 }
 
 void CPX_E0()
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
-    ++PC;
-
     char ret = cpu.X - bt;
-    set_nz(ret);
 
-    if(ret >= 0) set_flag(CARRY);
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void SBC_E1()
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     char ret = cpu.X - bt;
-    cpu.X = ret;
 
-    if(ret < 0 ) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void CPX_E4()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    char ret = cpu.X - bt;
+    char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void SBC_E5()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
-
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void INC_E6()
@@ -1443,24 +1477,24 @@ void INC_E6()
 void INX_E8()
 {
     cpu.X += 1;
-    ++PC;
-
     set_nz(cpu.X);
+
+    ++PC;
 }
 
 void SBC_E9()
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(ZERO); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void NOP_EA()
 {
+    ++PC;
     fprintf(stderr, "nop!");
     //do nothing
 }
@@ -1469,20 +1503,20 @@ void CPX_EC()
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
+    char ret = cpu.X - bt;
 
-    char ret = cpu.A - bt;
-    if(ret < 0) { set_flag(ZERO); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void SBC_ED()
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void INC_EE()
@@ -1495,36 +1529,30 @@ void INC_EE()
 
 void BEQ_F0()
 {
-    char of = read_byte(PC + 1);
-    PC += 2;
-
+    WORD addr = relative_addressing();
     if(!test_flag(ZERO))  return;
 
-    PC += of;
+    PC = addr;
 }
 
 void SBC_F1()
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void SBC_F5()
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    PC += 3;
-
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void INC_F6()
@@ -1538,28 +1566,28 @@ void INC_F6()
 void SED_F8()
 {
     set_flag(DEC);
+
+    ++PC;
 }
 
 void SBC_F9()
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void SBC_FD()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+    cpu.A -= bt;
 
-    char ret = cpu.A - bt;
-    cpu.A = ret;
-
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(cpu.A);
+    set_carry(cpu.A);
 }
 
 void INC_FE()
@@ -1778,6 +1806,9 @@ void parse_code()
     BYTE addr1 = read_byte(0xFFFC);
     BYTE addr2 = read_byte(0xFFFD);
 
+    write_byte(0x2002, 0x80);
+
+    BYTE c = 0;
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
 
@@ -1792,6 +1823,11 @@ void parse_code()
         display_reg();
         display_stack();
         printf("\n");
+
+        if((cpu.X == 0x00 && cpu.Y == 0x00) || (addr == 0xC06C))
+            getchar();
+
+        ++c;
 
         code_maps[code].op_func();
         addr = PC;
