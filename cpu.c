@@ -53,7 +53,24 @@ void display_reg()
         neg_flag, of_flag, ex_flag, brk_flag, dec_flag, inter_flag, zero_flag, carry_flag);
 }
 
-static void set_nz(char value)
+void display_stack()
+{
+    if(cpu.SP == 0xFF) return;
+
+    BYTE spp = cpu.SP + 1;
+
+    BYTE c = 1;
+    printf("stack: [ ");
+    while(spp) {
+        if(c % 5 == 0) printf("\n");
+        printf("%02X:%02X ", spp, read_byte(spp));
+        ++spp;
+        ++c;
+    }
+    printf("]\n");
+}
+
+static void set_nz(short value)
 {
     //0 清空负数标记, 打上0 标记
     if(value == 0) {
@@ -74,9 +91,17 @@ static void set_nz(char value)
     clear_flag(ZERO);
 }
 
+static void set_carry(short value)
+{
+    if(value <= 0) return;
+
+    set_flag(CARRY);
+}
+
 static void push(BYTE data)
 {
     printf("push data:%02X\n", data);
+
     getchar();
 
     write_byte(cpu.SP, data);
@@ -87,7 +112,6 @@ static inline BYTE pop()
 {
     BYTE bt = read_byte(++cpu.SP);
     printf("pop data:%02X\n", bt);
-    getchar();
 
     return bt;
 }
@@ -243,7 +267,7 @@ static inline WORD indirect_Y_indexed_addressing()
     BYTE addr2 = addr1 + 1;
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
 
-    return addr;
+    return addr + cpu.Y;
 }
 
 static inline WORD relative_addressing()
@@ -380,6 +404,7 @@ void ASL_16()
 void CLC_18()
 {
     clear_flag(CARRY);
+    ++PC;
 }
 
 void ORA_19()
@@ -411,6 +436,9 @@ void ASL_1E()
 void JSR_20()
 {
     WORD cur_pc = PC;
+    PC += 2;
+
+    //返回地址压栈
     BYTE *bp = (BYTE*)&PC;
     push(*(bp + 1));
     push(*(bp));
@@ -423,8 +451,6 @@ void JSR_20()
     printf("read addr1:%02X, addr2:%02X\n", addr1, addr2);
 
     printf("jump to:%4X\n", PC);
-
-    getchar();
 }
 
 void AND_21()
@@ -712,6 +738,8 @@ void RTS_60()
 
     WORD addr = addr2 << 8 | addr1;
 
+    printf("addr1:%02X, addr2:%02X, return :%04X\n", addr1, addr2, addr + 1);
+
     PC = addr + 1;
 }
 
@@ -723,7 +751,7 @@ void ADC_61()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
-    if(ret > 0xFF) { set_flag(CARRY); }
+    set_carry(ret);
 }
 
 void ADC_65()
@@ -734,7 +762,7 @@ void ADC_65()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
-    if(ret > 0xFF) { set_flag(CARRY); }
+    set_carry(ret);
 }
 
 void ROR_66()
@@ -759,7 +787,8 @@ void ADC_69()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
-    if(ret > 0xFF) { set_flag(CARRY); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void ROR_6A()
@@ -780,7 +809,7 @@ void ADC_6D()
     short ret = cpu.A + bt;
     cpu.A = ret;
 
-    if(ret) { set_flag(CARRY); }
+    set_carry(ret);
 }
 
 void ROR_6E()
@@ -804,7 +833,7 @@ void ADC_71()
     short x = cpu.A + bt;
     cpu.A = x;
 
-    if(x > 0xFF) { set_flag(CARRY); }
+    set_carry(x);
 }
 
 void ADC_75()
@@ -814,7 +843,7 @@ void ADC_75()
     short x = cpu.A + bt;
     cpu.A = x;
 
-    if(x > 0xFF) { set_flag(CARRY); }
+    set_carry(x);
 }
 
 void ROR_76()
@@ -841,7 +870,7 @@ void ADC_79()
     short x = cpu.A + bt;
     cpu.A = x;
 
-    if(x > 0xFF) { set_flag(CARRY); }
+    set_carry(x);
 }
 
 void ADC_7D()
@@ -851,7 +880,7 @@ void ADC_7D()
     short x = cpu.A + bt;
     cpu.A = x;
 
-    if(x > 0xFF) { set_flag(CARRY); }
+    set_carry(x);
 }
 
 void ROR_7E()
@@ -1024,6 +1053,8 @@ void LDA_A5()
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
 
+    set_nz(bt);
+
     cpu.A = bt;
 }
 
@@ -1100,6 +1131,9 @@ void LDA_B1()
     PC += 2;
 
     BYTE bt = read_byte(addr);
+
+    printf("LDA_B1 readbyte :%02X\n", bt);
+
     set_nz(bt);
 
     cpu.A = bt;
@@ -1209,8 +1243,7 @@ void CMP_C5()
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
-
+    set_carry(ret);
 }
 
 void DEC_C6()
@@ -1225,6 +1258,8 @@ void INY_C8()
 {
     ++PC;
     cpu.Y += 1;
+
+    set_nz(cpu.Y);
 }
 
 void CMP_C9()
@@ -1233,9 +1268,13 @@ void CMP_C9()
     ++PC;
 
     BYTE bt = read_byte(addr);
+
+    printf("CMP_C9: %02X\n", bt);
+
     char ret = cpu.A - bt;
 
-    if(ret < 0) { set_flag(NEG); }
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void DEX_CA()
@@ -1280,9 +1319,11 @@ void BNE_D0()
 
     PC += 2;
 
-    printf("PC:%04X, next:%4X\n", last, PC);
+    BYTE zf = test_flag(ZERO);
 
-    if(test_flag(ZERO)) return;
+    printf("PC:%04X, next:%4X\n", last, zf ? PC : PC + of);
+
+    if(zf) return;
 
     PC += of;
 }
@@ -1738,10 +1779,8 @@ void parse_code()
     BYTE addr2 = read_byte(0xFFFD);
 
     WORD addr = addr2 << 8 | addr1;
-
     PC = addr;
 
-    int state = 0;
     while(addr) {
         BYTE code = read_byte(addr);
         if(!code_maps[code].op_name) {
@@ -1751,23 +1790,11 @@ void parse_code()
         printf("PC:%02X, A:%02X, X:%02X, Y:%02X, P:%02X, SP:%02X, code:%s_%02X, len:%d\n", 
             cpu.IP, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, code_maps[code].op_name, code, code_maps[code].op_len);
         display_reg();
+        display_stack();
         printf("\n");
 
         code_maps[code].op_func();
         addr = PC;
-
-        (void)state;
-        /*
-        if(addr == 0xC06C) {
-            state = 1;
-        }
-        if(state)
-        getchar();
-        */
-        
-
-       // getchar();
-        //addr += code_maps[code].op_len;
     }
 
 }
