@@ -58,12 +58,13 @@ void display_stack()
     if(cpu.SP == 0xFF) return;
 
     BYTE spp = cpu.SP + 1;
+    WORD addr = 0x0100;
 
     BYTE c = 1;
     printf("stack: [ ");
     while(spp) {
         if(c % 5 == 0) printf("\n");
-        printf("%02X:%02X ", spp, read_byte(spp));
+        printf("%04X:%02X ", addr + spp, read_byte(addr + spp));
         ++spp;
         ++c;
     }
@@ -106,13 +107,18 @@ static void set_overflow(short value)
 
 static void push(BYTE data)
 {
-    write_byte(cpu.SP, data);
+    WORD addr = 0x0100 + cpu.SP;
+    write_byte(addr, data);
+
     --cpu.SP;
 }
 
 static inline BYTE pop()
 {
-    BYTE bt = read_byte(++cpu.SP);
+    ++cpu.SP;
+    WORD addr = 0x0100 + cpu.SP;
+
+    BYTE bt = read_byte(addr);
     return bt;
 }
 
