@@ -286,7 +286,7 @@ static inline WORD relative_addressing()
 }
 
 //BRK 中断
-void BRK_00()
+void BRK_00(BYTE op)
 {
     //CPU 会把PC + 1 这条指令用作填充作用, 并且直接忽略
     PC++;
@@ -302,7 +302,7 @@ void BRK_00()
     jump(IRQ_vector());
 }
 
-void ORA_01()
+void ORA_01(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -312,7 +312,7 @@ void ORA_01()
     set_nz(cpu.A);
 }
 
-void ORA_05()
+void ORA_05(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -321,7 +321,7 @@ void ORA_05()
     set_nz(cpu.A);
 }
 
-void ASL_06()
+void ASL_06(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -333,13 +333,13 @@ void ASL_06()
     set_carry(bt);
 }
 
-void PHP_08()
+void PHP_08(BYTE op)
 {
     push(cpu.P);
     ++PC;
 }
 
-void ORA_09()
+void ORA_09(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -349,15 +349,17 @@ void ORA_09()
     set_nz(cpu.A);
 }
 
-void ASL_0A()
+void ASL_0A(BYTE op)
 {
     cpu.A <<= 1;
 
     set_nz(cpu.A);
     set_carry(cpu.A);
+
+    ++PC;
 }
 
-void ORA_0D()
+void ORA_0D(BYTE op)
 {
     WORD addr = absolute_addressing();
     char bt = read_byte(addr);
@@ -367,7 +369,7 @@ void ORA_0D()
     set_nz(cpu.A);
 }
 
-void ASL_0E()
+void ASL_0E(BYTE op)
 {
     WORD addr = absolute_addressing();
     
@@ -380,25 +382,30 @@ void ASL_0E()
     set_carry(bt);
 }
 
-void BPL_10()
+void BPL_10(BYTE op)
 {
     WORD addr = relative_addressing();
     if(test_flag(NEG)) return;
 
+    //分支如果没有跨页, 则 + 1, 否则 + 2;
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     PC = addr;
 }
 
-void ORA_11()
+void ORA_11(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A || bt;
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void ORA_15()
+void ORA_15(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -408,7 +415,7 @@ void ORA_15()
     set_nz(cpu.A);
 }
 
-void ASL_16()
+void ASL_16(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -421,33 +428,35 @@ void ASL_16()
     set_carry(bt);
 }
 
-void CLC_18()
+void CLC_18(BYTE op)
 {
     clear_flag(CARRY);
     ++PC;
 }
 
-void ORA_19()
+void ORA_19(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A || bt;
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void ORA_1D()
+void ORA_1D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A || bt;
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void ASL_1E()
+void ASL_1E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -456,7 +465,7 @@ void ASL_1E()
     write_byte(addr, bt);
 }
 
-void JSR_20()
+void JSR_20(BYTE op)
 {
     WORD cur_pc = PC;
     PC += 2;
@@ -472,7 +481,7 @@ void JSR_20()
     PC = addr;
 }
 
-void AND_21()
+void AND_21(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -482,8 +491,7 @@ void AND_21()
     set_nz(cpu.A);
 }
 
-//TODO:
-void BIT_24()
+void BIT_24(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -491,7 +499,7 @@ void BIT_24()
     printf("not complete! :%02X\n", bt);
 }
 
-void AND_25()
+void AND_25(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -501,7 +509,7 @@ void AND_25()
     set_nz(cpu.A);
 }
 
-void ROL_26()
+void ROL_26(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -511,12 +519,13 @@ void ROL_26()
     set_carry(bt);
 }
 
-void PLP_28()
+void PLP_28(BYTE op)
 {
     cpu.P = pop();
+    ++PC;
 }
 
-void AND_29()
+void AND_29(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -526,21 +535,26 @@ void AND_29()
     set_nz(cpu.A);
 }
 
-void ROL_2A()
+void ROL_2A(BYTE op)
 {
     cpu.A <<= 1;
 
     set_nz(cpu.A);
     set_carry(cpu.A);
+
+    ++PC;
 }
 
 //TODO
-void BIT_2C()
+void BIT_2C(BYTE op)
 {
-    //what the fuck
+    printf("not complete code!\n");
+    getchar();
+
+    ++PC;
 }
 
-void AND_2D()
+void AND_2D(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -550,7 +564,7 @@ void AND_2D()
     set_nz(cpu.A);
 }
 
-void ROL_2E()
+void ROL_2E(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -562,25 +576,29 @@ void ROL_2E()
     set_carry(bt);
 }
 
-void BMI_30()
+void BMI_30(BYTE op)
 {
     WORD addr = relative_addressing();
     if(!test_flag(NEG)) return;
 
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     PC = addr;
 }
 
-void AND_31()
+void AND_31(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A && bt;
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void AND_35()
+void AND_35(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -590,7 +608,7 @@ void AND_35()
     set_nz(cpu.A);
 }
 
-void ROL_36()
+void ROL_36(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -602,30 +620,35 @@ void ROL_36()
     set_carry(bt);
 }
 
-void SEC_38()
+void SEC_38(BYTE op)
 {
     set_flag(CARRY);
+    ++PC;
 }
 
-void AND_39()
+void AND_39(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void AND_3D()
+void AND_3D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void ROL_3E()
+void ROL_3E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -634,7 +657,7 @@ void ROL_3E()
     write_byte(addr, bt);
 }
 
-void RTI_40()
+void RTI_40(BYTE op)
 {
     BYTE addr1 = pop();
     set_flag(addr1);
@@ -647,7 +670,7 @@ void RTI_40()
     PC = ret_addr;
 }
 
-void EOR_41()
+void EOR_41(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -657,7 +680,7 @@ void EOR_41()
     set_nz(cpu.A);
 }
 
-void EOR_45()
+void EOR_45(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -667,7 +690,7 @@ void EOR_45()
     set_nz(cpu.A);
 }
 
-void LSR_46()
+void LSR_46(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -676,12 +699,13 @@ void LSR_46()
     write_byte(addr, bt);
 }
 
-void PHA_48()
+void PHA_48(BYTE op)
 {
     push(cpu.A);
+    ++PC;
 }
 
-void EOR_49()
+void EOR_49(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -690,20 +714,20 @@ void EOR_49()
     set_nz(cpu.A);
 }
 
-void LSR_4A()
+void LSR_4A(BYTE op)
 {
     cpu.A >>= 1;
 
     ++PC;
 }
 
-void JMP_4C()
+void JMP_4C(BYTE op)
 {
     WORD addr = absolute_addressing();
     PC = read_word(addr);
 }
 
-void EOR_4D()
+void EOR_4D(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -713,7 +737,7 @@ void EOR_4D()
     set_nz(cpu.A);
 }
 
-void LSR_4E()
+void LSR_4E(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -722,22 +746,27 @@ void LSR_4E()
     write_byte(addr, bt);
 }
 
-void BVC_50()
+void BVC_50(BYTE op)
 {
-    PC = relative_addressing();
+    WORD addr = relative_addressing();
+    if(test_flag(OF)) return;
+
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 }
 
-void EOR_51()
+void EOR_51(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     cpu.A = cpu.A ^ bt;
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void EOR_55()
+void EOR_55(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -747,7 +776,7 @@ void EOR_55()
     set_nz(cpu.A);
 }
 
-void LSR_56()
+void LSR_56(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -756,30 +785,35 @@ void LSR_56()
     write_byte(addr, bt);
 }
 
-void CLI_58()
+void CLI_58(BYTE op)
 {
     clear_flag(INT);
+    ++PC;
 }
 
-void EOR_59()
+void EOR_59(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void EOR_5D()
+void EOR_5D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void LSR_5E()
+void LSR_5E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -788,7 +822,7 @@ void LSR_5E()
     write_byte(addr, bt);
 }
 
-void RTS_60()
+void RTS_60(BYTE op)
 {
     BYTE addr1 = pop();
     BYTE addr2 = pop();
@@ -797,7 +831,7 @@ void RTS_60()
     PC = addr + 1;
 }
 
-void ADC_61()
+void ADC_61(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -809,7 +843,7 @@ void ADC_61()
     set_overflow(ret);
 }
 
-void ADC_65()
+void ADC_65(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -821,7 +855,7 @@ void ADC_65()
     set_overflow(ret);
 }
 
-void ROR_66()
+void ROR_66(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -830,18 +864,17 @@ void ROR_66()
     write_byte(addr, bt);
 }
 
-void PLA_68()
+void PLA_68(BYTE op)
 {
     cpu.A = pop();
 
     ++PC;
 }
 
-void ADC_69()
+void ADC_69(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
-
     short ret = cpu.A + bt;
     cpu.A = ret;
 
@@ -850,19 +883,20 @@ void ADC_69()
     set_overflow(ret);
 }
 
-void ROR_6A()
+void ROR_6A(BYTE op)
 {
     cpu.A >>= 1;
+
     ++PC;
 }
 
-void JMP_6C()
+void JMP_6C(BYTE op)
 {
     WORD addr = indirect_addressing();
     PC = addr;
 }
 
-void ADC_6D()
+void ADC_6D(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -874,7 +908,7 @@ void ADC_6D()
     set_overflow(ret);
 }
 
-void ROR_6E()
+void ROR_6E(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -883,24 +917,30 @@ void ROR_6E()
     write_byte(addr, bt);
 }
 
-void BVS_70()
+void BVS_70(BYTE op)
 {
-    PC = relative_addressing();
+    WORD addr = relative_addressing();
+    if(!test_flag(OF)) return;
+
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 }
 
-void ADC_71()
+void ADC_71(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt;
     cpu.A = x;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(x);
     set_carry(x);
     set_overflow(x);
 }
 
-void ADC_75()
+void ADC_75(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -912,7 +952,7 @@ void ADC_75()
     set_overflow(x);
 }
 
-void ROR_76()
+void ROR_76(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -922,38 +962,41 @@ void ROR_76()
     write_byte(addr, bt);
 }
 
-void SEI_78()
+void SEI_78(BYTE op)
 {
-    ++PC;
-
     set_flag(INT);
+    ++PC;
 }
 
-void ADC_79()
+void ADC_79(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt;
     cpu.A = x;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(x);
     set_carry(x);
     set_overflow(x);
 }
 
-void ADC_7D()
+void ADC_7D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt;
     cpu.A = x;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(x);
     set_carry(x);
     set_overflow(x);
 }
 
-void ROR_7E()
+void ROR_7E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -963,31 +1006,31 @@ void ROR_7E()
     write_byte(addr, bt);
 }
 
-void STA_81()
+void STA_81(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     write_byte(addr, cpu.A);
 }
 
-void STY_84()
+void STY_84(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     write_byte(addr, cpu.Y);
 }
 
-void STA_85()
+void STA_85(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     write_byte(addr, cpu.A);
 }
 
-void STX_86()
+void STX_86(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     write_byte(addr, cpu.X);
 }
 
-void DEY_88()
+void DEY_88(BYTE op)
 {
     cpu.Y -= 1;
     set_nz(cpu.Y);
@@ -995,7 +1038,7 @@ void DEY_88()
     ++PC;
 }
 
-void TXA_8A()
+void TXA_8A(BYTE op)
 {
     cpu.Y -= 1;
     set_nz(cpu.Y);
@@ -1003,57 +1046,60 @@ void TXA_8A()
     ++PC;
 }
 
-void STY_8C()
+void STY_8C(BYTE op)
 {
     WORD addr = absolute_addressing();
     write_byte(addr, cpu.Y);
 }
 
-void STA_8D()
+void STA_8D(BYTE op)
 {
     WORD addr = absolute_addressing();
     write_byte(addr, cpu.A);
 }
 
-void STX_8E()
+void STX_8E(BYTE op)
 {
     WORD addr = absolute_addressing();
     write_byte(addr, cpu.X);
 }
 
-void BCC_90()
+void BCC_90(BYTE op)
 {
     WORD addr = relative_addressing();
     if(!test_flag(CARRY)) return;
 
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     PC = addr;
 }
 
-void STA_91()
+void STA_91(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     write_byte(addr, cpu.A);
 }
 
-void STY_94()
+void STY_94(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     write_byte(addr, cpu.Y);
 }
 
-void STA_95()
+void STA_95(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     write_byte(addr, cpu.A);
 }
 
-void STX_96()
+void STX_96(BYTE op)
 {
     WORD addr = zero_Y_indexed_addressing();
     write_byte(addr, cpu.X);
 }
 
-void TYA_98()
+void TYA_98(BYTE op)
 {
     cpu.A = cpu.Y;
     set_nz(cpu.A);
@@ -1061,26 +1107,26 @@ void TYA_98()
     ++PC;
 }
 
-void STA_99()
+void STA_99(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     write_byte(addr, cpu.A);
 }
 
-void TXS_9A()
+void TXS_9A(BYTE op)
 {
     cpu.SP = cpu.X;
 
     ++PC;
 }
 
-void STA_9D()
+void STA_9D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     write_byte(addr, cpu.A);
 }
 
-void LDY_A0()
+void LDY_A0(BYTE op)
 {
     WORD addr = immediate_addressing();
     cpu.Y = read_byte(addr);
@@ -1088,7 +1134,7 @@ void LDY_A0()
     set_nz(cpu.Y);
 }
 
-void LDA_A1()
+void LDA_A1(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     cpu.A = read_byte(addr);
@@ -1096,7 +1142,7 @@ void LDA_A1()
     set_nz(cpu.A);
 }
 
-void LDX_A2()
+void LDX_A2(BYTE op)
 {
     WORD addr = immediate_addressing();
     cpu.X = read_byte(addr);
@@ -1104,7 +1150,7 @@ void LDX_A2()
     set_nz(cpu.X);
 }
 
-void LDY_A4()
+void LDY_A4(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -1114,7 +1160,7 @@ void LDY_A4()
     set_nz(bt);
 }
 
-void LDA_A5()
+void LDA_A5(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1124,7 +1170,7 @@ void LDA_A5()
     cpu.A = bt;
 }
 
-void LDX_A6()
+void LDX_A6(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     cpu.X = read_byte(addr);
@@ -1132,14 +1178,14 @@ void LDX_A6()
     set_nz(cpu.X);
 }
 
-void TAY_A8()
+void TAY_A8(BYTE op)
 {
     cpu.Y = cpu.A;
 
     ++PC;
 }
 
-void LDA_A9()
+void LDA_A9(BYTE op)
 {
     WORD addr = immediate_addressing();
     cpu.A = read_byte(addr);
@@ -1147,14 +1193,14 @@ void LDA_A9()
     set_nz(cpu.A);
 }
 
-void TAX_AA()
+void TAX_AA(BYTE op)
 {
     cpu.X = cpu.A;
 
     ++PC;
 }
 
-void LDY_AC()
+void LDY_AC(BYTE op)
 {
     WORD addr = absolute_addressing();
     cpu.Y = read_byte(addr);
@@ -1162,7 +1208,7 @@ void LDY_AC()
     set_nz(cpu.Y);
 }
 
-void LDA_AD()
+void LDA_AD(BYTE op)
 {
     WORD addr = absolute_addressing();
     cpu.A = read_byte(addr);
@@ -1170,7 +1216,7 @@ void LDA_AD()
     set_nz(cpu.A);
 }
 
-void LDX_AE()
+void LDX_AE(BYTE op)
 {
     WORD addr = absolute_addressing();
     cpu.X = read_byte(addr);
@@ -1178,24 +1224,29 @@ void LDX_AE()
     set_nz(cpu.X);
 }
 
-void BCS_B0()
+void BCS_B0(BYTE op)
 {
     WORD addr = relative_addressing();
-
     if(!test_flag(CARRY)) return;
 
-    PC  = addr;
+    //分支如果没有跨页, 则 + 1, 否则 + 2;
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
+    PC += addr;
 }
 
-void LDA_B1()
+void LDA_B1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-
     cpu.A = read_byte(addr);
+
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void LDY_B4()
+void LDY_B4(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     cpu.Y = read_byte(addr);
@@ -1203,7 +1254,7 @@ void LDY_B4()
     set_nz(cpu.Y);
 }
 
-void LDA_B5()
+void LDA_B5(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     cpu.A = read_byte(addr);
@@ -1211,7 +1262,7 @@ void LDA_B5()
     set_nz(cpu.A);
 }
 
-void LDX_B6()
+void LDX_B6(BYTE op)
 {
     WORD addr = zero_Y_indexed_addressing();
     cpu.X = read_byte(addr);
@@ -1219,51 +1270,59 @@ void LDX_B6()
     set_nz(cpu.X);
 }
 
-void CLV_B8()
+void CLV_B8(BYTE op)
 {
     clear_flag(OF);
     ++PC;
 }
 
-void LDA_B9()
+void LDA_B9(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     cpu.A = read_byte(addr);
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.A);
 }
 
-void TSX_BA()
+void TSX_BA(BYTE op)
 {
     cpu.X = cpu.SP;
     ++PC;
 }
 
-void LDY_BC()
+void LDY_BC(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     cpu.Y = read_byte(addr);
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.Y);
 }
 
-void LDA_BD()
+void LDA_BD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     cpu.A = read_byte(addr);
+    
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
     set_nz(cpu.A);
 }
 
-void LDX_BE()
+void LDX_BE(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     cpu.X  = read_byte(addr);
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(cpu.X);
 }
 
-void CPY_C0()
+void CPY_C0(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -1273,7 +1332,7 @@ void CPY_C0()
     set_carry(ret);
 }
 
-void CMP_C1()
+void CMP_C1(BYTE op)
 {
     WORD addr = indirect_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1283,7 +1342,7 @@ void CMP_C1()
     set_carry(ret);
 }
 
-void CPY_C4()
+void CPY_C4(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1293,7 +1352,7 @@ void CPY_C4()
     set_carry(ret);
 }
 
-void CMP_C5()
+void CMP_C5(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1303,7 +1362,7 @@ void CMP_C5()
     set_carry(ret);
 }
 
-void DEC_C6()
+void DEC_C6(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1311,7 +1370,7 @@ void DEC_C6()
     write_byte(addr, bt - 1);
 }
 
-void INY_C8()
+void INY_C8(BYTE op)
 {
     ++PC;
     cpu.Y += 1;
@@ -1319,7 +1378,7 @@ void INY_C8()
     set_nz(cpu.Y);
 }
 
-void CMP_C9()
+void CMP_C9(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -1329,7 +1388,7 @@ void CMP_C9()
     set_carry(ret);
 }
 
-void DEX_CA()
+void DEX_CA(BYTE op)
 {
     cpu.X -= 1;
     set_nz(cpu.X);
@@ -1337,7 +1396,7 @@ void DEX_CA()
     ++PC;
 }
 
-void CPY_CC()
+void CPY_CC(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1347,7 +1406,7 @@ void CPY_CC()
     set_carry(ret);
 }
 
-void CMP_CD()
+void CMP_CD(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1357,7 +1416,7 @@ void CMP_CD()
     set_carry(ret);
 }
 
-void DEC_CE()
+void DEC_CE(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1365,25 +1424,30 @@ void DEC_CE()
     write_byte(addr, bt - 1);
 }
 
-void BNE_D0()
+void BNE_D0(BYTE op)
 {
     WORD addr = relative_addressing();
     if(test_flag(ZERO)) return;
 
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     PC = addr;
 }
 
-void CMP_D1()
+void CMP_D1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
 }
 
-void CMP_D5()
+void CMP_D5(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1393,7 +1457,7 @@ void CMP_D5()
     set_carry(ret);
 }
 
-void DEC_D6()
+void DEC_D6(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1401,33 +1465,37 @@ void DEC_D6()
     write_byte(addr, bt - 1);
 }
 
-void CLD_D8()
+void CLD_D8(BYTE op)
 {
     ++PC;
     clear_flag(DEC);
 }
 
-void CMP_D9()
+void CMP_D9(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
 }
 
-void CMP_DD()
+void CMP_DD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
 }
 
-void DEC_DE()
+void DEC_DE(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1437,7 +1505,7 @@ void DEC_DE()
     set_carry(cpu.X);
 }
 
-void CPX_E0()
+void CPX_E0(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -1447,7 +1515,7 @@ void CPX_E0()
     set_carry(ret);
 }
 
-void SBC_E1()
+void SBC_E1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1459,7 +1527,7 @@ void SBC_E1()
     set_overflow(ret);
 }
 
-void CPX_E4()
+void CPX_E4(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1469,7 +1537,7 @@ void CPX_E4()
     set_carry(ret);
 }
 
-void SBC_E5()
+void SBC_E5(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1481,7 +1549,7 @@ void SBC_E5()
     set_overflow(ret);
 }
 
-void INC_E6()
+void INC_E6(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1489,7 +1557,7 @@ void INC_E6()
     write_byte(addr, bt + 1);
 }
 
-void INX_E8()
+void INX_E8(BYTE op)
 {
     cpu.X += 1;
     set_nz(cpu.X);
@@ -1497,7 +1565,7 @@ void INX_E8()
     ++PC;
 }
 
-void SBC_E9()
+void SBC_E9(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
@@ -1508,14 +1576,14 @@ void SBC_E9()
     set_carry(ret);
 }
 
-void NOP_EA()
+void NOP_EA(BYTE op)
 {
     ++PC;
     fprintf(stderr, "nop!");
     //do nothing
 }
 
-void CPX_EC()
+void CPX_EC(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1525,7 +1593,7 @@ void CPX_EC()
     set_carry(ret);
 }
 
-void SBC_ED()
+void SBC_ED(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1537,7 +1605,7 @@ void SBC_ED()
     set_overflow(ret);
 }
 
-void INC_EE()
+void INC_EE(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
@@ -1545,27 +1613,32 @@ void INC_EE()
     write_byte(addr, bt + 1);
 }
 
-void BEQ_F0()
+void BEQ_F0(BYTE op)
 {
     WORD addr = relative_addressing();
     if(!test_flag(ZERO))  return;
 
+    ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     PC = addr;
 }
 
-void SBC_F1()
+void SBC_F1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
     cpu.A = ret;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
     set_overflow(ret);
 }
 
-void SBC_F5()
+void SBC_F5(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1577,7 +1650,7 @@ void SBC_F5()
     set_overflow(ret);
 }
 
-void INC_F6()
+void INC_F6(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1585,38 +1658,42 @@ void INC_F6()
     write_byte(addr, bt + 1);
 }
 
-void SED_F8()
+void SED_F8(BYTE op)
 {
     set_flag(DEC);
 
     ++PC;
 }
 
-void SBC_F9()
+void SBC_F9(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
     cpu.A = ret;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
     set_overflow(ret);
 }
 
-void SBC_FD()
+void SBC_FD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
     cpu.A = ret;
 
+    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+
     set_nz(ret);
     set_carry(ret);
     set_overflow(ret);
 }
 
-void INC_FE()
+void INC_FE(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
@@ -1795,20 +1872,6 @@ void init_code()
 
 }
 
-void execute_code()
-{
-    BYTE code = 0x78;
-
-    #define INC_PC() PC += code_maps[code].op_len
-    for(;;) {
-        if(!code_maps[code].op_name) {
-            return;
-        }
-        code_maps[code].op_func();
-        INC_PC();
-    }
-}
-
 void init_cpu()
 {
     cpu.IP = 0xC004;
@@ -1855,7 +1918,7 @@ void parse_code()
 
         ++c;
 
-        code_maps[code].op_func();
+        code_maps[code].op_func(code);
         addr = PC;
     }
 

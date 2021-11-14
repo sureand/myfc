@@ -10,7 +10,7 @@ typedef struct
     char cycle;
 
     //对应代码的执行函数
-    void (*op_func)();
+    void (*op_func)(BYTE);
 }INS;
 
 INS code_maps[0X100];
