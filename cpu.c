@@ -98,6 +98,12 @@ static void set_carry(short value)
     set_flag(CARRY);
 }
 
+static void set_overflow(short value)
+{
+    if(value <= 0xFF) return;
+    set_flag(OF);
+}
+
 static void push(BYTE data)
 {
     write_byte(cpu.SP, data);
@@ -795,24 +801,24 @@ void ADC_61()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-
     short ret = cpu.A + bt;
     cpu.A = ret;
 
     set_nz(ret);
     set_carry(ret);
+    set_overflow(ret);
 }
 
 void ADC_65()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-
     short ret = cpu.A + bt;
     cpu.A = ret;
 
     set_nz(ret);
     set_carry(ret);
+    set_overflow(ret);
 }
 
 void ROR_66()
@@ -827,6 +833,7 @@ void ROR_66()
 void PLA_68()
 {
     cpu.A = pop();
+
     ++PC;
 }
 
@@ -840,6 +847,7 @@ void ADC_69()
 
     set_nz(ret);
     set_carry(ret);
+    set_overflow(ret);
 }
 
 void ROR_6A()
@@ -863,6 +871,7 @@ void ADC_6D()
 
     set_nz(bt);
     set_carry(ret);
+    set_overflow(ret);
 }
 
 void ROR_6E()
@@ -886,8 +895,9 @@ void ADC_71()
     short x = cpu.A + bt;
     cpu.A = x;
 
-    set_nz(bt);
+    set_nz(x);
     set_carry(x);
+    set_overflow(x);
 }
 
 void ADC_75()
@@ -899,6 +909,7 @@ void ADC_75()
 
     set_nz(x);
     set_carry(x);
+    set_overflow(x);
 }
 
 void ROR_76()
@@ -927,6 +938,7 @@ void ADC_79()
 
     set_nz(x);
     set_carry(x);
+    set_overflow(x);
 }
 
 void ADC_7D()
@@ -938,6 +950,7 @@ void ADC_7D()
 
     set_nz(x);
     set_carry(x);
+    set_overflow(x);
 }
 
 void ROR_7E()
@@ -1005,7 +1018,6 @@ void STA_8D()
 void STX_8E()
 {
     WORD addr = absolute_addressing();
-    printf("next PC:%04X, addr:%04X\n", PC, addr);
     write_byte(addr, cpu.X);
 }
 
@@ -1356,7 +1368,6 @@ void DEC_CE()
 void BNE_D0()
 {
     WORD addr = relative_addressing();
-    printf("BNE PC:%04X, addr:%04X\n", PC, addr);
     if(test_flag(ZERO)) return;
 
     PC = addr;
@@ -1441,9 +1452,11 @@ void SBC_E1()
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.X - bt;
+    cpu.X = ret;
 
     set_nz(ret);
     set_carry(ret);
+    set_overflow(ret);
 }
 
 void CPX_E4()
@@ -1460,10 +1473,12 @@ void SBC_E5()
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void INC_E6()
@@ -1486,10 +1501,11 @@ void SBC_E9()
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
 }
 
 void NOP_EA()
@@ -1513,10 +1529,12 @@ void SBC_ED()
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void INC_EE()
@@ -1539,20 +1557,24 @@ void SBC_F1()
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void SBC_F5()
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void INC_F6()
@@ -1574,20 +1596,24 @@ void SBC_F9()
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void SBC_FD()
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    cpu.A -= bt;
+    char ret = cpu.A - bt;
+    cpu.A = ret;
 
-    set_nz(cpu.A);
-    set_carry(cpu.A);
+    set_nz(ret);
+    set_carry(ret);
+    set_overflow(ret);
 }
 
 void INC_FE()
