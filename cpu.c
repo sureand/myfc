@@ -228,18 +228,12 @@ static inline WORD indirect_addressing()
 static inline WORD indexed_X_indirect_addressing()
 {
     BYTE addr1 = read_byte(PC + 1);
-    printf("indexed_X_indirect_addressing----> %02X\n", addr1);
-
     addr1 += cpu.X;
 
     BYTE addr2 = addr1 + 1;
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
 
-    printf("indexed_X_indirect_addressing ----> %04X\n", addr);
-
     PC += 2;
-
-    getchar();
 
     return addr;
 }
