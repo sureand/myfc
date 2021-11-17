@@ -150,36 +150,6 @@ static inline WORD immediate_addressing()
     return addr;
 }
 
-#if 0
-//间接 X 寻址
-static inline WORD indirext_x_address()
-{
-    WORD address = read_byte(PC + 1) & 0xFF;
-    PC += 1;
-
-    BYTE addr1 = read_byte(address + cpu.X);
-    BYTE addr2 = read_byte(address + cpu.X + 1);
-    WORD addr = (addr2 << 8) | addr1;
-
-    return addr;
-}
-#endif
-
-#if 0
-//现在用不到
-// 间接 Y 寻址
-static inline WORD indirext_y_address()
-{
-    WORD address = read_byte(PC + 1);
-
-    BYTE addr1 = read_byte(address + cpu.Y);
-    BYTE addr2 = read_byte(address + cpu.Y + 1);
-    WORD addr = (addr2 << 8) | addr1;
-
-    return addr;
-}
-#endif
-
 //绝对寻址
 static inline WORD absolute_addressing()
 {
@@ -254,24 +224,25 @@ static inline WORD indirect_addressing()
     return read_word(addr);
 }
 
-//间接 x 变址寻址
-static inline WORD indirect_X_indexed_addressing()
+// x 变址间接 寻址
+static inline WORD indexed_X_indirect_addressing()
 {
     BYTE addr1 = read_byte(PC + 1);
-    addr1 &= 0xFF;
+    addr1 += cpu.X;
 
     BYTE addr2 = addr1 + 1;
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
+
     PC += 2;
 
-    return addr + cpu.X;
+    return addr;
 }
 
-//间接 Y 变址寻址
+//Y 间接 变址寻址
 static inline WORD indirect_Y_indexed_addressing()
 {
     BYTE addr1 = read_byte(PC + 1);
-    addr1 &= 0xFF;
+    addr1 = read_byte(addr1);
 
     BYTE addr2 = addr1 + 1;
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
@@ -310,7 +281,7 @@ void BRK_00(BYTE op)
 
 void ORA_01(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A || bt;
 
@@ -485,7 +456,7 @@ void JSR_20(BYTE op)
 
 void AND_21(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
@@ -672,7 +643,7 @@ void RTI_40(BYTE op)
 
 void EOR_41(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
@@ -872,7 +843,7 @@ void RTS_60(BYTE op)
 
 void ADC_61(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
     cpu.A = ret;
@@ -1051,7 +1022,7 @@ void ROR_7E(BYTE op)
 
 void STA_81(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     write_byte(addr, cpu.A);
 }
 
@@ -1180,7 +1151,7 @@ void LDY_A0(BYTE op)
 
 void LDA_A1(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     cpu.A = read_byte(addr);
 
     set_nz(cpu.A);
@@ -1380,7 +1351,7 @@ void CPY_C0(BYTE op)
 
 void CMP_C1(BYTE op)
 {
-    WORD addr = indirect_X_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
@@ -1571,7 +1542,7 @@ void CPX_E0(BYTE op)
 
 void SBC_E1(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
     cpu.X = ret;
