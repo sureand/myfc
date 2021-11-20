@@ -1252,13 +1252,14 @@ void LDX_AE(BYTE op)
 void BCS_B0(BYTE op)
 {
     WORD addr = relative_addressing();
+
     if(!test_flag(CARRY)) return;
 
     //分支如果没有跨页, 则 + 1, 否则 + 2;
     ++code_maps[op].cycle;
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
-    PC += addr;
+    PC = addr;
 }
 
 void LDA_B1(BYTE op)
