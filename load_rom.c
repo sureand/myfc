@@ -131,12 +131,14 @@ int load_data(const char *path)
     ROM *rom = load_rom(path);
     if(!rom) return -1;
 
+/*
     ROM_HEADER *header = rom->header;
 
     size_t prg_size = (header->prg_rom_count * 0x4000) >> 10;
     size_t chr_size = (header->prg_rom_count * 0x2000) >> 10;
+    */
 
-    printf("PRG:%zuk, CHR:%zuK\n", prg_size, chr_size);
+  //  printf("PRG:%zuk, CHR:%zuK\n", prg_size, chr_size);
 
     show_code(rom);
 

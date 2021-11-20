@@ -472,7 +472,23 @@ void BIT_24(BYTE op)
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
 
-    printf("not complete! :%02X\n", bt);
+    BYTE flag = test_bit(bt, 6);
+    if(flag) { set_bit(&cpu.P, 6); } else{
+        clear_bit(&cpu.P, 6);
+    }
+
+    flag = test_bit(bt, 7);
+    if(flag) { set_bit(&cpu.P, 7); } else{
+       clear_bit(&cpu.P, 7);
+    }
+
+    BYTE ret = cpu.A | bt;
+    if(ret == 0) {
+        set_flag(ZERO);
+        return;
+    }
+
+    clear_flag(ZERO);
 }
 
 void AND_25(BYTE op)
@@ -524,8 +540,7 @@ void ROL_2A(BYTE op)
 void BIT_2C(BYTE op)
 {
     WORD addr = absolute_addressing();
-    printf("not complete code: %04X\n", addr);
-    getchar();
+    (void)addr;
 
     ++PC;
 }
@@ -948,6 +963,8 @@ void BVS_70(BYTE op)
 
     ++cpu.cycle;
     if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+
+    PC = addr;
 }
 
 void ADC_71(BYTE op)
@@ -1092,7 +1109,7 @@ void STX_8E(BYTE op)
 void BCC_90(BYTE op)
 {
     WORD addr = relative_addressing();
-    if(!test_flag(CARRY)) return;
+    if(test_flag(CARRY)) return;
 
     ++cpu.cycle;
     if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
@@ -1769,7 +1786,7 @@ void init_code()
 
     op(20, "JSR", 3, 6, JSR_20)
     op(21, "AND", 2, 6, AND_21)
-    op(24, "BIT", 2, 4, BIT_24)
+    op(24, "BIT", 2, 3, BIT_24)
     op(25, "AND", 2, 3, AND_25)
     op(26, "ROL", 2, 5, ROL_26)
     op(28, "PLP", 1, 4, PLP_28)
@@ -1949,7 +1966,12 @@ void parse_code()
     addr = 0xC000;
     PC = 0xC000;
 
+    size_t c = 0;
+
     while(addr) {
+
+        if(c == 8992) break;
+
         BYTE code = read_byte(addr);
         if(!code_maps[code].op_name) {
             printf("addr:%04X, code:%02X \n", addr, code);
@@ -1963,6 +1985,8 @@ void parse_code()
         cpu.cycle += code_maps[code].cycle;
 
         addr = PC;
+
+        ++c;
     }
 
 }
@@ -1986,6 +2010,8 @@ void show_code(ROM *rom)
     mem_init(mem);
 
     parse_code();
+
+    if(1) return;
 
 
     BYTE addr1 = read_byte(0xFFFE);
