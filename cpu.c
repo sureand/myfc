@@ -315,7 +315,7 @@ void ASL_06(BYTE op)
 
 void PHP_08(BYTE op)
 {
-    push(cpu.P);
+    push(cpu.P | 0x30);
     ++PC;
 }
 
@@ -767,6 +767,8 @@ void BVC_50(BYTE op)
 
     ++cpu.cycle;
     if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+
+    PC = addr;
 }
 
 void EOR_51(BYTE op)
@@ -868,10 +870,6 @@ void ADC_61(BYTE op)
     short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
 
     cpu.A = ret & 0xFF;
-
-    printf("ADC --- 61\n");
-
-    getchar();
 
     set_nz(ret);
     set_carry(ret);
