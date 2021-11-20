@@ -94,14 +94,20 @@ static void set_nz(short value)
 
 static void set_carry(short value)
 {
-    if(value <= 0 || value > 0x7F) return;
+    if(value <= 0 || value > 0x7F) {
+        clear_flag(CARRY);
+        return;
+    }
 
     set_flag(CARRY);
 }
 
 static void set_overflow(short value)
 {
-    if(value <= 0xFF) return;
+    if(value <= 0xFF) {
+        clear_flag(OF);
+        return;
+    }
     set_flag(OF);
 }
 
@@ -844,7 +850,12 @@ void ADC_61(BYTE op)
     WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = ret;
+
+    cpu.A = ret & 0xFF;
+
+    printf("ADC --- 61\n");
+
+    getchar();
 
     set_nz(ret);
     set_carry(ret);
@@ -855,8 +866,8 @@ void ADC_65(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.A + bt;
-    cpu.A = ret;
+    short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -885,7 +896,7 @@ void ADC_69(BYTE op)
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -913,7 +924,7 @@ void ADC_6D(BYTE op)
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(bt);
     set_carry(ret);
@@ -943,7 +954,7 @@ void ADC_71(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = x;
+    cpu.A = x & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -985,7 +996,7 @@ void ADC_79(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = x;
+    cpu.A = x & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -999,7 +1010,7 @@ void ADC_7D(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
-    cpu.A = x;
+    cpu.A = x & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -1543,7 +1554,8 @@ void SBC_E1(BYTE op)
     WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.X = ret;
+
+    cpu.X = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -1565,7 +1577,7 @@ void SBC_E5(BYTE op)
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -1595,7 +1607,7 @@ void SBC_E9(BYTE op)
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -1623,7 +1635,7 @@ void SBC_ED(BYTE op)
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -1656,7 +1668,7 @@ void SBC_F1(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -1670,7 +1682,7 @@ void SBC_F5(BYTE op)
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     set_nz(ret);
     set_carry(ret);
@@ -1699,7 +1711,7 @@ void SBC_F9(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -1713,7 +1725,7 @@ void SBC_FD(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret;
+    cpu.A = ret & 0xFF;
 
     if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
 
@@ -1991,6 +2003,9 @@ void show_code(ROM *rom)
     printf("RESET:%04X\n", addr);
 
     BYTE code = read_byte(addr);
+    printf("code:%02X\n", code);
+    getchar();
+
     printf("code:%s\n", code_maps[code].op_name);
 
     addr1 = read_byte(0xFFFA);
