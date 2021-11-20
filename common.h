@@ -110,6 +110,8 @@ typedef struct {
 
     BYTE reversed; //保留, 用来作为结构体对齐使用
 
+    size_t cycle;
+
 }_CPU;
 
 #define INLINE_VOID inline void

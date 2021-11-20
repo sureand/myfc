@@ -364,8 +364,8 @@ void BPL_10(BYTE op)
     if(test_flag(NEG)) return;
 
     //分支如果没有跨页, 则 + 1, 否则 + 2;
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -376,7 +376,7 @@ void ORA_11(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A || bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -413,7 +413,7 @@ void ORA_19(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A || bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -424,7 +424,7 @@ void ORA_1D(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A || bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -556,8 +556,8 @@ void BMI_30(BYTE op)
     WORD addr = relative_addressing();
     if(!test_flag(NEG)) return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -568,7 +568,7 @@ void AND_31(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -606,7 +606,7 @@ void AND_39(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -617,7 +617,7 @@ void AND_3D(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A && bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -750,8 +750,8 @@ void BVC_50(BYTE op)
     WORD addr = relative_addressing();
     if(test_flag(OF)) return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 }
 
 void EOR_51(BYTE op)
@@ -760,7 +760,7 @@ void EOR_51(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -805,7 +805,7 @@ void EOR_59(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -816,7 +816,7 @@ void EOR_5D(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -946,8 +946,8 @@ void BVS_70(BYTE op)
     WORD addr = relative_addressing();
     if(!test_flag(OF)) return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 }
 
 void ADC_71(BYTE op)
@@ -957,7 +957,7 @@ void ADC_71(BYTE op)
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
     cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(x);
     set_carry(x);
@@ -999,7 +999,7 @@ void ADC_79(BYTE op)
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
     cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(x);
     set_carry(x);
@@ -1013,7 +1013,7 @@ void ADC_7D(BYTE op)
     short x = cpu.A + bt + test_flag(CARRY) ? 1 : 0;
     cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(x);
     set_carry(x);
@@ -1094,8 +1094,8 @@ void BCC_90(BYTE op)
     WORD addr = relative_addressing();
     if(!test_flag(CARRY)) return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -1251,13 +1251,20 @@ void LDX_AE(BYTE op)
 
 void BCS_B0(BYTE op)
 {
+    WORD old_pc = PC;
     WORD addr = relative_addressing();
+
+    printf("oldPC:%04X, addr:%04X\n", old_pc, addr);
+    printf("------>code:0x%02X, cyc:%d\n", op, code_maps[0xB0].cycle);
 
     if(!test_flag(CARRY)) return;
 
+    //FIXME: 这里不应该直接修改
     //分支如果没有跨页, 则 + 1, 否则 + 2;
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+
+    printf("cyc:%d\n", code_maps[op].cycle);
+    if((addr >> 8) != (old_pc >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -1267,7 +1274,7 @@ void LDA_B1(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     cpu.A = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1307,7 +1314,7 @@ void LDA_B9(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     cpu.A = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1325,7 +1332,7 @@ void LDY_BC(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     cpu.Y = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.Y);
 }
@@ -1335,7 +1342,7 @@ void LDA_BD(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     cpu.A = read_byte(addr);
     
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1345,7 +1352,7 @@ void LDX_BE(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     cpu.X  = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.X);
 }
@@ -1462,8 +1469,8 @@ void BNE_D0(BYTE op)
     WORD addr = relative_addressing();
     if(test_flag(ZERO)) return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -1474,7 +1481,7 @@ void CMP_D1(BYTE op)
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1512,7 +1519,7 @@ void CMP_D9(BYTE op)
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1524,7 +1531,7 @@ void CMP_DD(BYTE op)
     BYTE bt = read_byte(addr);
     char ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1618,7 +1625,6 @@ void SBC_E9(BYTE op)
 void NOP_EA(BYTE op)
 {
     ++PC;
-    fprintf(stderr, "nop!");
     //do nothing
 }
 
@@ -1659,8 +1665,8 @@ void BEQ_F0(BYTE op)
     WORD addr = relative_addressing();
     if(!test_flag(ZERO))  return;
 
-    ++code_maps[op].cycle;
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -1672,7 +1678,7 @@ void SBC_F1(BYTE op)
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
     cpu.A = ret & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1715,7 +1721,7 @@ void SBC_F9(BYTE op)
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
     cpu.A = ret & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1729,7 +1735,7 @@ void SBC_FD(BYTE op)
     short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
     cpu.A = ret & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++code_maps[op].cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(ret);
     set_carry(ret);
@@ -1940,10 +1946,10 @@ void parse_code()
     BYTE addr1 = read_byte(0xFFFC);
     BYTE addr2 = read_byte(0xFFFD);
 
-    BYTE c = 0;
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
 
+    cpu.P = 24;
     addr = 0xC000;
     PC = 0xC000;
 
@@ -1953,18 +1959,20 @@ void parse_code()
             printf("addr:%04X, code:%02X \n", addr, code);
             break;
         }
-        printf("PC:%02X, A:%02X, X:%02X, Y:%02X, P:%02X, SP:%02X, code:%s_%02X, len:%d\n", 
-            cpu.IP, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, code_maps[code].op_name, code, code_maps[code].op_len);
+
+        printf("PC:%02X, A:%02X, X:%02X, Y:%02X, P:%d, SP:%02X, code:%s_%02X, len:%d, CYC:%zu\n", 
+            cpu.IP, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,
+            code_maps[code].op_name, code, code_maps[code].op_len, cpu.cycle);
+
         display_reg();
         display_stack();
         printf("\n");
 
-        if((cpu.X == 0x00 && cpu.Y == 0x00) || (addr == 0xC06C))
-            getchar();
-
-        ++c;
+        getchar();
 
         code_maps[code].op_func(code);
+        cpu.cycle += code_maps[code].cycle;
+
         addr = PC;
     }
 
