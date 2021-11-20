@@ -1254,16 +1254,10 @@ void BCS_B0(BYTE op)
     WORD old_pc = PC;
     WORD addr = relative_addressing();
 
-    printf("oldPC:%04X, addr:%04X\n", old_pc, addr);
-    printf("------>code:0x%02X, cyc:%d\n", op, code_maps[0xB0].cycle);
-
     if(!test_flag(CARRY)) return;
 
-    //FIXME: 这里不应该直接修改
     //分支如果没有跨页, 则 + 1, 否则 + 2;
     ++cpu.cycle;
-
-    printf("cyc:%d\n", code_maps[op].cycle);
     if((addr >> 8) != (old_pc >> 8)) ++cpu.cycle;
 
     PC = addr;
