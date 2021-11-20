@@ -45,7 +45,7 @@ static BYTE *mem_addr(WORD address, _MEM *mem)
     }
 
     //PRG LOWER
-    if(address >= 0x8000 && address <= 0xC000) {
+    if(address >= 0x8000 && address < 0xC000) {
         address -= 0x8000;
         return &mem->PROG_ROM_LOWER[address];
     }
@@ -56,7 +56,7 @@ static BYTE *mem_addr(WORD address, _MEM *mem)
         return &mem->PROG_ROM_UPPER[address];
     }
 
-    fprintf(stderr, "un expected address:%u\n", address);
+    fprintf(stderr, "un expected address:%04X\n", address);
     exit(-1);
 
     return NULL;
