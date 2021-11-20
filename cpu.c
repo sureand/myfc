@@ -716,6 +716,9 @@ void LSR_4A(BYTE op)
 void JMP_4C(BYTE op)
 {
     WORD addr = absolute_addressing();
+    printf("jump:%04X\n", addr);
+    getchar();
+
     PC = addr;
 }
 
@@ -1943,6 +1946,9 @@ void parse_code()
     BYTE c = 0;
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
+
+    addr = 0xC000;
+    PC = 0xC000;
 
     while(addr) {
         BYTE code = read_byte(addr);
