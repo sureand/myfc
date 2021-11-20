@@ -1943,7 +1943,9 @@ void parse_code()
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
 
-    cpu.P = 24;
+    cpu.P = 0x24;
+    cpu.cycle = 7;
+
     addr = 0xC000;
     PC = 0xC000;
 
@@ -1954,15 +1956,8 @@ void parse_code()
             break;
         }
 
-        printf("PC:%02X, A:%02X, X:%02X, Y:%02X, P:%d, SP:%02X, code:%s_%02X, len:%d, CYC:%zu\n", 
-            cpu.IP, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,
-            code_maps[code].op_name, code, code_maps[code].op_len, cpu.cycle);
-
-        display_reg();
-        display_stack();
-        printf("\n");
-
-        getchar();
+        printf("%04X %02X A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%zu\n", \
+               PC, code, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, cpu.cycle);
 
         code_maps[code].op_func(code);
         cpu.cycle += code_maps[code].cycle;
