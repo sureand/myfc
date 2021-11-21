@@ -94,21 +94,22 @@ static void set_nz(short value)
 
 static void set_carry(short value)
 {
-    if(value <= 0) {
-        clear_flag(CARRY);
+    if(value >= 0x100) {
+        set_flag(CARRY);
         return;
     }
 
-    set_flag(CARRY);
+    clear_flag(CARRY);
 }
 
 static void set_overflow(short value)
 {
-    if(value < 0xFF) {
-        clear_flag(OF);
+    if(value > 127 || value < -128) {
+        set_flag(OF);
         return;
     }
-    set_flag(OF);
+
+    clear_flag(OF);
 }
 
 static void push(BYTE data)
@@ -332,10 +333,11 @@ void ORA_09(BYTE op)
 
 void ASL_0A(BYTE op)
 {
+    if(cpu.A & 0x80) { set_flag(CARRY); } else {clear_flag(CARRY);}
+
     cpu.A <<= 1;
 
     set_nz(cpu.A);
-    set_carry(cpu.A);
 
     ++PC;
 }
@@ -657,7 +659,8 @@ void ROL_3E(BYTE op)
 void RTI_40(BYTE op)
 {
     BYTE bt = pop();
-    cpu.P = bt;
+
+    cpu.P = bt | 0x20;
 
     BYTE addr1 = pop();
     BYTE addr2 = pop();
@@ -721,16 +724,11 @@ void EOR_49(BYTE op)
 
 void LSR_4A(BYTE op)
 {
-    char ret = cpu.A >> 1;
-    clear_flag(NEG);
+    if(cpu.A & 0x1 ) {set_flag(CARRY); }
+    else {clear_flag(CARRY);}
 
-    if(ret == 0) {
-        set_flag(ZERO);
-        clear_flag(CARRY);
-        return;
-    }
-
-    if(ret > 0x7F) set_flag(CARRY);
+    cpu.A >>= 1;
+    set_nz(cpu.A);
 
     ++PC;
 }
@@ -915,21 +913,31 @@ void PLA_68(BYTE op)
 void ADC_69(BYTE op)
 {
     WORD addr = immediate_addressing();
-    char bt = read_byte(addr);
+    BYTE bt = read_byte(addr);
 
     //三目运算要加括号，不然会踩坑
-    short ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
 
     cpu.A = ret & 0xFF;
 
     set_nz(cpu.A);
-    set_carry(ret - 0xFF);
 
-    set_overflow(ret);
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ROR_6A(BYTE op)
 {
+    if(cpu.A & 0x01) {set_flag(CARRY); } else {clear_flag(CARRY);}
+
     cpu.A >>= 1;
 
     ++PC;
@@ -1092,8 +1100,8 @@ void DEY_88(BYTE op)
 
 void TXA_8A(BYTE op)
 {
-    cpu.Y -= 1;
-    set_nz(cpu.Y);
+    cpu.A = cpu.X;
+    set_nz(cpu.A);
 
     ++PC;
 }
@@ -1385,7 +1393,9 @@ void CPY_C0(BYTE op)
     short ret = cpu.Y - bt;
 
     set_nz(ret);
-    set_carry(ret);
+    if(ret >= 0) { set_flag(CARRY); return; }
+
+    clear_flag(CARRY);
 }
 
 void CMP_C1(BYTE op)
@@ -1450,8 +1460,12 @@ void CMP_C9(BYTE op)
 
     set_nz(ret);
 
-    char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+    if(ret >= 0) {
+        set_flag(CARRY); 
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DEX_CA(BYTE op)
@@ -1599,8 +1613,12 @@ void CPX_E0(BYTE op)
 
     set_nz(ret);
 
-    char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+    if(ret >= 0) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void SBC_E1(BYTE op)
@@ -1662,11 +1680,21 @@ void SBC_E9(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret & 0xFF;
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
-    set_nz(ret);
-    set_carry(ret);
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void NOP_EA(BYTE op)
