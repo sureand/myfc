@@ -536,10 +536,21 @@ void AND_29(BYTE op)
 
 void ROL_2A(BYTE op)
 {
+    BYTE or = cpu.A & 0x80;
+
     cpu.A <<= 1;
 
+    if(test_flag(CARRY)) {
+        cpu.A |= 0x01;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
     set_nz(cpu.A);
-    set_carry(cpu.A);
 
     ++PC;
 }
@@ -936,9 +947,20 @@ void ADC_69(BYTE op)
 
 void ROR_6A(BYTE op)
 {
-    if(cpu.A & 0x01) {set_flag(CARRY); } else {clear_flag(CARRY);}
-
+    BYTE or = cpu.A & 0x01;
     cpu.A >>= 1;
+
+    if(test_flag(CARRY)) {
+        cpu.A |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    set_nz(cpu.A);
 
     ++PC;
 }
