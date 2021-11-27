@@ -307,11 +307,22 @@ void ASL_06(BYTE op)
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
 
+    BYTE or = bt & 0x80;
     bt <<= 1;
+
+    //置空第0位
+    bt &= 0xFE;
+
+    //第七位进入进位
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void PHP_08(BYTE op)
@@ -355,11 +366,23 @@ void ASL_0E(BYTE op)
 {
     WORD addr = absolute_addressing();
     char bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
     bt <<= 1;
+
+    //置空第0位
+    bt &= 0xFE;
+
+    //第七位进入进位
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void BPL_10(BYTE op)
@@ -398,11 +421,23 @@ void ASL_16(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
     bt <<= 1;
+
+    //置空第0位
+    bt &= 0xFE;
+
+    //第七位进入进位
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void CLC_18(BYTE op)
@@ -437,12 +472,23 @@ void ASL_1E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
     bt <<= 1;
+
+    //置空第0位
+    bt &= 0xFE;
+
+    //第七位进入进位
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void JSR_20(BYTE op)
@@ -702,19 +748,20 @@ void LSR_46(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
     bt >>= 1;
 
-    clear_flag(NEG);
-
-    if(bt == 0) {
-        set_flag(ZERO);
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
         clear_flag(CARRY);
-        return;
     }
 
-    if(bt > 0x7F) set_flag(CARRY);
+    write_byte(addr, bt);
 
-    ++PC;
+    set_nz(bt);
 }
 
 void PHA_48(BYTE op)
@@ -735,7 +782,7 @@ void EOR_49(BYTE op)
 
 void LSR_4A(BYTE op)
 {
-    if(cpu.A & 0x1 ) {set_flag(CARRY); }
+    if(cpu.A & 0x1 ) { set_flag(CARRY); }
     else {clear_flag(CARRY);}
 
     cpu.A >>= 1;
@@ -764,16 +811,21 @@ void LSR_4E(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
-    bt >>= 1;
-    write_byte(addr, bt);
+    BYTE or = bt & 0x01;
 
-    if(bt == 0) {
-        set_flag(ZERO);
+    bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
         clear_flag(CARRY);
-        return;
     }
 
-    if(bt > 0x7F) set_flag(CARRY);
+    write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void BVC_50(BYTE op)
@@ -811,19 +863,20 @@ void LSR_56(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
     bt >>= 1;
-    write_byte(addr, bt);
 
-    clear_flag(NEG);
-    if(bt == 0) {
-        set_flag(ZERO);
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
         clear_flag(CARRY);
-        return;
     }
 
-    if(bt > 0x7F) set_flag(CARRY);
+    write_byte(addr, bt);
 
-    ++PC;
+    set_nz(bt);
 }
 
 void CLI_58(BYTE op)
@@ -858,16 +911,20 @@ void LSR_5E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
     bt >>= 1;
-    write_byte(addr, bt);
 
-    if(bt == 0) {
-        set_flag(ZERO);
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
         clear_flag(CARRY);
-        return;
     }
 
-    if(bt > 0x7F) set_flag(CARRY);
+    write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void RTS_60(BYTE op)
@@ -1490,7 +1547,13 @@ void CPY_C0(BYTE op)
     short ret = cpu.Y - bt;
 
     set_nz(ret);
-    if(ret >= 0) { set_flag(CARRY); return; }
+
+    char cf = (ret >= 0) ? 1 : 0;
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
 
     clear_flag(CARRY);
 }
@@ -1522,7 +1585,13 @@ void CPY_C4(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CMP_C5(BYTE op)
@@ -1597,7 +1666,13 @@ void CPY_CC(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CMP_CD(BYTE op)
@@ -1748,7 +1823,9 @@ void CPX_E0(BYTE op)
 
     set_nz(ret);
 
-    if(ret >= 0) {
+    char cf = (ret >= 0) ? 1 : 0;
+
+    if(cf) {
         set_flag(CARRY);
         return;
     }
@@ -1782,12 +1859,18 @@ void CPX_E4(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.A - bt;
+    short ret = cpu.X - bt;
 
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void SBC_E5(BYTE op)
@@ -1865,7 +1948,13 @@ void CPX_EC(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void SBC_ED(BYTE op)
