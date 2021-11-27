@@ -253,6 +253,8 @@ static inline WORD indirect_Y_indexed_addressing()
     WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
     PC += 2;
 
+    if( (addr >> 8) != (addr + cpu.Y) >> 8) ++cpu.cycle;
+
     return addr + cpu.Y;
 }
 
@@ -402,8 +404,6 @@ void ORA_11(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A | bt;
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -692,8 +692,6 @@ void AND_31(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A & bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.A);
 }
 
@@ -888,8 +886,6 @@ void EOR_51(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1553,7 +1549,8 @@ void LDA_B1(BYTE op)
     WORD addr = indirect_Y_indexed_addressing();
     cpu.A = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+  //  printf("addr:%04X, PC:%04X\n", addr, PC);
+   // getchar();
 
     set_nz(cpu.A);
 }
@@ -2090,6 +2087,7 @@ void BEQ_F0(BYTE op)
     if(!test_flag(ZERO))  return;
 
     ++cpu.cycle;
+
     if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
@@ -2414,7 +2412,7 @@ void parse_code()
 
     while(addr) {
 
-        if(c == 8992) break;
+       // if(c == 8992) break;
 
         BYTE code = read_byte(addr);
         if(!code_maps[code].op_name) {
