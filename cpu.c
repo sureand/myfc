@@ -228,7 +228,17 @@ static inline WORD indirect_addressing()
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
-    return read_word(addr);
+
+    //这个是6502CPU的Bug
+    if((addr & 0xFF) == 0xFF) {
+        addr = (read_byte(addr & 0xFF00) << 8) + read_byte(addr);
+        return addr;
+    }
+
+    BYTE pc1 = read_byte(addr);
+    BYTE pc2 = read_byte(addr + 1);
+
+    return (pc2 << 8 )| pc1;
 }
 
 // x 变址间接 寻址
@@ -1100,10 +1110,8 @@ void ROR_6A(BYTE op)
 void JMP_6C(BYTE op)
 {
     WORD addr = indirect_addressing();
-    BYTE pc1 = read_byte(addr);
-    BYTE pc2 = read_byte(addr + 1);
 
-    PC = pc2 << 8 | pc1;
+    PC = addr;
 }
 
 void ADC_6D(BYTE op)
@@ -1548,9 +1556,6 @@ void LDA_B1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     cpu.A = read_byte(addr);
-
-  //  printf("addr:%04X, PC:%04X\n", addr, PC);
-   // getchar();
 
     set_nz(cpu.A);
 }
