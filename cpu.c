@@ -554,10 +554,26 @@ void ROL_26(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
+
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+
     set_nz(bt);
-    set_carry(bt);
 }
 
 void PLP_28(BYTE op)
@@ -601,13 +617,28 @@ void ROL_2A(BYTE op)
     ++PC;
 }
 
-//TODO
 void BIT_2C(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    ++PC;
+    BYTE flag = test_bit(bt, 6);
+    if(flag) { set_bit(&cpu.P, 6); } else{
+        clear_bit(&cpu.P, 6);
+    }
+
+    flag = test_bit(bt, 7);
+    if(flag) { set_bit(&cpu.P, 7); } else{
+       clear_bit(&cpu.P, 7);
+    }
+
+    BYTE ret = cpu.A & bt;
+    if(ret == 0) {
+        set_flag(ZERO);
+        return;
+    }
+
+    clear_flag(ZERO);
 }
 
 void AND_2D(BYTE op)
@@ -623,12 +654,25 @@ void ROL_2E(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x80;
 
     bt <<= 1;
+
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
+
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void BMI_30(BYTE op)
@@ -987,9 +1031,22 @@ void ROR_66(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
+
     bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void PLA_68(BYTE op)
@@ -1082,8 +1139,22 @@ void ROR_6E(BYTE op)
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
 
+    BYTE or = bt & 0x01;
     bt >>= 1;
+
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void BVS_70(BYTE op)
@@ -1150,9 +1221,22 @@ void ROR_76(BYTE op)
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
 
+    BYTE or = bt & 0x01;
+
     bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void SEI_78(BYTE op)
@@ -1213,10 +1297,22 @@ void ROR_7E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
+
+    set_nz(bt);
 }
 
 void STA_81(BYTE op)
