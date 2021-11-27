@@ -883,25 +883,47 @@ void ADC_61(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
 
     cpu.A = ret & 0xFF;
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ADC_65(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);;
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
     cpu.A = ret & 0xFF;
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ROR_66(BYTE op)
@@ -979,12 +1001,23 @@ void ADC_6D(BYTE op)
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
 
-    short ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
     cpu.A = ret & 0xFF;
 
-    set_nz(bt);
-    set_carry(ret);
-    set_overflow(ret);
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ROR_6E(BYTE op)
@@ -1011,26 +1044,48 @@ void ADC_71(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short x = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
-    cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
 
-    set_nz(x);
-    set_carry(x);
-    set_overflow(x);
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ADC_75(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short x = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
-    cpu.A = x;
 
-    set_nz(x);
-    set_carry(x);
-    set_overflow(x);
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ROR_76(BYTE op)
@@ -1053,28 +1108,48 @@ void ADC_79(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short x = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
-    cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
 
-    set_nz(x);
-    set_carry(x);
-    set_overflow(x);
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ADC_7D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short x = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
-    cpu.A = x & 0xFF;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
 
-    set_nz(x);
-    set_carry(x);
-    set_overflow(x);
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void ROR_7E(BYTE op)
@@ -1429,7 +1504,13 @@ void CMP_C1(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CPY_C4(BYTE op)
@@ -1453,7 +1534,13 @@ void CMP_C5(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DEC_C6(BYTE op)
@@ -1482,8 +1569,10 @@ void CMP_C9(BYTE op)
 
     set_nz(ret);
 
-    if(ret >= 0) {
-        set_flag(CARRY); 
+    char cf = (ret >= 0) ? 1 : 0;
+
+    if(cf) {
+        set_flag(CARRY);
         return;
     }
 
@@ -1520,7 +1609,13 @@ void CMP_CD(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DEC_CE(BYTE op)
@@ -1550,12 +1645,16 @@ void CMP_D1(BYTE op)
     BYTE bt = read_byte(addr);
     short ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CMP_D5(BYTE op)
@@ -1567,7 +1666,13 @@ void CMP_D5(BYTE op)
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DEC_D6(BYTE op)
@@ -1592,12 +1697,16 @@ void CMP_D9(BYTE op)
     BYTE bt = read_byte(addr);
     short ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CMP_DD(BYTE op)
@@ -1606,12 +1715,16 @@ void CMP_DD(BYTE op)
     BYTE bt = read_byte(addr);
     short ret = cpu.A - bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(ret);
 
     char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DEC_DE(BYTE op)
@@ -1647,13 +1760,22 @@ void SBC_E1(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
 
-    cpu.X = ret & 0xFF;
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CPX_E4(BYTE op)
@@ -1672,12 +1794,21 @@ void SBC_E5(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret & 0xFF;
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void INC_E6(BYTE op)
@@ -1741,12 +1872,21 @@ void SBC_ED(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret & 0xFF;
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void INC_EE(BYTE op)
@@ -1774,13 +1914,21 @@ void SBC_F1(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
     cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
 
-    set_nz(ret);
-    set_carry(ret);
+    clear_flag(CARRY);
     set_overflow(ret);
 }
 
@@ -1788,12 +1936,21 @@ void SBC_F5(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
-    cpu.A = ret & 0xFF;
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void INC_F6(BYTE op)
@@ -1817,28 +1974,42 @@ void SBC_F9(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
     cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    clear_flag(CARRY);
 }
 
 void SBC_FD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-    short ret = cpu.X - bt - (test_flag(CARRY) ? 0 : 1);
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
     cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
 
-    set_nz(ret);
-    set_carry(ret);
-    set_overflow(ret);
+    clear_flag(CARRY);
 }
 
 void INC_FE(BYTE op)
