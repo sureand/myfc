@@ -196,7 +196,9 @@ static inline WORD absolute_Y_indexed_addressing()
     BYTE addr2 = read_byte(PC + 2);
     PC += 3;
 
-    WORD addr = (addr2 >> 8) | addr1;
+    WORD addr = (addr2 << 8) | addr1;
+
+    if((addr >> 8) != ((addr + cpu.Y) >> 8)) ++cpu.cycle;
 
     return (addr + cpu.Y);
 }
@@ -462,8 +464,6 @@ void ORA_19(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A | bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.A);
 }
 
@@ -718,12 +718,26 @@ void ROL_36(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
+
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
+
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void SEC_38(BYTE op)
@@ -737,8 +751,6 @@ void AND_39(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A & bt;
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -758,11 +770,26 @@ void ROL_3E(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
+
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
+
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
+
     write_byte(addr, bt);
 
     set_nz(bt);
-    set_carry(bt);
 }
 
 void RTI_40(BYTE op)
@@ -940,8 +967,6 @@ void EOR_59(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1540,14 +1565,13 @@ void LDX_AE(BYTE op)
 
 void BCS_B0(BYTE op)
 {
-    WORD old_pc = PC;
     WORD addr = relative_addressing();
 
     if(!test_flag(CARRY)) return;
 
     //分支如果没有跨页, 则 + 1, 否则 + 2;
     ++cpu.cycle;
-    if((addr >> 8) != (old_pc >> 8)) ++cpu.cycle;
+    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     PC = addr;
 }
@@ -1595,8 +1619,6 @@ void LDA_B9(BYTE op)
     WORD addr = absolute_Y_indexed_addressing();
     cpu.A = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.A);
 }
 
@@ -1632,8 +1654,6 @@ void LDX_BE(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     cpu.X  = read_byte(addr);
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.X);
 }
@@ -1832,7 +1852,7 @@ void CMP_D1(BYTE op)
 
 void CMP_D5(BYTE op)
 {
-    WORD addr = zero_absolute_addressing();
+    WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     short ret = cpu.A - bt;
 
