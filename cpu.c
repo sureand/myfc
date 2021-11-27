@@ -186,6 +186,8 @@ static inline WORD absolute_X_indexed_addressing()
 
     WORD addr = (addr2 << 8) | addr1;
 
+    if((addr >> 8) != ((addr + cpu.X) >> 8)) ++cpu.cycle;
+
     return (addr + cpu.X);
 }
 
@@ -473,8 +475,6 @@ void ORA_1D(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A | bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.A);
 }
 
@@ -761,8 +761,6 @@ void AND_3D(BYTE op)
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A & bt;
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.A);
 }
 
@@ -976,8 +974,6 @@ void EOR_5D(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
-
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
@@ -1635,8 +1631,6 @@ void LDY_BC(BYTE op)
     WORD addr = absolute_X_indexed_addressing();
     cpu.Y = read_byte(addr);
 
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
-
     set_nz(cpu.Y);
 }
 
@@ -1644,8 +1638,6 @@ void LDA_BD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing();
     cpu.A = read_byte(addr);
-    
-    if((addr >> 8) != (PC >> 8)) ++cpu.cycle;
 
     set_nz(cpu.A);
 }
