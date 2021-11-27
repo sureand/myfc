@@ -92,16 +92,6 @@ static void set_nz(short value)
     clear_flag(ZERO);
 }
 
-static void set_carry(short value)
-{
-    if(value >= 0x100) {
-        set_flag(CARRY);
-        return;
-    }
-
-    clear_flag(CARRY);
-}
-
 static void set_overflow(short value)
 {
     if(value > 127 || value < -128) {
@@ -178,7 +168,7 @@ static inline WORD zero_absolute_addressing()
 }
 
 //绝对 X 变址
-static inline WORD absolute_X_indexed_addressing()
+static inline WORD absolute_X_indexed_addressing(BYTE op)
 {
     BYTE addr1 = read_byte(PC + 1);
     BYTE addr2 = read_byte(PC + 2);
@@ -186,7 +176,8 @@ static inline WORD absolute_X_indexed_addressing()
 
     WORD addr = (addr2 << 8) | addr1;
 
-    if((addr >> 8) != ((addr + cpu.X) >> 8)) ++cpu.cycle;
+    if( code_maps[op].cycle < 5 && (addr >> 8) != ((addr + cpu.X) >> 8) )
+        ++cpu.cycle;
 
     return (addr + cpu.X);
 }
@@ -471,7 +462,7 @@ void ORA_19(BYTE op)
 
 void ORA_1D(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A | bt;
 
@@ -480,7 +471,7 @@ void ORA_1D(BYTE op)
 
 void ASL_1E(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
 
     BYTE or = bt & 0x80;
@@ -757,7 +748,7 @@ void AND_39(BYTE op)
 
 void AND_3D(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A & bt;
 
@@ -766,7 +757,7 @@ void AND_3D(BYTE op)
 
 void ROL_3E(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
 
     BYTE or = bt & 0x80;
@@ -971,7 +962,7 @@ void EOR_59(BYTE op)
 
 void EOR_5D(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     cpu.A = cpu.A ^ bt;
 
@@ -980,7 +971,7 @@ void EOR_5D(BYTE op)
 
 void LSR_5E(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     BYTE or = bt & 0x01;
     bt >>= 1;
@@ -1296,7 +1287,7 @@ void ADC_79(BYTE op)
 
 void ADC_7D(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
 
     //三目运算要加括号，不然会踩坑
@@ -1320,7 +1311,7 @@ void ADC_7D(BYTE op)
 
 void ROR_7E(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     BYTE or = bt & 0x01;
 
@@ -1457,7 +1448,7 @@ void TXS_9A(BYTE op)
 
 void STA_9D(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     write_byte(addr, cpu.A);
 }
 
@@ -1628,7 +1619,7 @@ void TSX_BA(BYTE op)
 
 void LDY_BC(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     cpu.Y = read_byte(addr);
 
     set_nz(cpu.Y);
@@ -1636,7 +1627,7 @@ void LDY_BC(BYTE op)
 
 void LDA_BD(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     cpu.A = read_byte(addr);
 
     set_nz(cpu.A);
@@ -1896,7 +1887,7 @@ void CMP_D9(BYTE op)
 
 void CMP_DD(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     short ret = cpu.A - bt;
 
@@ -1914,15 +1905,13 @@ void CMP_DD(BYTE op)
 
 void DEC_DE(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
-    BYTE bt = read_byte(addr);
-    char ret = cpu.X - bt;
-    cpu.X = ret;
+    WORD addr = absolute_X_indexed_addressing(op);
+    char bt = read_byte(addr);
+    bt -= 1;
 
-    set_nz(ret);
+    write_byte(addr, bt);
 
-    char cf = (ret >= 0) ? 1 : 0;
-    set_carry(cf);
+    set_nz(bt);
 }
 
 void CPX_E0(BYTE op)
@@ -2193,7 +2182,7 @@ void SBC_F9(BYTE op)
 
 void SBC_FD(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
 
@@ -2214,7 +2203,7 @@ void SBC_FD(BYTE op)
 
 void INC_FE(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
     char ret = bt + 1;
     write_byte(addr, ret);
