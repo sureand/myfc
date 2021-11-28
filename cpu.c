@@ -300,6 +300,12 @@ void ORA_01(BYTE op)
     set_nz(cpu.A);
 }
 
+void KIL_02(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void DOP_04(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
@@ -440,6 +446,12 @@ void ORA_11(BYTE op)
     set_nz(cpu.A);
 }
 
+void KIL_12(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void DOP_14(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
@@ -562,6 +574,12 @@ void AND_21(BYTE op)
     cpu.A = cpu.A & bt;
 
     set_nz(cpu.A);
+}
+
+void KIL_22(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void BIT_24(BYTE op)
@@ -757,6 +775,12 @@ void AND_31(BYTE op)
     set_nz(cpu.A);
 }
 
+void KIL_32(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void NOP_34(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
@@ -880,6 +904,12 @@ void EOR_41(BYTE op)
     cpu.A = cpu.A ^ bt;
 
     set_nz(cpu.A);
+}
+
+void KIL_42(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void DOP_44(BYTE op)
@@ -1010,6 +1040,12 @@ void EOR_51(BYTE op)
     set_nz(cpu.A);
 }
 
+void KIL_52(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void DOP_54(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
@@ -1131,6 +1167,12 @@ void ADC_61(BYTE op)
     }
 
     clear_flag(CARRY);
+}
+
+void KIL_62(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void DOP_64(BYTE op)
@@ -1333,6 +1375,12 @@ void ADC_71(BYTE op)
     }
 
     clear_flag(CARRY);
+}
+
+void KIL_72(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void DOP_74(BYTE op)
@@ -1597,6 +1645,12 @@ void STA_91(BYTE op)
     write_byte(addr, cpu.A);
 }
 
+void KIL_92(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void AXA_93(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
@@ -1829,6 +1883,12 @@ void LDA_B1(BYTE op)
     cpu.A = read_byte(addr);
 
     set_nz(cpu.A);
+}
+
+void KIL_B2(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void LAX_B3(BYTE op)
@@ -2201,6 +2261,12 @@ void CMP_D1(BYTE op)
     }
 
     clear_flag(CARRY);
+}
+
+void KIL_D2(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
 }
 
 void DCP_D3(BYTE op)
@@ -2619,6 +2685,12 @@ void SBC_F1(BYTE op)
     set_overflow(ret);
 }
 
+void KIL_F2(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    getchar();
+}
+
 void ISC_F3(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
@@ -2760,6 +2832,7 @@ void init_code()
 {
     op(00, "BRK", 1, 7, BRK_00)
     op(01, "ORA", 2, 6, ORA_01)
+    op(02, "KIL", 1, 0, KIL_02)
     op(04, "DOP", 2, 3, DOP_04)
     op(05, "ORA", 2, 3, ORA_05)
     op(06, "ASL", 2, 5, ASL_06)
@@ -2773,6 +2846,7 @@ void init_code()
 
     op(10, "BPL", 2, 2, BPL_10)
     op(11, "ORA", 2, 5, ORA_11)
+    op(12, "KIL", 1, 0, KIL_12)
     op(14, "DOP", 2, 4, DOP_14)
     op(15, "ORA", 2, 4, ORA_15)
     op(16, "ASL", 2, 6, ASL_16)
@@ -2785,6 +2859,7 @@ void init_code()
 
     op(20, "JSR", 3, 6, JSR_20)
     op(21, "AND", 2, 6, AND_21)
+    op(22, "KIL", 1, 0, KIL_22)
     op(24, "BIT", 2, 3, BIT_24)
     op(25, "AND", 2, 3, AND_25)
     op(26, "ROL", 2, 5, ROL_26)
@@ -2798,6 +2873,7 @@ void init_code()
 
     op(30, "BMI", 2, 2, BMI_30)
     op(31, "AND", 2, 5, AND_31)
+    op(32, "KIL", 1, 0, KIL_32)
     op(34, "DOP", 2, 4, DOP_34)
     op(35, "AND", 2, 4, AND_35)
     op(36, "ROL", 2, 6, ROL_36)
@@ -2810,6 +2886,7 @@ void init_code()
 
     op(40, "RTI", 1, 6, RTI_40)
     op(41, "EOR", 2, 6, EOR_41)
+    op(42, "KIL", 1, 0, KIL_42)
     op(44, "DOP", 2, 3, DOP_44)
     op(45, "EOR", 2, 3, EOR_45)
     op(46, "LSR", 2, 5, LSR_46)
@@ -2823,6 +2900,7 @@ void init_code()
 
     op(50, "BVC", 2, 2, BVC_50)
     op(51, "EOR", 2, 5, EOR_51)
+    op(52, "KIL", 1, 0, KIL_52)
     op(54, "DOP", 2, 4, DOP_54)
     op(55, "EOR", 2, 4, EOR_55)
     op(56, "LSR", 2, 6, LSR_56)
@@ -2835,6 +2913,7 @@ void init_code()
 
     op(60, "RTS", 1, 6, RTS_60)
     op(61, "ADC", 2, 6, ADC_61)
+    op(62, "KIL", 1, 0, KIL_62)
     op(64, "DOP", 2, 3, DOP_64)
     op(65, "ADC", 2, 3, ADC_65)
     op(66, "ROR", 2, 5, ROR_66)
@@ -2848,6 +2927,7 @@ void init_code()
 
     op(70, "BVS", 2, 2, BVS_70)
     op(71, "ADC", 2, 5, ADC_71)
+    op(72, "KIL", 1, 0, KIL_72)
     op(74, "DOP", 2, 4, DOP_74)
     op(75, "ADC", 2, 4, ADC_75)
     op(76, "ROR", 3, 6, ROR_76)
@@ -2876,6 +2956,7 @@ void init_code()
 
     op(90, "BCC", 2, 2, BCC_90)
     op(91, "STA", 2, 6, STA_91)
+    op(92, "KIL", 1, 0, KIL_92)
     op(93, "AXA", 2, 6, AXA_93)
     op(94, "STY", 2, 4, STY_94)
     op(95, "STA", 2, 4, STA_95)
@@ -2906,6 +2987,7 @@ void init_code()
 
     op(B0, "BCS", 2, 2, BCS_B0)
     op(B1, "LDA", 2, 5, LDA_B1)
+    op(B2, "KIL", 1, 0, KIL_B2)
     op(B3, "LAX", 2, 5, LAX_B3)
     op(B4, "LDY", 2, 4, LDY_B4)
     op(B5, "LDA", 2, 4, LDA_B5)
@@ -2938,6 +3020,7 @@ void init_code()
 
     op(D0, "BNE", 2, 2, BNE_D0)
     op(D1, "CMP", 2, 5, CMP_D1)
+    op(D2, "KIL", 1, 0, KIL_D2)
     op(D3, "DCP", 2, 8, DCP_D3) 
     op(D4, "DOP", 2, 4, DOP_D4)
     op(D5, "CMP", 2, 4, CMP_D5)
@@ -2971,6 +3054,7 @@ void init_code()
 
     op(F0, "BEQ", 2, 2, BEQ_F0)
     op(F1, "SBC", 2, 5, SBC_F1)
+    op(F2, "KIL", 1, 0, KIL_F2)
     op(F3, "ISC", 2, 8, ISC_F3)
     op(F4, "DOP", 2, 4, DOP_F4)
     op(F5, "SBC", 2, 4, SBC_F5)
