@@ -1603,7 +1603,12 @@ void LDX_A2(BYTE op)
 void LAX_A3(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void LDY_A4(BYTE op)
@@ -1635,7 +1640,12 @@ void LDX_A6(BYTE op)
 void LAX_A7(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void TAY_A8(BYTE op)
@@ -1688,10 +1698,15 @@ void LDX_AE(BYTE op)
     set_nz(cpu.X);
 }
 
-void LDX_AF(BYTE op)
+void LAX_AF(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void BCS_B0(BYTE op)
@@ -1718,7 +1733,12 @@ void LDA_B1(BYTE op)
 void LAX_B3(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void LDY_B4(BYTE op)
@@ -1748,7 +1768,12 @@ void LDX_B6(BYTE op)
 void LAX_B7(BYTE op)
 {
     WORD addr = zero_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void CLV_B8(BYTE op)
@@ -1800,7 +1825,12 @@ void LDX_BE(BYTE op)
 void LAX_BF(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    cpu.A = bt;
+    cpu.X = bt;
+
+    set_nz(bt);
 }
 
 void CPY_C0(BYTE op)
@@ -2552,7 +2582,7 @@ void init_code()
     op(AC, "LDY", 3, 4, LDY_AC)
     op(AD, "LDA", 3, 4, LDA_AD)
     op(AE, "LDX", 3, 4, LDX_AE)
-    op(AF, "LAX", 3, 4, LDX_AF)
+    op(AF, "LAX", 3, 4, LAX_AF)
 
     op(B0, "BCS", 2, 2, BCS_B0)
     op(B1, "LDA", 2, 5, LDA_B1)
