@@ -300,7 +300,7 @@ void ORA_01(BYTE op)
     set_nz(cpu.A);
 }
 
-void NOP_04(BYTE op)
+void DOP_04(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     (void)addr;
@@ -368,6 +368,19 @@ void ASL_0A(BYTE op)
     ++PC;
 }
 
+void ACC_0B(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    BYTE bt = read_byte(addr);
+
+    char ret = bt & cpu.A;
+    if(ret < 0) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+
+    set_nz(ret);
+}
+
 void NOP_0C(BYTE op)
 {
     WORD addr = absolute_addressing();
@@ -427,7 +440,7 @@ void ORA_11(BYTE op)
     set_nz(cpu.A);
 }
 
-void NOP_14(BYTE op)
+void DOP_14(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
 
@@ -653,6 +666,19 @@ void ROL_2A(BYTE op)
     ++PC;
 }
 
+void ACC_2B(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    BYTE bt = read_byte(addr);
+
+    char ret = bt & cpu.A;
+    if(ret < 0) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+
+    set_nz(ret);
+}
+
 void BIT_2C(BYTE op)
 {
     WORD addr = absolute_addressing();
@@ -856,7 +882,7 @@ void EOR_41(BYTE op)
     set_nz(cpu.A);
 }
 
-void NOP_44(BYTE op)
+void DOP_44(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     (void)addr;
@@ -920,6 +946,13 @@ void LSR_4A(BYTE op)
     ++PC;
 }
 
+void ASR_4B(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    //TODO:
+}
+
 void JMP_4C(BYTE op)
 {
     WORD addr = absolute_addressing();
@@ -977,7 +1010,7 @@ void EOR_51(BYTE op)
     set_nz(cpu.A);
 }
 
-void NOP_54(BYTE op)
+void DOP_54(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     (void)addr;
@@ -1100,7 +1133,7 @@ void ADC_61(BYTE op)
     clear_flag(CARRY);
 }
 
-void NOP_64(BYTE op)
+void DOP_64(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     (void)addr;
@@ -1206,6 +1239,13 @@ void ROR_6A(BYTE op)
     ++PC;
 }
 
+void ARR_6B(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    //TODO:
+}
+
 void JMP_6C(BYTE op)
 {
     WORD addr = indirect_addressing();
@@ -1295,7 +1335,7 @@ void ADC_71(BYTE op)
     clear_flag(CARRY);
 }
 
-void NOP_74(BYTE op)
+void DOP_74(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     (void)addr;
@@ -1436,7 +1476,7 @@ void ROR_7E(BYTE op)
     set_nz(bt);
 }
 
-void NOP_80(BYTE op)
+void DOP_80(BYTE op)
 {
     WORD addr = immediate_addressing();
     PC += 1;
@@ -1448,6 +1488,14 @@ void STA_81(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
     write_byte(addr, cpu.A);
+}
+
+void DOP_82(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+
+    (void)addr;
 }
 
 void AAX_83(BYTE op)
@@ -1492,7 +1540,7 @@ void DEY_88(BYTE op)
     ++PC;
 }
 
-void NOP_89(BYTE op)
+void DOP_89(BYTE op)
 {
     WORD addr = immediate_addressing();
     PC += 1;
@@ -1549,6 +1597,14 @@ void STA_91(BYTE op)
     write_byte(addr, cpu.A);
 }
 
+void AXA_93(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+    
+    //TODO:
+}
+
 void STY_94(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
@@ -1599,6 +1655,14 @@ void STA_9D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
     write_byte(addr, cpu.A);
+}
+
+void AXA_9F(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing(op);
+    (void)addr;
+
+    //TODO:
 }
 
 void LDY_A0(BYTE op)
@@ -1701,6 +1765,14 @@ void TAX_AA(BYTE op)
     set_nz(cpu.X);
 
     ++PC;
+}
+
+void ATX_AB(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+
+    //TODO:
 }
 
 void LDY_AC(BYTE op)
@@ -1900,6 +1972,13 @@ void CMP_C1(BYTE op)
     clear_flag(CARRY);
 }
 
+void DOP_C2(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    (void)addr;
+}
+
 void DCP_C3(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
@@ -1922,6 +2001,9 @@ void DCP_C3(BYTE op)
     BYTE nf = (cf >> 7) & 0x01;
     if(nf) { set_flag(NEG);}
     else { clear_flag(NEG);}
+
+    //TODO:
+
 }
 
 void CPY_C4(BYTE op)
@@ -1981,6 +2063,8 @@ void DCP_C7(BYTE op)
     else {clear_flag(CARRY);}
 
     set_nz(bt);
+    //TODO:
+
 }
 
 void INY_C8(BYTE op)
@@ -2018,6 +2102,15 @@ void DEX_CA(BYTE op)
     set_nz(ret);
 
     ++PC;
+}
+
+void AXS_CB(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    (void)addr;
+
+    //TODO:
 }
 
 void CPY_CC(BYTE op)
@@ -2077,6 +2170,8 @@ void DCP_CF(BYTE op)
     else {clear_flag(CARRY);}
 
     set_nz(bt);
+
+    //TODO:
 }
 
 void BNE_D0(BYTE op)
@@ -2117,9 +2212,11 @@ void DCP_D3(BYTE op)
 
     if(bt >= cpu.A) {set_flag(CARRY);}
     else {clear_flag(CARRY);}
+
+    //TODO:
 }
 
-void NOP_D4(BYTE op)
+void DOP_D4(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     (void)addr;
@@ -2164,6 +2261,7 @@ void DCP_D7(BYTE op)
     else {clear_flag(CARRY);}
 
     set_nz(bt);
+    //TODO:
 }
 
 void CLD_D8(BYTE op)
@@ -2205,6 +2303,8 @@ void DCP_DB(BYTE op)
 
     if(bt >= cpu.A) {set_flag(CARRY);}
     else {clear_flag(CARRY);}
+
+    //TODO:
 }
 
 void TOP_DC(BYTE op)
@@ -2253,6 +2353,8 @@ void DCP_DF(BYTE op)
     else {clear_flag(CARRY);}
 
     set_nz(bt);
+    //TODO:
+
 }
 
 void CPX_E0(BYTE op)
@@ -2295,6 +2397,20 @@ void SBC_E1(BYTE op)
     }
 
     clear_flag(CARRY);
+}
+
+void DOP_E2(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    (void)addr;
+}
+
+void ISC_E3(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void CPX_E4(BYTE op)
@@ -2344,6 +2460,13 @@ void INC_E6(BYTE op)
     write_byte(addr, ret);
 
     set_nz(ret);
+}
+
+void ISC_E7(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void INX_E8(BYTE op)
@@ -2455,6 +2578,13 @@ void INC_EE(BYTE op)
     set_nz(ret);
 }
 
+void ISC_EF(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void BEQ_F0(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -2489,7 +2619,14 @@ void SBC_F1(BYTE op)
     set_overflow(ret);
 }
 
-void NOP_F4(BYTE op)
+void ISC_F3(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
+void DOP_F4(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     (void)addr;
@@ -2526,6 +2663,13 @@ void INC_F6(BYTE op)
     set_nz(ret);
 }
 
+void ISC_F7(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void SED_F8(BYTE op)
 {
     set_flag(DEC);
@@ -2558,6 +2702,14 @@ void NOP_FA(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void ISC_FB(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void TOP_FC(BYTE op)
@@ -2597,23 +2749,31 @@ void INC_FE(BYTE op)
     set_nz(ret);
 }
 
+void ISC_FF(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+    //TODO:
+}
+
 void init_code()
 {
     op(00, "BRK", 1, 7, BRK_00)
     op(01, "ORA", 2, 6, ORA_01)
-    op(04, "NOP", 2, 3, NOP_04)
+    op(04, "DOP", 2, 3, DOP_04)
     op(05, "ORA", 2, 3, ORA_05)
     op(06, "ASL", 2, 5, ASL_06)
     op(08, "PHP", 1, 3, PHP_08)
     op(09, "ORA", 2, 2, ORA_09)
     op(0A, "ASL", 1, 2, ASL_0A)
+    op(0B, "AAC", 2, 2, ACC_0B)
     op(0C, "TOP", 3, 4, NOP_0C)
     op(0D, "ORA", 3, 4, ORA_0D)
     op(0E, "ASL", 3, 6, ASL_0E)
 
     op(10, "BPL", 2, 2, BPL_10)
     op(11, "ORA", 2, 5, ORA_11)
-    op(14, "NOP", 2, 4, NOP_14)
+    op(14, "DOP", 2, 4, DOP_14)
     op(15, "ORA", 2, 4, ORA_15)
     op(16, "ASL", 2, 6, ASL_16)
     op(18, "CLC", 1, 2, CLC_18)
@@ -2631,13 +2791,14 @@ void init_code()
     op(28, "PLP", 1, 4, PLP_28)
     op(29, "AND", 2, 2, AND_29)
     op(2A, "ROL", 1, 2, ROL_2A)
+    op(2B, "ROL", 1, 2, ACC_2B)
     op(2C, "BIT", 3, 4, BIT_2C)
     op(2D, "AND", 3, 4, AND_2D)
     op(2E, "ROL", 3, 6, ROL_2E)
 
     op(30, "BMI", 2, 2, BMI_30)
     op(31, "AND", 2, 5, AND_31)
-    op(34, "NOP", 2, 4, NOP_34)
+    op(34, "DOP", 2, 4, DOP_34)
     op(35, "AND", 2, 4, AND_35)
     op(36, "ROL", 2, 6, ROL_36)
     op(38, "SEC", 1, 2, SEC_38)
@@ -2649,19 +2810,20 @@ void init_code()
 
     op(40, "RTI", 1, 6, RTI_40)
     op(41, "EOR", 2, 6, EOR_41)
-    op(44, "NOP", 2, 3, NOP_44)
+    op(44, "DOP", 2, 3, DOP_44)
     op(45, "EOR", 2, 3, EOR_45)
     op(46, "LSR", 2, 5, LSR_46)
     op(48, "PHA", 1, 3, PHA_48)
     op(49, "EOR", 2, 2, EOR_49)
     op(4A, "LSR", 1, 2, LSR_4A)
+    op(4B, "ASR", 2, 2, ASR_4B)
     op(4C, "JMP", 3, 3, JMP_4C)
     op(4D, "EOR", 3, 4, EOR_4D)
     op(4E, "LSR", 3, 6, LSR_4E)
 
     op(50, "BVC", 2, 2, BVC_50)
     op(51, "EOR", 2, 5, EOR_51)
-    op(54, "NOP", 2, 4, NOP_54)
+    op(54, "DOP", 2, 4, DOP_54)
     op(55, "EOR", 2, 4, EOR_55)
     op(56, "LSR", 2, 6, LSR_56)
     op(58, "CLI", 1, 2, CLI_58)
@@ -2673,19 +2835,20 @@ void init_code()
 
     op(60, "RTS", 1, 6, RTS_60)
     op(61, "ADC", 2, 6, ADC_61)
-    op(64, "NOP", 2, 3, NOP_64)
+    op(64, "DOP", 2, 3, DOP_64)
     op(65, "ADC", 2, 3, ADC_65)
     op(66, "ROR", 2, 5, ROR_66)
     op(68, "PLA", 1, 4, PLA_68)
     op(69, "ADC", 2, 2, ADC_69)
     op(6A, "ROR", 1, 2, ROR_6A)
+    op(6B, "ARR", 2, 2, ARR_6B)
     op(6C, "JMP", 3, 5, JMP_6C)
     op(6D, "ADC", 3, 4, ADC_6D)
     op(6E, "ROR", 3, 6, ROR_6E)
 
     op(70, "BVS", 2, 2, BVS_70)
     op(71, "ADC", 2, 5, ADC_71)
-    op(74, "NOP", 2, 4, NOP_74)
+    op(74, "DOP", 2, 4, DOP_74)
     op(75, "ADC", 2, 4, ADC_75)
     op(76, "ROR", 3, 6, ROR_76)
     op(78, "SEI", 1, 2, SEI_78)
@@ -2695,15 +2858,16 @@ void init_code()
     op(7D, "ADC", 3, 4, ADC_7D)
     op(7E, "ROR", 3, 7, ROR_7E)
 
-    op(80, "NOP", 2, 2, NOP_80)
+    op(80, "DOP", 2, 2, DOP_80)
     op(81, "STA", 2, 6, STA_81)
+    op(82, "DOP", 2, 2, DOP_82)
     op(83, "SAX", 2, 6, AAX_83)
     op(84, "STY", 2, 3, STY_84)
     op(85, "STA", 2, 3, STA_85)
     op(86, "STX", 2, 3, STX_86)
     op(87, "SAX", 2, 3, AAX_87)
     op(88, "DEY", 1, 2, DEY_88)
-    op(89, "NOP", 2, 2, NOP_89)
+    op(89, "DOP", 2, 2, DOP_89)
     op(8A, "TXA", 1, 2, TXA_8A)
     op(8C, "STY", 3, 4, STY_8C)
     op(8D, "STA", 3, 4, STA_8D)
@@ -2712,6 +2876,7 @@ void init_code()
 
     op(90, "BCC", 2, 2, BCC_90)
     op(91, "STA", 2, 6, STA_91)
+    op(93, "AXA", 2, 6, AXA_93)
     op(94, "STY", 2, 4, STY_94)
     op(95, "STA", 2, 4, STA_95)
     op(96, "STX", 2, 4, STX_96)
@@ -2720,6 +2885,7 @@ void init_code()
     op(99, "STA", 3, 5, STA_99)
     op(9A, "TXS", 1, 2, TXS_9A)
     op(9D, "STA", 3, 5, STA_9D)
+    op(9F, "AXA", 3, 5, AXA_9F)
 
     op(A0, "LDY", 2, 2, LDY_A0)
     op(A1, "LDA", 2, 6, LDA_A1)
@@ -2732,6 +2898,7 @@ void init_code()
     op(A8, "TAY", 1, 2, TAY_A8)
     op(A9, "LDA", 2, 2, LDA_A9)
     op(AA, "TAX", 1, 2, TAX_AA)
+    op(AB, "ATX", 2, 2, ATX_AB)
     op(AC, "LDY", 3, 4, LDY_AC)
     op(AD, "LDA", 3, 4, LDA_AD)
     op(AE, "LDX", 3, 4, LDX_AE)
@@ -2754,6 +2921,7 @@ void init_code()
 
     op(C0, "CPY", 2, 2, CPY_C0)
     op(C1, "CMP", 2, 6, CMP_C1)
+    op(C2, "DOP", 2, 2, DOP_C2)
     op(C3, "DCP", 2, 8, DCP_C3)
     op(C4, "CPY", 2, 3, CPY_C4)
     op(C5, "CMP", 2, 3, CMP_C5)
@@ -2762,6 +2930,7 @@ void init_code()
     op(C8, "INY", 1, 2, INY_C8)
     op(C9, "CMP", 2, 2, CMP_C9)
     op(CA, "DEX", 1, 2, DEX_CA)
+    op(CB, "AXS", 2, 2, AXS_CB)
     op(CC, "CPY", 3, 4, CPY_CC)
     op(CD, "CMP", 3, 4, CMP_CD)
     op(CE, "DEC", 3, 6, DEC_CE)
@@ -2770,7 +2939,7 @@ void init_code()
     op(D0, "BNE", 2, 2, BNE_D0)
     op(D1, "CMP", 2, 5, CMP_D1)
     op(D3, "DCP", 2, 8, DCP_D3) 
-    op(D4, "NOP", 2, 4, NOP_D4)
+    op(D4, "DOP", 2, 4, DOP_D4)
     op(D5, "CMP", 2, 4, CMP_D5)
     op(D6, "DEC", 2, 6, DEC_D6)
     op(D7, "DCP", 2, 7, DCP_D7)
@@ -2785,9 +2954,12 @@ void init_code()
 
     op(E0, "CPX", 2, 2, CPX_E0)
     op(E1, "SBC", 2, 6, SBC_E1)
+    op(E2, "DOP", 2, 6, DOP_E2)
+    op(E3, "ISC", 2, 8, ISC_E3)
     op(E4, "CPX", 2, 3, CPX_E4)
     op(E5, "SBC", 2, 3, SBC_E5)
     op(E6, "INC", 2, 5, INC_E6)
+    op(E7, "ISC", 2, 6, ISC_E7)
     op(E8, "INX", 1, 2, INX_E8)
     op(E9, "SBC", 2, 2, SBC_E9)
     op(EA, "NOP", 1, 2, NOP_EA)
@@ -2795,19 +2967,23 @@ void init_code()
     op(EC, "CPX", 3, 4, CPX_EC)
     op(ED, "SBC", 3, 4, SBC_ED)
     op(EE, "INC", 3, 6, INC_EE)
+    op(EF, "ISC", 3, 6, ISC_EF)
 
     op(F0, "BEQ", 2, 2, BEQ_F0)
     op(F1, "SBC", 2, 5, SBC_F1)
-    op(F4, "NOP", 2, 4, NOP_F4)
+    op(F3, "ISC", 2, 8, ISC_F3)
+    op(F4, "DOP", 2, 4, DOP_F4)
     op(F5, "SBC", 2, 4, SBC_F5)
     op(F6, "INC", 2, 6, INC_F6)
+    op(F7, "ISC", 2, 6, ISC_F7) 
     op(F8, "SED", 1, 2, SED_F8)
     op(F9, "SBC", 3, 4, SBC_F9)
     op(FA, "NOP", 1, 2, NOP_FA)
+    op(FB, "ISC", 3, 7, ISC_FB)
     op(FC, "TOP", 3, 4, TOP_FC)
     op(FD, "SBC", 3, 4, SBC_FD)
     op(FE, "INC", 3, 7, INC_FE)
-
+    op(FF, "ISC", 3, 7, ISC_FF)
 }
 
 void init_cpu()
