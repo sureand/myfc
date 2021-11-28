@@ -1600,6 +1600,12 @@ void LDX_A2(BYTE op)
     set_nz(cpu.X);
 }
 
+void LAX_A3(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    (void)addr;
+}
+
 void LDY_A4(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
@@ -1624,6 +1630,12 @@ void LDX_A6(BYTE op)
     cpu.X = read_byte(addr);
 
     set_nz(cpu.X);
+}
+
+void LAX_A7(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
 }
 
 void TAY_A8(BYTE op)
@@ -1676,6 +1688,12 @@ void LDX_AE(BYTE op)
     set_nz(cpu.X);
 }
 
+void LDX_AF(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+}
+
 void BCS_B0(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -1695,6 +1713,12 @@ void LDA_B1(BYTE op)
     cpu.A = read_byte(addr);
 
     set_nz(cpu.A);
+}
+
+void LAX_B3(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
 }
 
 void LDY_B4(BYTE op)
@@ -1719,6 +1743,12 @@ void LDX_B6(BYTE op)
     cpu.X = read_byte(addr);
 
     set_nz(cpu.X);
+}
+
+void LAX_B7(BYTE op)
+{
+    WORD addr = zero_Y_indexed_addressing();
+    (void)addr;
 }
 
 void CLV_B8(BYTE op)
@@ -1765,6 +1795,12 @@ void LDX_BE(BYTE op)
     cpu.X  = read_byte(addr);
 
     set_nz(cpu.X);
+}
+
+void LAX_BF(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
 }
 
 void CPY_C0(BYTE op)
@@ -2505,27 +2541,33 @@ void init_code()
     op(A0, "LDY", 2, 2, LDY_A0)
     op(A1, "LDA", 2, 6, LDA_A1)
     op(A2, "LDX", 2, 2, LDX_A2)
+    op(A3, "LAX", 2, 6, LAX_A3)
     op(A4, "LDY", 2, 3, LDY_A4)
     op(A5, "LDA", 2, 3, LDA_A5)
     op(A6, "LDX", 2, 3, LDX_A6)
+    op(A7, "LAX", 2, 3, LAX_A7)
     op(A8, "TAY", 1, 2, TAY_A8)
     op(A9, "LDA", 2, 2, LDA_A9)
     op(AA, "TAX", 1, 2, TAX_AA)
     op(AC, "LDY", 3, 4, LDY_AC)
     op(AD, "LDA", 3, 4, LDA_AD)
     op(AE, "LDX", 3, 4, LDX_AE)
+    op(AF, "LAX", 3, 4, LDX_AF)
 
     op(B0, "BCS", 2, 2, BCS_B0)
     op(B1, "LDA", 2, 5, LDA_B1)
+    op(B3, "LAX", 2, 5, LAX_B3)
     op(B4, "LDY", 2, 4, LDY_B4)
     op(B5, "LDA", 2, 4, LDA_B5)
     op(B6, "LDX", 2, 4, LDX_B6)
+    op(B7, "LAX", 2, 4, LAX_B7)
     op(B8, "CLV", 1, 2, CLV_B8)
     op(B9, "LDA", 3, 4, LDA_B9)
     op(BA, "TSX", 1, 2, TSX_BA)
     op(BC, "LDY", 3, 4, LDY_BC)
     op(BD, "LDA", 3, 4, LDA_BD)
     op(BE, "LDX", 3, 4, LDX_BE)
+    op(BF, "LAX", 3, 4, LAX_BF)
 
     op(C0, "CPY", 2, 2, CPY_C0)
     op(C1, "CMP", 2, 6, CMP_C1)
