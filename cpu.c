@@ -303,7 +303,17 @@ void ORA_01(BYTE op)
 void KIL_02(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     getchar();
+}
+
+void SLO_03(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_04(BYTE op)
@@ -342,6 +352,13 @@ void ASL_06(BYTE op)
     write_byte(addr, bt);
 
     set_nz(bt);
+}
+
+void SLO_07(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void PHP_08(BYTE op)
@@ -425,6 +442,14 @@ void ASL_0E(BYTE op)
     set_nz(bt);
 }
 
+void SLO_0F(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void BPL_10(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -449,7 +474,16 @@ void ORA_11(BYTE op)
 void KIL_12(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
+}
+
+void SLO_13(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_14(BYTE op)
@@ -491,6 +525,14 @@ void ASL_16(BYTE op)
     set_nz(bt);
 }
 
+void SLO_17(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void CLC_18(BYTE op)
 {
     clear_flag(CARRY);
@@ -510,6 +552,13 @@ void NOP_1A(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void SLO_1B(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void TOP_1C(BYTE op)
@@ -550,6 +599,14 @@ void ASL_1E(BYTE op)
     set_nz(bt);
 }
 
+void SLO_1F(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+
+    //TODO:
+}
+
 void JSR_20(BYTE op)
 {
     WORD cur_pc = PC;
@@ -579,6 +636,7 @@ void AND_21(BYTE op)
 void KIL_22(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
 }
 
@@ -799,6 +857,7 @@ void AND_31(BYTE op)
 void KIL_32(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
 }
 
@@ -809,7 +868,7 @@ void RLA_33(BYTE op)
     //TODO:
 }
 
-void NOP_34(BYTE op)
+void DOP_34(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     (void)addr;
@@ -928,7 +987,7 @@ void ROL_3E(BYTE op)
 
 void RLA_3F(BYTE op)
 {
-    WORD addr = absolute_X_indexed_addressing();
+    WORD addr = absolute_X_indexed_addressing(op);
     (void)addr;
     //TODO:
 }
@@ -958,7 +1017,16 @@ void EOR_41(BYTE op)
 void KIL_42(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
+}
+
+void SRE_43(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_44(BYTE op)
@@ -996,6 +1064,14 @@ void LSR_46(BYTE op)
     set_nz(bt);
 }
 
+void SRE_47(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void PHA_48(BYTE op)
 {
     push(cpu.A);
@@ -1028,6 +1104,8 @@ void LSR_4A(BYTE op)
 void ASR_4B(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     PC += 1;
     //TODO:
 }
@@ -1069,6 +1147,14 @@ void LSR_4E(BYTE op)
     set_nz(bt);
 }
 
+void SRE_4F(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void BVC_50(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -1092,7 +1178,17 @@ void EOR_51(BYTE op)
 void KIL_52(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     getchar();
+}
+
+void SRE_53(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_54(BYTE op)
@@ -1130,6 +1226,14 @@ void LSR_56(BYTE op)
     set_nz(bt);
 }
 
+void SRE_57(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void CLI_58(BYTE op)
 {
     clear_flag(INT);
@@ -1149,6 +1253,14 @@ void NOP_5A(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void SRE_5B(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void TOP_5C(BYTE op)
@@ -1186,6 +1298,14 @@ void LSR_5E(BYTE op)
     set_nz(bt);
 }
 
+void SRE_5F(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+
+    //TODO:
+}
+
 void RTS_60(BYTE op)
 {
     BYTE addr1 = pop();
@@ -1221,7 +1341,17 @@ void ADC_61(BYTE op)
 void KIL_62(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     getchar();
+}
+
+void RRA_63(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_64(BYTE op)
@@ -1274,6 +1404,14 @@ void ROR_66(BYTE op)
     write_byte(addr, bt);
 
     set_nz(bt);
+}
+
+void RRA_67(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void PLA_68(BYTE op)
@@ -1333,6 +1471,8 @@ void ROR_6A(BYTE op)
 void ARR_6B(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     PC += 1;
     //TODO:
 }
@@ -1391,6 +1531,14 @@ void ROR_6E(BYTE op)
     set_nz(bt);
 }
 
+void RRA_6F(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void BVS_70(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -1429,7 +1577,17 @@ void ADC_71(BYTE op)
 void KIL_72(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     getchar();
+}
+
+void RRA_73(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_74(BYTE op)
@@ -1485,6 +1643,14 @@ void ROR_76(BYTE op)
     set_nz(bt);
 }
 
+void RRA_77(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    (void)addr;
+
+    //TODO:
+}
+
 void SEI_78(BYTE op)
 {
     set_flag(INT);
@@ -1519,6 +1685,14 @@ void NOP_7A(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void RRA_7B(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+
+    //TODO:
 }
 
 void TOP_7C(BYTE op)
@@ -1571,6 +1745,14 @@ void ROR_7E(BYTE op)
     write_byte(addr, bt);
 
     set_nz(bt);
+}
+
+void RRA_7F(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+
+    //TODO:
 }
 
 void DOP_80(BYTE op)
@@ -1658,6 +1840,13 @@ void STY_8C(BYTE op)
     write_byte(addr, cpu.Y);
 }
 
+void XAA_8B(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void STA_8D(BYTE op)
 {
     WORD addr = absolute_addressing();
@@ -1697,6 +1886,8 @@ void STA_91(BYTE op)
 void KIL_92(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+
     getchar();
 }
 
@@ -1754,15 +1945,36 @@ void TXS_9A(BYTE op)
     ++PC;
 }
 
+void XAS_9B(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
+void SYA_9C(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+    //TODO:
+}
+
 void STA_9D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
     write_byte(addr, cpu.A);
 }
 
+void SXA_9E(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void AXA_9F(BYTE op)
 {
-    WORD addr = absolute_Y_indexed_addressing(op);
+    WORD addr = absolute_Y_indexed_addressing();
     (void)addr;
 
     //TODO:
@@ -1873,6 +2085,7 @@ void TAX_AA(BYTE op)
 void ATX_AB(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     PC += 1;
 
     //TODO:
@@ -1937,6 +2150,7 @@ void LDA_B1(BYTE op)
 void KIL_B2(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
 }
 
@@ -2322,6 +2536,7 @@ void CMP_D1(BYTE op)
 void KIL_D2(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
 }
 
@@ -2744,6 +2959,7 @@ void SBC_F1(BYTE op)
 void KIL_F2(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
     getchar();
 }
 
