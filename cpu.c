@@ -2286,6 +2286,29 @@ void NOP_EA(BYTE op)
     //do nothing
 }
 
+void SBC_EB(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+
+    BYTE bt = read_byte(addr);
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
+}
+
 void CPX_EC(BYTE op)
 {
     WORD addr = absolute_addressing();
@@ -2664,6 +2687,7 @@ void init_code()
     op(E8, "INX", 1, 2, INX_E8)
     op(E9, "SBC", 2, 2, SBC_E9)
     op(EA, "NOP", 1, 2, NOP_EA)
+    op(EB, "SBC", 2, 2, SBC_EB)
     op(EC, "CPX", 3, 4, CPX_EC)
     op(ED, "SBC", 3, 4, SBC_ED)
     op(EE, "INC", 3, 6, INC_EE)
