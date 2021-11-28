@@ -1450,6 +1450,14 @@ void STA_81(BYTE op)
     write_byte(addr, cpu.A);
 }
 
+void AAX_83(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    BYTE bt = cpu.X & cpu.A;
+
+    write_byte(addr, bt);
+}
+
 void STY_84(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
@@ -1466,6 +1474,13 @@ void STX_86(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     write_byte(addr, cpu.X);
+}
+
+void AAX_87(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    BYTE bt = cpu.X & cpu.A;
+    write_byte(addr, bt);
 }
 
 void DEY_88(BYTE op)
@@ -1510,6 +1525,13 @@ void STX_8E(BYTE op)
     write_byte(addr, cpu.X);
 }
 
+void AAX_8F(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    BYTE bt = cpu.X & cpu.A;
+    write_byte(addr, bt);
+}
+
 void BCC_90(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -1543,6 +1565,13 @@ void STX_96(BYTE op)
 {
     WORD addr = zero_Y_indexed_addressing();
     write_byte(addr, cpu.X);
+}
+
+void AAX_97(BYTE op)
+{
+    WORD addr = zero_Y_indexed_addressing();
+    BYTE bt = cpu.X & cpu.A;
+    write_byte(addr, bt);
 }
 
 void TYA_98(BYTE op)
@@ -2548,21 +2577,25 @@ void init_code()
 
     op(80, "NOP", 2, 2, NOP_80)
     op(81, "STA", 2, 6, STA_81)
+    op(83, "SAX", 2, 6, AAX_83)
     op(84, "STY", 2, 3, STY_84)
     op(85, "STA", 2, 3, STA_85)
     op(86, "STX", 2, 3, STX_86)
+    op(87, "SAX", 2, 3, AAX_87)
     op(88, "DEY", 1, 2, DEY_88)
     op(89, "NOP", 2, 2, NOP_89)
     op(8A, "TXA", 1, 2, TXA_8A)
     op(8C, "STY", 3, 4, STY_8C)
     op(8D, "STA", 3, 4, STA_8D)
     op(8E, "STX", 3, 4, STX_8E)
+    op(8F, "SAX", 3, 4, AAX_8F)
 
     op(90, "BCC", 2, 2, BCC_90)
     op(91, "STA", 2, 6, STA_91)
     op(94, "STY", 2, 4, STY_94)
     op(95, "STA", 2, 4, STA_95)
     op(96, "STX", 2, 4, STX_96)
+    op(97, "SAX", 2, 4, AAX_97)
     op(98, "TYA", 1, 2, TYA_98)
     op(99, "STA", 3, 5, STA_99)
     op(9A, "TXS", 1, 2, TXS_9A)
