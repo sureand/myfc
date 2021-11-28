@@ -487,7 +487,7 @@ void NOP_1A(BYTE op)
     (void)addr;
 }
 
-void NOP_1C(BYTE op)
+void TOP_1C(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
     (void)addr;
@@ -793,6 +793,12 @@ void NOP_3A(BYTE op)
     (void)addr;
 }
 
+void TOP_3C(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+}
+
 void AND_3D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
@@ -1024,6 +1030,12 @@ void EOR_59(BYTE op)
 void NOP_5A(BYTE op)
 {
     WORD addr = immediate_addressing();
+    (void)addr;
+}
+
+void TOP_5C(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
     (void)addr;
 }
 
@@ -1372,6 +1384,12 @@ void NOP_7A(BYTE op)
     (void)addr;
 }
 
+void TOP_7C(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+}
+
 void ADC_7D(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
@@ -1421,6 +1439,8 @@ void ROR_7E(BYTE op)
 void NOP_80(BYTE op)
 {
     WORD addr = immediate_addressing();
+    PC += 1;
+
     (void)addr;
 }
 
@@ -1455,6 +1475,13 @@ void DEY_88(BYTE op)
     set_nz(ret);
 
     ++PC;
+}
+
+void NOP_89(BYTE op)
+{
+    WORD addr = immediate_addressing();
+    PC += 1;
+    (void)addr;
 }
 
 void TXA_8A(BYTE op)
@@ -2001,6 +2028,12 @@ void NOP_DA(BYTE op)
     (void)addr;
 }
 
+void TOP_DC(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+}
+
 void CMP_DD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
@@ -2312,6 +2345,12 @@ void NOP_FA(BYTE op)
     (void)addr;
 }
 
+void TOP_FC(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    (void)addr;
+}
+
 void SBC_FD(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
@@ -2353,7 +2392,7 @@ void init_code()
     op(08, "PHP", 1, 3, PHP_08)
     op(09, "ORA", 2, 2, ORA_09)
     op(0A, "ASL", 1, 2, ASL_0A)
-    op(0C, "NOP", 3, 4, NOP_0C)
+    op(0C, "TOP", 3, 4, NOP_0C)
     op(0D, "ORA", 3, 4, ORA_0D)
     op(0E, "ASL", 3, 6, ASL_0E)
 
@@ -2365,6 +2404,7 @@ void init_code()
     op(18, "CLC", 1, 2, CLC_18)
     op(19, "ORA", 3, 4, ORA_19)
     op(1A, "NOP", 1, 2, NOP_1A)
+    op(1C, "TOP", 3, 4, TOP_1C)
     op(1D, "ORA", 3, 4, ORA_1D)
     op(1E, "ASL", 3, 7, ASL_1E)
 
@@ -2388,6 +2428,7 @@ void init_code()
     op(38, "SEC", 1, 2, SEC_38)
     op(39, "AND", 3, 4, AND_39)
     op(3A, "NOP", 1, 2, NOP_3A)
+    op(3C, "TOP", 3, 4, TOP_3C)
     op(3D, "AND", 3, 4, AND_3D)
     op(3E, "ROL", 3, 7, ROL_3E)
 
@@ -2411,6 +2452,7 @@ void init_code()
     op(58, "CLI", 1, 2, CLI_58)
     op(59, "EOR", 3, 4, EOR_59)
     op(5A, "NOP", 1, 2, NOP_5A)
+    op(5C, "TOP", 3, 4, TOP_5C)
     op(5D, "EOR", 3, 4, EOR_5D)
     op(5E, "LSR", 3, 7, LSR_5E)
 
@@ -2434,6 +2476,7 @@ void init_code()
     op(78, "SEI", 1, 2, SEI_78)
     op(79, "ADC", 3, 4, ADC_79)
     op(7A, "NOP", 1, 2, NOP_7A)
+    op(7C, "TOP", 3, 4, TOP_7C)
     op(7D, "ADC", 3, 4, ADC_7D)
     op(7E, "ROR", 3, 7, ROR_7E)
 
@@ -2443,6 +2486,7 @@ void init_code()
     op(85, "STA", 2, 3, STA_85)
     op(86, "STX", 2, 3, STX_86)
     op(88, "DEY", 1, 2, DEY_88)
+    op(89, "NOP", 2, 2, NOP_89)
     op(8A, "TXA", 1, 2, TXA_8A)
     op(8C, "STY", 3, 4, STY_8C)
     op(8D, "STA", 3, 4, STA_8D)
@@ -2503,6 +2547,7 @@ void init_code()
     op(D8, "CLD", 1, 2, CLD_D8)
     op(D9, "CMP", 3, 4, CMP_D9)
     op(DA, "NOP", 1, 2, NOP_DA)
+    op(DC, "TOP", 3, 4, TOP_DC)
     op(DD, "CMP", 3, 4, CMP_DD)
     op(DE, "DEC", 3, 7, DEC_DE)
 
@@ -2526,6 +2571,7 @@ void init_code()
     op(F8, "SED", 1, 2, SED_F8)
     op(F9, "SBC", 3, 4, SBC_F9)
     op(FA, "NOP", 1, 2, NOP_FA)
+    op(FC, "TOP", 3, 4, TOP_FC)
     op(FD, "SBC", 3, 4, SBC_FD)
     op(FE, "INC", 3, 7, INC_FE)
 
