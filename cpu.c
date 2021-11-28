@@ -1900,6 +1900,30 @@ void CMP_C1(BYTE op)
     clear_flag(CARRY);
 }
 
+void DCP_C3(BYTE op)
+{
+    WORD addr = indexed_X_indirect_addressing();
+    BYTE bt = read_byte(addr);
+    bt -= 1;
+
+    write_byte(addr, bt);
+
+    short cf = cpu.A - bt;
+
+    if(cf >= 0) { set_flag(CARRY); }
+    else {clear_flag(CARRY);}
+
+    if(cf == 0) {
+        set_flag(ZERO);
+        return;
+    }
+
+    clear_flag(ZERO);
+    BYTE nf = (cf >> 7) & 0x01;
+    if(nf) { set_flag(NEG);}
+    else { clear_flag(NEG);}
+}
+
 void CPY_C4(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
@@ -1944,6 +1968,19 @@ void DEC_C6(BYTE op)
     write_byte(addr, ret);
 
     set_nz(ret);
+}
+
+void DCP_C7(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    BYTE bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+
+    set_nz(bt);
 }
 
 void INY_C8(BYTE op)
@@ -2029,6 +2066,19 @@ void DEC_CE(BYTE op)
     set_nz(ret);
 }
 
+void DCP_CF(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    char bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+
+    set_nz(bt);
+}
+
 void BNE_D0(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -2058,6 +2108,16 @@ void CMP_D1(BYTE op)
     clear_flag(CARRY);
 }
 
+void DCP_D3(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    char bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+}
 
 void NOP_D4(BYTE op)
 {
@@ -2093,6 +2153,19 @@ void DEC_D6(BYTE op)
     set_nz(ret);
 }
 
+void DCP_D7(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    char bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
+
+    set_nz(bt);
+}
+
 void CLD_D8(BYTE op)
 {
     ++PC;
@@ -2121,6 +2194,17 @@ void NOP_DA(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void DCP_DB(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    char bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
 }
 
 void TOP_DC(BYTE op)
@@ -2154,6 +2238,19 @@ void DEC_DE(BYTE op)
     bt -= 1;
 
     write_byte(addr, bt);
+
+    set_nz(bt);
+}
+
+void DCP_DF(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing(op);
+    char bt = read_byte(addr);
+    bt -= 1;
+    write_byte(addr, bt);
+
+    if(bt >= cpu.A) {set_flag(CARRY);}
+    else {clear_flag(CARRY);}
 
     set_nz(bt);
 }
@@ -2657,27 +2754,34 @@ void init_code()
 
     op(C0, "CPY", 2, 2, CPY_C0)
     op(C1, "CMP", 2, 6, CMP_C1)
+    op(C3, "DCP", 2, 8, DCP_C3)
     op(C4, "CPY", 2, 3, CPY_C4)
     op(C5, "CMP", 2, 3, CMP_C5)
     op(C6, "DEC", 2, 5, DEC_C6)
+    op(C7, "DCP", 2, 5, DCP_C7)
     op(C8, "INY", 1, 2, INY_C8)
     op(C9, "CMP", 2, 2, CMP_C9)
     op(CA, "DEX", 1, 2, DEX_CA)
     op(CC, "CPY", 3, 4, CPY_CC)
     op(CD, "CMP", 3, 4, CMP_CD)
     op(CE, "DEC", 3, 6, DEC_CE)
+    op(CF, "DCP", 3, 6, DCP_CF)
 
     op(D0, "BNE", 2, 2, BNE_D0)
     op(D1, "CMP", 2, 5, CMP_D1)
+    op(D3, "DCP", 2, 8, DCP_D3) 
     op(D4, "NOP", 2, 4, NOP_D4)
     op(D5, "CMP", 2, 4, CMP_D5)
     op(D6, "DEC", 2, 6, DEC_D6)
+    op(D7, "DCP", 2, 7, DCP_D7)
     op(D8, "CLD", 1, 2, CLD_D8)
     op(D9, "CMP", 3, 4, CMP_D9)
     op(DA, "NOP", 1, 2, NOP_DA)
+    op(DB, "DCP", 1, 2, DCP_DB)
     op(DC, "TOP", 3, 4, TOP_DC)
     op(DD, "CMP", 3, 4, CMP_DD)
     op(DE, "DEC", 3, 7, DEC_DE)
+    op(DF, "DCP", 3, 7, DCP_DF)
 
     op(E0, "CPX", 2, 2, CPX_E0)
     op(E1, "SBC", 2, 6, SBC_E1)
