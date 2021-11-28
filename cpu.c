@@ -582,6 +582,13 @@ void KIL_22(BYTE op)
     getchar();
 }
 
+void RLA_23(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void BIT_24(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
@@ -639,6 +646,13 @@ void ROL_26(BYTE op)
     write_byte(addr, bt);
 
     set_nz(bt);
+}
+
+void RLA_27(BYTE op)
+{
+    WORD addr = zero_absolute_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void PLP_28(BYTE op)
@@ -755,6 +769,13 @@ void ROL_2E(BYTE op)
     set_nz(bt);
 }
 
+void RLA_2F(BYTE op)
+{
+    WORD addr = absolute_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void BMI_30(BYTE op)
 {
     WORD addr = relative_addressing();
@@ -779,6 +800,13 @@ void KIL_32(BYTE op)
 {
     WORD addr = immediate_addressing();
     getchar();
+}
+
+void RLA_33(BYTE op)
+{
+    WORD addr = indirect_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void NOP_34(BYTE op)
@@ -822,6 +850,13 @@ void ROL_36(BYTE op)
     set_nz(bt);
 }
 
+void RLA_37(BYTE op)
+{
+    WORD addr = zero_X_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void SEC_38(BYTE op)
 {
     set_flag(CARRY);
@@ -841,6 +876,13 @@ void NOP_3A(BYTE op)
 {
     WORD addr = immediate_addressing();
     (void)addr;
+}
+
+void RLA_3B(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void TOP_3C(BYTE op)
@@ -882,6 +924,13 @@ void ROL_3E(BYTE op)
     write_byte(addr, bt);
 
     set_nz(bt);
+}
+
+void RLA_3F(BYTE op)
+{
+    WORD addr = absolute_X_indexed_addressing();
+    (void)addr;
+    //TODO:
 }
 
 void RTI_40(BYTE op)
@@ -1959,6 +2008,13 @@ void TSX_BA(BYTE op)
     ++PC;
 }
 
+void LAR_BB(BYTE op)
+{
+    WORD addr = absolute_Y_indexed_addressing();
+    (void)addr;
+    //TODO:
+}
+
 void LDY_BC(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
@@ -2860,9 +2916,11 @@ void init_code()
     op(20, "JSR", 3, 6, JSR_20)
     op(21, "AND", 2, 6, AND_21)
     op(22, "KIL", 1, 0, KIL_22)
+    op(23, "RLA", 2, 8, RLA_23)
     op(24, "BIT", 2, 3, BIT_24)
     op(25, "AND", 2, 3, AND_25)
     op(26, "ROL", 2, 5, ROL_26)
+    op(27, "RLA", 2, 5, RLA_27)
     op(28, "PLP", 1, 4, PLP_28)
     op(29, "AND", 2, 2, AND_29)
     op(2A, "ROL", 1, 2, ROL_2A)
@@ -2870,19 +2928,24 @@ void init_code()
     op(2C, "BIT", 3, 4, BIT_2C)
     op(2D, "AND", 3, 4, AND_2D)
     op(2E, "ROL", 3, 6, ROL_2E)
+    op(2F, "RLA", 3, 6, RLA_2F)
 
     op(30, "BMI", 2, 2, BMI_30)
     op(31, "AND", 2, 5, AND_31)
     op(32, "KIL", 1, 0, KIL_32)
+    op(33, "RLA", 2, 8, RLA_33)
     op(34, "DOP", 2, 4, DOP_34)
     op(35, "AND", 2, 4, AND_35)
     op(36, "ROL", 2, 6, ROL_36)
+    op(37, "RLA", 2, 6, RLA_37)
     op(38, "SEC", 1, 2, SEC_38)
     op(39, "AND", 3, 4, AND_39)
     op(3A, "NOP", 1, 2, NOP_3A)
+    op(3B, "RLA", 3, 7, RLA_3B)
     op(3C, "TOP", 3, 4, TOP_3C)
     op(3D, "AND", 3, 4, AND_3D)
     op(3E, "ROL", 3, 7, ROL_3E)
+    op(3F, "RLA", 3, 7, RLA_3F)
 
     op(40, "RTI", 1, 6, RTI_40)
     op(41, "EOR", 2, 6, EOR_41)
@@ -2996,6 +3059,7 @@ void init_code()
     op(B8, "CLV", 1, 2, CLV_B8)
     op(B9, "LDA", 3, 4, LDA_B9)
     op(BA, "TSX", 1, 2, TSX_BA)
+    op(BB, "LAR", 3, 4, LAR_BB)
     op(BC, "LDY", 3, 4, LDY_BC)
     op(BD, "LDA", 3, 4, LDA_BD)
     op(BE, "LDX", 3, 4, LDX_BE)
