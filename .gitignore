@@ -1,0 +1,11 @@
+cpu.o
+fc
+load_rom.o
+main.o
+disasm.o
+memory.o
+tags
+t1.log
+t1.log
+*.o
+*.log
