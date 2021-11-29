@@ -49,7 +49,7 @@ void display_reg()
     int inter_flag = test_flag(INT);
     int zero_flag = test_flag(ZERO);
     int carry_flag = test_flag(CARRY);
-    printf("NEG:[%d], OF:[%d], EX:[%d], BRK:[%d], DEC:[%d], INT:[%d], ZERO:[%d], CARRY:[%d] \n", 
+    printf("NEG:[%d], OF:[%d], EX:[%d], BRK:[%d], DEC:[%d], INT:[%d], ZERO:[%d], CARRY:[%d] \n",
         neg_flag, of_flag, ex_flag, brk_flag, dec_flag, inter_flag, zero_flag, carry_flag);
 }
 
@@ -88,7 +88,7 @@ static void set_nz(short value)
     }
 
     //负数 打上负数标记和清空 0 标记
-    set_flag(NEG);    
+    set_flag(NEG);
     clear_flag(ZERO);
 }
 
@@ -1895,7 +1895,7 @@ void AXA_93(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     (void)addr;
-    
+
     //TODO:
 }
 
@@ -3326,7 +3326,7 @@ void init_code()
     op(D0, "BNE", 2, 2, BNE_D0)
     op(D1, "CMP", 2, 5, CMP_D1)
     op(D2, "KIL", 1, 0, KIL_D2)
-    op(D3, "DCP", 2, 8, DCP_D3) 
+    op(D3, "DCP", 2, 8, DCP_D3)
     op(D4, "DOP", 2, 4, DOP_D4)
     op(D5, "CMP", 2, 4, CMP_D5)
     op(D6, "DEC", 2, 6, DEC_D6)
@@ -3364,7 +3364,7 @@ void init_code()
     op(F4, "DOP", 2, 4, DOP_F4)
     op(F5, "SBC", 2, 4, SBC_F5)
     op(F6, "INC", 2, 6, INC_F6)
-    op(F7, "ISC", 2, 6, ISC_F7) 
+    op(F7, "ISC", 2, 6, ISC_F7)
     op(F8, "SED", 1, 2, SED_F8)
     op(F9, "SBC", 3, 4, SBC_F9)
     op(FA, "NOP", 1, 2, NOP_FA)
@@ -3390,7 +3390,7 @@ void read_code(WORD addr)
     BYTE op = read_byte(addr);
 
     printf("code[%s]\n", code_maps[op].op_name);
-    //cpu->X = 
+    //cpu->X =
 }
 
 void parse_code()
