@@ -9,3 +9,5 @@ t1.log
 t1.log
 *.o
 *.log
+nt.log
+nestest.log

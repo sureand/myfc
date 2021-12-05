@@ -311,9 +311,19 @@ void KIL_02(BYTE op)
 void SLO_03(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void DOP_04(BYTE op)
@@ -357,8 +367,19 @@ void ASL_06(BYTE op)
 void SLO_07(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void PHP_08(BYTE op)
@@ -445,9 +466,19 @@ void ASL_0E(BYTE op)
 void SLO_0F(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void BPL_10(BYTE op)
@@ -481,9 +512,19 @@ void KIL_12(BYTE op)
 void SLO_13(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void DOP_14(BYTE op)
@@ -528,9 +569,19 @@ void ASL_16(BYTE op)
 void SLO_17(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void CLC_18(BYTE op)
@@ -557,8 +608,19 @@ void NOP_1A(BYTE op)
 void SLO_1B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void TOP_1C(BYTE op)
@@ -602,9 +664,19 @@ void ASL_1E(BYTE op)
 void SLO_1F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt <<= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A |= bt;
+    set_nz(cpu.A);
 }
 
 void JSR_20(BYTE op)
