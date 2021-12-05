@@ -2715,10 +2715,9 @@ void DEX_CA(BYTE op)
 void AXS_CB(BYTE op)
 {
     WORD addr = immediate_addressing();
-    PC += 1;
-    (void)addr;
+    write_byte(addr, cpu.X & cpu.A);
 
-    //TODO:
+    PC += 1;
 }
 
 void CPY_CC(BYTE op)
@@ -3024,8 +3023,25 @@ void DOP_E2(BYTE op)
 void ISC_E3(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CPX_E4(BYTE op)
@@ -3080,8 +3096,25 @@ void INC_E6(BYTE op)
 void ISC_E7(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void INX_E8(BYTE op)
@@ -3196,8 +3229,25 @@ void INC_EE(BYTE op)
 void ISC_EF(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void BEQ_F0(BYTE op)
@@ -3244,8 +3294,25 @@ void KIL_F2(BYTE op)
 void ISC_F3(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DOP_F4(BYTE op)
@@ -3288,8 +3355,25 @@ void INC_F6(BYTE op)
 void ISC_F7(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void SED_F8(BYTE op)
@@ -3329,9 +3413,25 @@ void NOP_FA(BYTE op)
 void ISC_FB(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
 
-    //TODO:
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void TOP_FC(BYTE op)
@@ -3374,8 +3474,25 @@ void INC_FE(BYTE op)
 void ISC_FF(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt += 1;
+    write_byte(addr, bt);
+
+    WORD ret = cpu.A - bt - (test_flag(CARRY) ? 0 : 1);
+
+    BYTE of = (cpu.A ^ bt) & (cpu.A ^ ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    cpu.A = ret & 0xFF;
+    set_nz(cpu.A);
+
+    BYTE cf = ret >> 8;
+    if(!cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void init_code()
