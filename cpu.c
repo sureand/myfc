@@ -1207,10 +1207,20 @@ void KIL_42(BYTE op)
 
 void SRE_43(BYTE op)
 {
-    WORD addr = indexed_X_indirect_addressing();
-    (void)addr;
+    WORD addr = zero_absolute_addressing();
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void DOP_44(BYTE op)
@@ -1251,9 +1261,19 @@ void LSR_46(BYTE op)
 void SRE_47(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void PHA_48(BYTE op)
@@ -1334,9 +1354,19 @@ void LSR_4E(BYTE op)
 void SRE_4F(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void BVC_50(BYTE op)
@@ -1370,9 +1400,19 @@ void KIL_52(BYTE op)
 void SRE_53(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void DOP_54(BYTE op)
@@ -1413,9 +1453,19 @@ void LSR_56(BYTE op)
 void SRE_57(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void CLI_58(BYTE op)
@@ -1436,15 +1486,36 @@ void EOR_59(BYTE op)
 void NOP_5A(BYTE op)
 {
     WORD addr = immediate_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    BYTE cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
 }
 
 void SRE_5B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void TOP_5C(BYTE op)
@@ -1485,9 +1556,19 @@ void LSR_5E(BYTE op)
 void SRE_5F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    BYTE cf = bt & 0x01;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    bt >>= 1;
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A ^= bt;
+    set_nz(cpu.A);
 }
 
 void RTS_60(BYTE op)
