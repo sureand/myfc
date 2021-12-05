@@ -714,21 +714,27 @@ void KIL_22(BYTE op)
 
 void RLA_23(BYTE op)
 {
-    WORD addr = absolute_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -798,19 +804,25 @@ void RLA_27(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -935,19 +947,25 @@ void RLA_2F(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -985,19 +1003,25 @@ void RLA_33(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -1049,19 +1073,25 @@ void RLA_37(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -1093,19 +1123,25 @@ void RLA_3B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -1157,19 +1193,25 @@ void RLA_3F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
+
+    BYTE or = bt & 0x80;
+
     bt <<= 1;
 
-    //把进位移入零位
-    BYTE cf = test_flag(CARRY);
-    bt |= cf;
+    if(test_flag(CARRY)) {
+        bt |= 0x01;
+    } else {
+        bt |= 0x00;
+    }
 
-    //把第八位移入进位
-    cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    if(or) {
+        set_flag(CARRY);
+    }else {
+        clear_flag(CARRY);
+    }
 
-    //回写数据
     write_byte(addr, bt);
+
     set_nz(bt);
 
     cpu.A &= bt;
@@ -3814,7 +3856,7 @@ void init_code()
     op(30, "BMI", 2, 2, BMI_30)
     op(31, "AND", 2, 5, AND_31)
     op(32, "KIL", 1, 0, KIL_32)
-    op(33, "RLA", 2, 8, RLA_33)
+    op(33, "RLA", 2, 7, RLA_33)
     op(34, "DOP", 2, 4, DOP_34)
     op(35, "AND", 2, 4, AND_35)
     op(36, "ROL", 2, 6, ROL_36)
@@ -3822,7 +3864,7 @@ void init_code()
     op(38, "SEC", 1, 2, SEC_38)
     op(39, "AND", 3, 4, AND_39)
     op(3A, "NOP", 1, 2, NOP_3A)
-    op(3B, "RLA", 3, 7, RLA_3B)
+    op(3B, "RLA", 3, 6, RLA_3B)
     op(3C, "TOP", 3, 4, TOP_3C)
     op(3D, "AND", 3, 4, AND_3D)
     op(3E, "ROL", 3, 7, ROL_3E)
