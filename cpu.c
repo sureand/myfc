@@ -1308,10 +1308,19 @@ void LSR_4A(BYTE op)
 void ASR_4B(BYTE op)
 {
     WORD addr = immediate_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+
+    bt &= cpu.A;
+    set_nz(bt);
+
+    write_byte(addr, bt);
+    cpu.A >>= 1;
+
+    set_nz(cpu.A);
+
+    //TODO:
 
     PC += 1;
-    //TODO:
 }
 
 void JMP_4C(BYTE op)
@@ -2159,9 +2168,10 @@ void KIL_92(BYTE op)
 void AXA_93(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
 
-    //TODO:
+    cpu.X &= cpu.A;
+    BYTE ret = cpu.X & 0x07;
+    write_byte(addr, ret);
 }
 
 void STY_94(BYTE op)
@@ -2240,9 +2250,10 @@ void SXA_9E(BYTE op)
 void AXA_9F(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
 
-    //TODO:
+    cpu.X &= cpu.A;
+    BYTE ret = cpu.X & 0x07;
+    write_byte(addr, ret);
 }
 
 void LDY_A0(BYTE op)
@@ -2350,10 +2361,12 @@ void TAX_AA(BYTE op)
 void ATX_AB(BYTE op)
 {
     WORD addr = immediate_addressing();
-    (void)addr;
-    PC += 1;
+    BYTE bt = read_byte(addr);
 
-    //TODO:
+    cpu.A &= bt;
+    cpu.X = cpu.A;
+
+    PC += 1;
 }
 
 void LDY_AC(BYTE op)
