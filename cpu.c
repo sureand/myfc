@@ -1495,18 +1495,7 @@ void EOR_59(BYTE op)
 void NOP_5A(BYTE op)
 {
     WORD addr = immediate_addressing();
-    BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x80;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
-
-    bt >>= 1;
-
-    write_byte(addr, bt);
-    set_nz(bt);
-
-    cpu.A ^= bt;
+    (void)addr;
 }
 
 void SRE_5B(BYTE op)
@@ -2802,6 +2791,7 @@ void DOP_C2(BYTE op)
     WORD addr = immediate_addressing();
     PC += 1;
     (void)addr;
+    //TODO:
 }
 
 void DCP_C3(BYTE op)
@@ -2826,9 +2816,6 @@ void DCP_C3(BYTE op)
     BYTE nf = (cf >> 7) & 0x01;
     if(nf) { set_flag(NEG);}
     else { clear_flag(NEG);}
-
-    //TODO:
-
 }
 
 void CPY_C4(BYTE op)
