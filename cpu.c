@@ -2798,24 +2798,24 @@ void DCP_C3(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
-    bt -= 1;
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    write_byte(addr, bt);
+    short sr = (WORD)cpu.A - ret;
 
-    short cf = cpu.A - bt;
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
 
-    if(cf >= 0) { set_flag(CARRY); }
-    else {clear_flag(CARRY);}
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
 
-    if(cf == 0) {
-        set_flag(ZERO);
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
         return;
     }
 
-    clear_flag(ZERO);
-    BYTE nf = (cf >> 7) & 0x01;
-    if(nf) { set_flag(NEG);}
-    else { clear_flag(NEG);}
+    clear_flag(CARRY);
 }
 
 void CPY_C4(BYTE op)
@@ -2868,15 +2868,24 @@ void DCP_C7(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
     BYTE bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    set_nz(bt);
-    //TODO:
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
 
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void INY_C8(BYTE op)
@@ -2973,16 +2982,25 @@ void DEC_CE(BYTE op)
 void DCP_CF(BYTE op)
 {
     WORD addr = absolute_addressing();
-    char bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    BYTE bt = read_byte(addr);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    set_nz(bt);
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
 
-    //TODO:
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void BNE_D0(BYTE op)
@@ -3024,14 +3042,25 @@ void KIL_D2(BYTE op)
 void DCP_D3(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    char bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    BYTE bt = read_byte(addr);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    //TODO:
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
+
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DOP_D4(BYTE op)
@@ -3071,15 +3100,25 @@ void DEC_D6(BYTE op)
 void DCP_D7(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    char bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    BYTE bt = read_byte(addr);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    set_nz(bt);
-    //TODO:
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
+
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CLD_D8(BYTE op)
@@ -3115,14 +3154,25 @@ void NOP_DA(BYTE op)
 void DCP_DB(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    char bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    BYTE bt = read_byte(addr);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    //TODO:
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
+
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void TOP_DC(BYTE op)
@@ -3163,16 +3213,25 @@ void DEC_DE(BYTE op)
 void DCP_DF(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    char bt = read_byte(addr);
-    bt -= 1;
-    write_byte(addr, bt);
+    BYTE bt = read_byte(addr);
+    char ret = bt - 1;
+    write_byte(addr, ret);
+    set_nz(ret);
 
-    if(bt >= cpu.A) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    short sr = (WORD)cpu.A - ret;
 
-    set_nz(bt);
-    //TODO:
+    if((sr & 0xFF) == 0) { set_flag(ZERO); }
+    else { clear_flag(ZERO); }
 
+    if((sr >> 0x07) & 0x01) { set_flag(NEG); }
+    else { clear_flag(NEG); }
+
+    if(cpu.A >= (sr & 0xFF)) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void CPX_E0(BYTE op)
@@ -3925,15 +3984,15 @@ void init_code()
     op(D0, "BNE", 2, 2, BNE_D0)
     op(D1, "CMP", 2, 5, CMP_D1)
     op(D2, "KIL", 1, 0, KIL_D2)
-    op(D3, "DCP", 2, 8, DCP_D3)
+    op(D3, "DCP", 2, 7, DCP_D3)
     op(D4, "DOP", 2, 4, DOP_D4)
     op(D5, "CMP", 2, 4, CMP_D5)
     op(D6, "DEC", 2, 6, DEC_D6)
-    op(D7, "DCP", 2, 7, DCP_D7)
+    op(D7, "DCP", 2, 6, DCP_D7)
     op(D8, "CLD", 1, 2, CLD_D8)
     op(D9, "CMP", 3, 4, CMP_D9)
     op(DA, "NOP", 1, 2, NOP_DA)
-    op(DB, "DCP", 1, 2, DCP_DB)
+    op(DB, "DCP", 1, 6, DCP_DB)
     op(DC, "TOP", 3, 4, TOP_DC)
     op(DD, "CMP", 3, 4, CMP_DD)
     op(DE, "DEC", 3, 7, DEC_DE)
