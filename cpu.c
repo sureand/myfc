@@ -1356,16 +1356,22 @@ void ASR_4B(BYTE op)
 {
     WORD addr = immediate_addressing();
     BYTE bt = read_byte(addr);
-
-    bt &= cpu.A;
-    set_nz(bt);
-
-    write_byte(addr, bt);
-    cpu.A >>= 1;
-
+    cpu.A = cpu.A & bt;
     set_nz(cpu.A);
 
-    //TODO:
+    BYTE or = bt & 0x01;
+    bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
 
     PC += 1;
 }
@@ -1868,10 +1874,29 @@ void ROR_6A(BYTE op)
 void ARR_6B(BYTE op)
 {
     WORD addr = immediate_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    cpu.A = cpu.A & bt;
+
+    set_nz(cpu.A);
+
+    BYTE or = bt & 0x01;
+    bt >>= 1;
+
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+
+    set_nz(bt);
 
     PC += 1;
-    //TODO:
 }
 
 void JMP_6C(BYTE op)
@@ -2395,8 +2420,12 @@ void STY_8C(BYTE op)
 void XAA_8B(BYTE op)
 {
     WORD addr = immediate_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
+
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
 }
 
 void STA_8D(BYTE op)
@@ -2501,15 +2530,23 @@ void TXS_9A(BYTE op)
 void XAS_9B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
+
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
 }
 
 void SYA_9C(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
+
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
 }
 
 void STA_9D(BYTE op)
@@ -2521,8 +2558,12 @@ void STA_9D(BYTE op)
 void SXA_9E(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
+
+    cpu.A = cpu.A & bt;
+    set_nz(cpu.A);
 }
 
 void AXA_9F(BYTE op)
@@ -2781,8 +2822,12 @@ void TSX_BA(BYTE op)
 void LAR_BB(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    cpu.A = read_byte(addr);
+    set_nz(cpu.A);
+
+    cpu.X = cpu.SP;
+    set_nz(cpu.X);
+    ++PC;
 }
 
 void LDY_BC(BYTE op)
@@ -2861,9 +2906,7 @@ void CMP_C1(BYTE op)
 void DOP_C2(BYTE op)
 {
     WORD addr = immediate_addressing();
-    PC += 1;
     (void)addr;
-    //TODO:
 }
 
 void DCP_C3(BYTE op)
