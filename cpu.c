@@ -1623,9 +1623,40 @@ void KIL_62(BYTE op)
 void RRA_63(BYTE op)
 {
     WORD addr = indexed_X_indirect_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DOP_64(BYTE op)
@@ -1683,9 +1714,40 @@ void ROR_66(BYTE op)
 void RRA_67(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void PLA_68(BYTE op)
@@ -1808,9 +1870,40 @@ void ROR_6E(BYTE op)
 void RRA_6F(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void BVS_70(BYTE op)
@@ -1859,9 +1952,40 @@ void KIL_72(BYTE op)
 void RRA_73(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DOP_74(BYTE op)
@@ -1920,9 +2044,40 @@ void ROR_76(BYTE op)
 void RRA_77(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void SEI_78(BYTE op)
@@ -1964,9 +2119,40 @@ void NOP_7A(BYTE op)
 void RRA_7B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void TOP_7C(BYTE op)
@@ -2024,9 +2210,40 @@ void ROR_7E(BYTE op)
 void RRA_7F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
+    BYTE bt = read_byte(addr);
+    BYTE or = bt & 0x01;
 
-    //TODO:
+    bt >>= 1;
+    if(test_flag(CARRY)) {
+        bt |= 0x80;
+    }
+
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
+
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    //三目运算要加括号，不然会踩坑
+    WORD ret = cpu.A + bt + (test_flag(CARRY) ? 1 : 0);
+
+    cpu.A = ret & 0xFF;
+
+    set_nz(cpu.A);
+
+    BYTE of = (bt ^ ret) & (cpu.A & ret) & 0x80;
+    if(of) { set_flag(OF); } else { clear_flag(OF); }
+
+    BYTE cf = ret >> 8;
+    if(cf) {
+        set_flag(CARRY);
+        return;
+    }
+
+    clear_flag(CARRY);
 }
 
 void DOP_80(BYTE op)
