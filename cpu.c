@@ -715,8 +715,24 @@ void KIL_22(BYTE op)
 void RLA_23(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void BIT_24(BYTE op)
@@ -781,8 +797,24 @@ void ROL_26(BYTE op)
 void RLA_27(BYTE op)
 {
     WORD addr = zero_absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void PLP_28(BYTE op)
@@ -902,8 +934,24 @@ void ROL_2E(BYTE op)
 void RLA_2F(BYTE op)
 {
     WORD addr = absolute_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void BMI_30(BYTE op)
@@ -936,8 +984,24 @@ void KIL_32(BYTE op)
 void RLA_33(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void DOP_34(BYTE op)
@@ -984,8 +1048,24 @@ void ROL_36(BYTE op)
 void RLA_37(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void SEC_38(BYTE op)
@@ -1012,8 +1092,24 @@ void NOP_3A(BYTE op)
 void RLA_3B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void TOP_3C(BYTE op)
@@ -1060,8 +1156,24 @@ void ROL_3E(BYTE op)
 void RLA_3F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
-    (void)addr;
-    //TODO:
+    BYTE bt = read_byte(addr);
+    bt <<= 1;
+
+    //把进位移入零位
+    BYTE cf = test_flag(CARRY);
+    bt |= cf;
+
+    //把第八位移入进位
+    cf = bt & 0x80;
+    if(cf) { set_flag(CARRY); }
+    else { clear_flag(CARRY); }
+
+    //回写数据
+    write_byte(addr, bt);
+    set_nz(bt);
+
+    cpu.A &= bt;
+    set_nz(cpu.A);
 }
 
 void RTI_40(BYTE op)
