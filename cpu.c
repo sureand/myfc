@@ -1249,14 +1249,19 @@ void KIL_42(BYTE op)
 
 void SRE_43(BYTE op)
 {
-    WORD addr = zero_absolute_addressing();
+    WORD addr = indexed_X_indirect_addressing();
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -1406,12 +1411,17 @@ void SRE_4F(BYTE op)
 {
     WORD addr = absolute_addressing();
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -1452,12 +1462,17 @@ void SRE_53(BYTE op)
 {
     WORD addr = indirect_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -1505,12 +1520,17 @@ void SRE_57(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -1544,12 +1564,17 @@ void SRE_5B(BYTE op)
 {
     WORD addr = absolute_Y_indexed_addressing();
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -1597,12 +1622,17 @@ void SRE_5F(BYTE op)
 {
     WORD addr = absolute_X_indexed_addressing(op);
     BYTE bt = read_byte(addr);
-
-    BYTE cf = bt & 0x01;
-    if(cf) { set_flag(CARRY); }
-    else { clear_flag(CARRY); }
+    BYTE or = bt & 0x01;
 
     bt >>= 1;
+
+    //置空第七位
+    bt &= 0x7F;
+    if(or)  {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 
     write_byte(addr, bt);
     set_nz(bt);
@@ -3885,12 +3915,12 @@ void init_code()
     op(4C, "JMP", 3, 3, JMP_4C)
     op(4D, "EOR", 3, 4, EOR_4D)
     op(4E, "LSR", 3, 6, LSR_4E)
-    op(4F, "SRE", 3, 7, SRE_4F)
+    op(4F, "SRE", 3, 6, SRE_4F)
 
     op(50, "BVC", 2, 2, BVC_50)
     op(51, "EOR", 2, 5, EOR_51)
     op(52, "KIL", 1, 0, KIL_52)
-    op(53, "SRE", 2, 8, SRE_53)
+    op(53, "SRE", 2, 7, SRE_53)
     op(54, "DOP", 2, 4, DOP_54)
     op(55, "EOR", 2, 4, EOR_55)
     op(56, "LSR", 2, 6, LSR_56)
@@ -3898,7 +3928,7 @@ void init_code()
     op(58, "CLI", 1, 2, CLI_58)
     op(59, "EOR", 3, 4, EOR_59)
     op(5A, "NOP", 1, 2, NOP_5A)
-    op(5B, "SRE", 3, 7, SRE_5B)
+    op(5B, "SRE", 3, 6, SRE_5B)
     op(5C, "TOP", 3, 4, TOP_5C)
     op(5D, "EOR", 3, 4, EOR_5D)
     op(5E, "LSR", 3, 7, LSR_5E)
