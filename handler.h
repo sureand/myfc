@@ -25,7 +25,7 @@ void handler_SRE(WORD addr);
 void handler_RRA(WORD addr);
 void handler_RLA(WORD addr);
 void handler_ARR(WORD addr);
-void handler_ACC(WORD addr);
+void handler_AAC(WORD addr);
 void handler_BIT(WORD addr);
 void handler_JSR(WORD address);
 void handler_BRK(WORD addr);

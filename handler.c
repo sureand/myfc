@@ -477,98 +477,26 @@ void handler_SRE(WORD addr)
 
 void handler_RRA(WORD addr)
 {
-    WORD value = read_byte(addr);
+   handler_ROR(addr);
 
-    BYTE or = value & 0x01;
-
-    value >>= 1;
-    if(test_flag(CARRY)) {
-        value |= 0x80;
-    }
-
-    if(or)  {
-        set_flag(CARRY);
-    } else {
-        clear_flag(CARRY);
-    }
-
-    write_byte(addr, value);
-    set_nz(value);
-
-    //三目运算要加括号，不然会踩坑
-    WORD ret = cpu.A + value + (test_flag(CARRY) ? 1 : 0);
-
-    cpu.A = ret & 0xFF;
-
-    set_nz(cpu.A);
-
-    BYTE of = (value ^ ret) & (cpu.A & ret) & 0x80;
-    if(of) { set_flag(OF); } else { clear_flag(OF); }
-
-    BYTE cf = ret >> 8;
-    if(cf) {
-        set_flag(CARRY);
-        return;
-    }
-
-    clear_flag(CARRY);
+   handler_ADC(addr);
 }
 
 void handler_RLA(WORD addr)
 {
-    BYTE value = read_byte(addr);
+    handler_ROL(addr);
 
-    BYTE or = value & 0x80;
-
-    value <<= 1;
-
-    if(test_flag(CARRY)) {
-        value |= 0x01;
-    } else {
-        value |= 0x00;
-    }
-
-    if(or) {
-        set_flag(CARRY);
-    }else {
-        clear_flag(CARRY);
-    }
-
-    write_byte(addr, value);
-
-    set_nz(value);
-
-    cpu.A &= value;
-    set_nz(cpu.A);
+    handler_AND(addr);
 }
 
 void handler_ARR(WORD addr)
 {
-    BYTE value = read_byte(addr);
+    handler_AND(addr);
 
-    cpu.A = cpu.A & value;
-
-    set_nz(cpu.A);
-
-    BYTE or = value & 0x01;
-    value >>= 1;
-
-    if(test_flag(CARRY)) {
-        value |= 0x80;
-    }
-
-    if(or)  {
-        set_flag(CARRY);
-    } else {
-        clear_flag(CARRY);
-    }
-
-    write_byte(addr, value);
-
-    set_nz(value);
+    handler_ROR(addr);
 }
 
-void handler_ACC(WORD addr)
+void handler_AAC(WORD addr)
 {
     BYTE value = read_byte(addr);
 
@@ -795,23 +723,8 @@ void handler_LSR_REG_A(WORD addr)
 
 void handler_ASR(WORD addr)
 {
-    BYTE value = read_byte(addr);
-    cpu.A = cpu.A & value;
-    set_nz(cpu.A);
-
-    BYTE or = value & 0x01;
-    value >>= 1;
-
-    //置空第七位
-    value &= 0x7F;
-    if(or)  {
-        set_flag(CARRY);
-    } else {
-        clear_flag(CARRY);
-    }
-
-    write_byte(addr, value);
-    set_nz(value);
+    handler_AND(addr);
+    handler_LSR(addr);
 
     PC += 1;
 }

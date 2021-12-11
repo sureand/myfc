@@ -218,12 +218,12 @@ void ASL_0A(BYTE op)
     handler_ASL_REG(addr);
 }
 
-void ACC_0B(BYTE op)
+void AAC_0B(BYTE op)
 {
     WORD addr = immediate_addressing();
     PC += 1;
 
-    handler_ACC(addr);
+    handler_AAC(addr);
 }
 
 void NOP_0C(BYTE op)
@@ -444,12 +444,12 @@ void ROL_2A(BYTE op)
     handler_ROL_REG_A(addr);
 }
 
-void ACC_2B(BYTE op)
+void AAC_2B(BYTE op)
 {
     WORD addr = immediate_addressing();
     PC += 1;
 
-    handler_ACC(addr);
+    handler_AAC(addr);
 }
 
 void BIT_2C(BYTE op)
@@ -1966,7 +1966,7 @@ void init_code()
     op(08, "PHP", 1, 3, PHP_08)
     op(09, "ORA", 2, 2, ORA_09)
     op(0A, "ASL", 1, 2, ASL_0A)
-    op(0B, "AAC", 2, 2, ACC_0B)
+    op(0B, "AAC", 2, 2, AAC_0B)
     op(0C, "TOP", 3, 4, NOP_0C)
     op(0D, "ORA", 3, 4, ORA_0D)
     op(0E, "ASL", 3, 6, ASL_0E)
@@ -2000,7 +2000,7 @@ void init_code()
     op(28, "PLP", 1, 4, PLP_28)
     op(29, "AND", 2, 2, AND_29)
     op(2A, "ROL", 1, 2, ROL_2A)
-    op(2B, "ROL", 1, 2, ACC_2B)
+    op(2B, "ROL", 1, 2, AAC_2B)
     op(2C, "BIT", 3, 4, BIT_2C)
     op(2D, "AND", 3, 4, AND_2D)
     op(2E, "ROL", 3, 6, ROL_2E)
