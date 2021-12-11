@@ -20,4 +20,10 @@ void init_code();
 void init_cpu();
 void show_code(ROM *rom);
 
+#define op(c, s, n, p, func) \
+    code_maps[0x##c].op_name = s; \
+    code_maps[0x##c].op_len = n; \
+    code_maps[0x##c].cycle = p; \
+    code_maps[0x##c].op_func = func; \
+
 #endif
