@@ -103,12 +103,6 @@ static inline BYTE pop()
     return value;
 }
 
-/**
- * 指令设计开始
- * IP 永远指向函数的开始地方
- * 因此需要识别指令长度, 调整 IP 的值
- */
-
 void jump(WORD address)
 {
     BYTE addr1 = read_byte(address);

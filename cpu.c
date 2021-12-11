@@ -142,7 +142,7 @@ static inline WORD relative_addressing()
 void BRK_00(BYTE op)
 {
     //这里的addr 没啥用
-    WORD addr = PC;
+    WORD addr = 0;
 
     handler_BRK(addr);
 }
@@ -213,7 +213,7 @@ void ORA_09(BYTE op)
 
 void ASL_0A(BYTE op)
 {
-    WORD addr = PC;
+    WORD addr = 0;
 
     handler_ASL_REG(addr);
 }

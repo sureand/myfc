@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    load_data("./test.nes");
+    load_data("./mario.nes");
 
     return 0;
 }

@@ -23,8 +23,8 @@ void parse_code()
     cpu.P = 0x24;
     cpu.cycle = 7;
 
-    addr = 0xC000;
-    PC = 0xC000;
+    addr = 0xC004;
+    PC = 0xC004;
 
     size_t c = 0;
 
