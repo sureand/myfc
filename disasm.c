@@ -23,14 +23,12 @@ void parse_code()
     cpu.P = 0x24;
     cpu.cycle = 7;
 
-    addr = 0xC004;
-    PC = 0xC004;
+    addr = 0xC000;
+    PC = 0xC000;
 
     size_t c = 0;
 
     while(addr) {
-
-       // if(c == 8992) break;
 
         BYTE code = read_byte(addr);
         if(!code_maps[code].op_name) {
@@ -51,29 +49,8 @@ void parse_code()
 
 }
 
-void show_code(ROM *rom)
+void display_IRQ()
 {
-    init_cpu();
-
-    init_code();
-
-    _MEM *mem = (_MEM*)malloc(sizeof(_MEM));
-
-    mem->PROG_ROM_LOWER = rom->prg_rom;
-    mem->PROG_ROM_UPPER = rom->prg_rom;
-
-    ROM_HEADER *header = rom->header;
-    if(header->prg_rom_count > 1) {
-        mem->PROG_ROM_UPPER = rom->prg_rom + 0x8000;
-    }
-
-    mem_init(mem);
-
-    parse_code();
-
-    if(1) return;
-
-
     BYTE addr1 = read_byte(0xFFFE);
     BYTE addr2 = read_byte(0xFFFF);
 
@@ -100,4 +77,16 @@ void show_code(ROM *rom)
     addr = addr2 << 8 | addr1;
 
     printf("NMI:%04X\n", addr);
+}
+
+void show_code(ROM *rom)
+{
+    init_cpu();
+
+    mem_init(rom);
+
+    parse_code();
+
+    // 显示部分IRQ 指令
+    // display_IRQ();
 }

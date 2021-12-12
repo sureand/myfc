@@ -15,10 +15,7 @@ typedef struct
 
 INS code_maps[0X100];
 
-void init_code();
-
 void init_cpu();
-void show_code(ROM *rom);
 
 #define op(c, s, n, p, func) \
     code_maps[0x##c].op_name = s; \

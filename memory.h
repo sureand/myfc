@@ -2,7 +2,7 @@
 #define __MEMORY_HEADER
 #include "common.h"
 
-void mem_init(_MEM *mem);
+void mem_init(ROM *rom);
 void write_byte(WORD address, BYTE data);
 BYTE read_byte(WORD address);
 WORD read_word(WORD address);

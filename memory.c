@@ -113,9 +113,19 @@ WORD read_word(WORD address)
     return bt;
 }
 
-void mem_init(_MEM *mem)
+void mem_init(ROM *rom)
 {
-    assert(mem);
+    assert(rom);
+
+    _MEM *mem = (_MEM*)malloc(sizeof(_MEM));
+
+    mem->PROG_ROM_LOWER = rom->prg_rom;
+    mem->PROG_ROM_UPPER = rom->prg_rom;
+
+    ROM_HEADER *header = rom->header;
+    if(header->prg_rom_count > 1) {
+        mem->PROG_ROM_UPPER = rom->prg_rom + 0x8000;
+    }
 
     global_mem = mem;
 }

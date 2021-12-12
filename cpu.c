@@ -1953,7 +1953,7 @@ void ISC_FF(BYTE op)
     handler_ISC(addr);
 }
 
-void init_code()
+static void init_code()
 {
     op(00, "BRK", 1, 7, BRK_00)
     op(01, "ORA", 2, 6, ORA_01)
@@ -2228,7 +2228,7 @@ void init_code()
     op(FF, "ISC", 3, 7, ISC_FF)
 }
 
-void init_cpu()
+static void init_reg()
 {
     cpu.IP = 0xC004;
     cpu.SP = 0xFD;
@@ -2236,4 +2236,11 @@ void init_cpu()
     cpu.Y = 0;
     cpu.P = 0;
     cpu.A = 0;
+}
+
+void init_cpu()
+{
+    init_reg();
+
+    init_code();
 }
