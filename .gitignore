@@ -11,3 +11,5 @@ t1.log
 *.log
 nt.log
 nestest.log
+update
+test*
