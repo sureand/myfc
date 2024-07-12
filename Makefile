@@ -1,11 +1,31 @@
-CFLAGS=-Wall -Werror -Wno-strict-aliasing -std=gnu11 -g -I -O0
-OBJS= handler.o cpu.o load_rom.o memory.o disasm.o
-LIBS=-lm
+# Compiler
+CC = gcc
 
-fc: load_rom.h disasm.h memory.h handler.h cpu.h main.o $(OBJS)
-	gcc -o $@ main.o $(OBJS) $(CFLAGS) $(LIBS)
+# Compiler flags
+CFLAGS = -Wall -g
 
-$(OBJS) main.o: load_rom.h
+TARGET = fc
 
+# Source directory
+SRCDIR = ./
+DEST_DIR = example
+
+# Source files
+SRCS = $(wildcard $(SRCDIR)/*.c)
+
+# Main target (all)
+all: $(TARGET)
+
+$(TARGET): $(SRCS)
+	$(CC) $(CFLAGS) $(IDIR) $(LDIR) -o $@ $^
+
+# Rule for compiling .c files to .o files (for executable)
+$(SRCDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CFLAGS) $(IDIR) -c -o $@ $<
+
+# Clean target
 clean:
-	rm *.o fc
+	if exist $(TARGET) del $(TARGET)
+
+# Phony targets to avoid conflicts with files named 'all' or 'clean'
+.PHONY: all clean
