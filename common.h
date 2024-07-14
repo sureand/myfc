@@ -1,6 +1,7 @@
 #ifndef __FC_COMMON_HEADER__
 #define __FC_COMMON_HEADER__
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -44,7 +45,7 @@ typedef struct
     BYTE reserved[8];
 }ROM_HEADER;
 
-typedef struct 
+typedef struct
 {
     ROM_HEADER *header;
 
@@ -113,6 +114,41 @@ typedef struct {
     size_t cycle;
 
 }_CPU;
+
+#define VRAM_SIZE   0x4000 // VRAM大小为16KB
+#define OAM_SIZE    0x100  // OAM大小为256字节
+
+typedef struct {
+
+    uint8_t ppuctrl;    // PPU控制寄存器 ($2000)
+    uint8_t ppumask;    // PPU掩码寄存器 ($2001)
+    uint8_t ppustatus;  // PPU状态寄存器 ($2002)，读取时会更新
+    uint8_t oamaddr;    // OAM地址寄存器 ($2003)
+    uint8_t oamdata[OAM_SIZE]; // OAM数据数组 ($2004)
+    uint8_t ppuscroll;  // 滚动值，用于计算当前显示的tile
+    uint8_t ppuaddr_t; // PPU地址寄存器的临时值，用于两次写入
+    uint16_t ppuaddr;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
+    uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
+    uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
+    uint8_t oamdma;     // OAM DMA寄存器 ($4014)，用于CPU到OAM的DMA传输
+    uint8_t cycle;      // 当前的PPU周期计数
+    uint8_t scanline;   // 当前的扫描线计数
+    uint8_t scroll_x;
+    uint8_t scroll_y;
+    uint8_t write_latch; // 用于跟踪第一次和第二次写入
+
+    // 以下寄存器用于模拟PPU内部渲染逻辑
+    uint8_t fineX;      // 用于渲染时的微分X位置
+    uint16_t vram_tmp;  // 临时VRAM地址，用于内部计算
+    uint8_t vram_buffer;// 用于存储从VRAM读取的数据
+    uint8_t *nametable; // 指向当前名称表的指针
+    uint8_t *pattern;   // 指向当前使用模式的指针（背景或精灵）
+    // 其他可能的内部状态，如渲染状态机、精灵评估逻辑等
+} PPU;
+
+void ppu_init(PPU* ppu);
+
+//详情看 https://www.nesdev.org/wiki/PPU_registers
 
 #define INLINE_VOID inline void
 

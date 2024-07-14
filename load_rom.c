@@ -44,6 +44,7 @@ ROM_HEADER *parse_header(FILE *fp)
         fprintf(stderr, "error, is not an nes file!\n");
         return NULL;
     }
+
     if(header[3] != 0x1A) {
         fprintf(stderr, "error, is not an nes file!\n");
         return NULL;
