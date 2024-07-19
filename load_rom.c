@@ -152,3 +152,15 @@ int load_data(const char *path)
 
     return 0;
 }
+
+void extend_rom_read(WORD address)
+{
+    BYTE data = extend_rom[address - 0x4020];
+
+    return data;
+}
+
+void extend_rom_write(WORD address, BYTE data)
+{
+    extend_rom[address - 0x4020] = data;
+}

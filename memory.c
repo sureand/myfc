@@ -14,15 +14,27 @@ BYTE bus_read(WORD address)
         return ppu_read(address & 0x2007);
     }
 
+    /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
+    if (address >= 0x4000 && address <= 0x4013) {
+        printf("incomplete interface!");
+        //TODO: apu_read(address, data); // 需要实现的函数
+    }
+
+    /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
+    if (address = 0x4015) {
+        printf("incomplete interface!");
+        //TODO: apu_status_read(address); // 需要实现的函数
+    }
+
     /* 手柄处理 */
-    if (address >= 0x4000 && address <= 0x401F) {
-        printf("incomplete interface!")
-        ;
+    if (address >= 0x4016 && address <= 0x4017) {
+        printf("incomplete interface!");
+        //TODO: controller_read(address);
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
     if (address >= 0x4020 && address <= 0x5FFF) {
-        return rom_read(address);
+        return extend_rom[address - 0x4020];
     }
 
     /* SRAM: 0x6000-0x7FFF(用于保存记录) */
@@ -45,7 +57,6 @@ BYTE bus_read(WORD address)
 void bus_write(WORD address, BYTE data)
 {
     if (address < 0x1FFF) {
-        address %= CPU_RAM_SIZE;
         return cpu_write_byte(address & 0x7FF, data);
     }
 
@@ -53,15 +64,36 @@ void bus_write(WORD address, BYTE data)
         return ppu_write(address & 0x2007, data);
     }
 
+    /* APU 的读写 */
+    if (address >= 0x4000 && address <= 0x4013) {
+        printf("incomplete interface!");
+        //TODO: apu_write(address, data); // 需要实现的函数
+    }
+
+    /* OAM DMA 写入 */
+    if (address == 0x4014) {
+        WORD dma_address = data << 8;
+        for (int i = 0; i < 256; i++) {
+            ppu.oamdata[i] = cpu_read_byte(dma_address + i); // bus_read 函数需要访问 CPU 内存
+        }
+        return;
+    }
+
+    /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
+    if (address = 0x4015) {
+        printf("incomplete interface!");
+        //apu_status_write(data); // 需要实现的函数
+    }
+
     /* 手柄处理 */
-    if (address >= 0x4000 && address <= 0x401F) {
-        printf("incomplete interface!")
-        ;
+    if (address >= 0x4016 && address <= 0x4017) {
+        printf("incomplete interface!");
+        //TODO: controller_write(address);
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
     if (address >= 0x4020 && address <= 0x5FFF) {
-        return rom_write(address, data);
+        extend_rom[address - 0x4020] = data;
     }
 
     /* SRAM: 0x6000-0x7FFF(用于保存记录) */

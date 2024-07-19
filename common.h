@@ -112,6 +112,9 @@ BYTE prg_rom[PRG_ROM_SIZE];
 /* 电池空间, 8k*/
 BYTE sram[SRAM_SIZE];
 
+/* 拓展rom */
+BYTE extend_rom[0x2000]; // 一般的拓展rom 是8k 左右
+
 
 _MEM *global_mem;
 
