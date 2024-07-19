@@ -16,6 +16,10 @@ BYTE ppu_read(WORD address)
 
     switch (address) {
 
+        //返回ppu mask 的状态
+        case 0x2001:
+            data = ppu.ppumask;
+            break;
         case 0x2002:
             // 返回PPU状态寄存器的值，并清除VBlank标志位
             data = ppu.ppustatus;

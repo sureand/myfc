@@ -30,8 +30,8 @@ void parse_code()
             break;
         }
 
-        printf("%04X %02X A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
-               PC, code, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, cpu.cycle);
+        printf("%04X %02X A:%02X X:%02X Y:%02X P:%02X SP:%02X  PPU:  %d, %d CYC:%I64u\n", \
+               PC, code, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, ppu.ppustatus, ppu.ppuctrl, cpu.cycle);
 
         code_maps[code].op_func(code);
         cpu.cycle += code_maps[code].cycle;
@@ -41,6 +41,51 @@ void parse_code()
         ++c;
     }
 
+}
+
+void disassemble()
+{
+    cpu.P = 0x24;
+    cpu.cycle = 7;
+
+    WORD addr = 0xC000;
+    PC = 0xC000;
+
+    while (addr) {
+
+        BYTE opcode = bus_read(addr);
+
+        printf("%04X  %02X", addr, opcode);
+
+        BYTE operand_length = code_maps[opcode].op_len - 1;
+        BYTE operand1 = 0, operand2 = 0;
+        if (operand_length == 1) {
+            operand1 = bus_read(addr + 1);
+            printf(" %02X", operand1);
+        } else if (operand_length == 2) {
+            operand1 = bus_read(addr + 1);
+            operand2 = bus_read(addr + 2);
+            printf(" %02X %02X", operand1, operand2);
+        }
+
+        printf("  %-4s", code_maps[opcode].op_name);
+
+        if (operand_length == 1) {
+            printf(" $%02X", operand1);
+        } else if (operand_length == 2) {
+            WORD address = (operand2 << 8) | operand1;
+            printf(" $%04X", address);
+        }
+
+        printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
+               cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,cpu.cycle);
+
+        getchar();
+        code_maps[opcode].op_func(opcode);
+        cpu.cycle += code_maps[opcode].cycle;
+
+        addr = PC;
+    }
 }
 
 void display_IRQ()
@@ -71,7 +116,7 @@ void show_code(ROM *rom)
 
     mem_init(rom);
 
-   // parse_code();
+    disassemble();
 
     // 显示部分IRQ 指令
     display_IRQ();

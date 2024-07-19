@@ -11,6 +11,7 @@ BYTE bus_read(WORD address)
 
     /* ppu 的处理 */
     if (address >= 0x2000 && address <= 0x3FFF) {
+        //printf("\nread ppu address: 0X%04X\n", address);
         return ppu_read(address & 0x2007);
     }
 
@@ -51,7 +52,7 @@ BYTE bus_read(WORD address)
         return prg_rom[address & address_range];
     }
 
-    printf("Read from unsupported address: %04X\n", address);
+    printf("\nRead from unsupported address: %04X\n", address);
     _exit(-1);
 
     return 0;
@@ -65,6 +66,7 @@ void bus_write(WORD address, BYTE data)
     }
 
     if (address >= 0x2000 && address <= 0x3FFF) {
+        printf("write ppu address: 0X%04X, data:[%d]\n", address, data);
         ppu_write(address & 0x2007, data);
         return;
     }
@@ -87,7 +89,7 @@ void bus_write(WORD address, BYTE data)
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (address == 0x4015) {
-        printf("incomplete interface!");
+        printf("Write from unsupported address: %04X\n", address);
         //apu_status_write(data); // 需要实现的函数
         return;
     }
