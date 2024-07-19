@@ -14,16 +14,10 @@ void display(BYTE *data, size_t count)
 
 void parse_code()
 {
-    BYTE addr1 = bus_read(0xFFFC);
-    BYTE addr2 = bus_read(0xFFFD);
-
-    WORD addr = addr2 << 8 | addr1;
-    PC = addr;
-
     cpu.P = 0x24;
     cpu.cycle = 7;
 
-    addr = 0xC000;
+    WORD addr = 0xC000;
     PC = 0xC000;
 
     size_t c = 0;
@@ -56,20 +50,12 @@ void display_IRQ()
 
     WORD addr = addr2 << 8 | addr1;
 
-    printf("IRQ/BRK:%04X\n", addr);
-
     addr1 = bus_read(0xFFFC);
     addr2 = bus_read(0xFFFD);
 
     addr = addr2 << 8 | addr1;
 
-    printf("RESET:%04X\n", addr);
-
     BYTE code = bus_read(addr);
-    printf("code:%02X\n", code);
-    getchar();
-
-    printf("code:%s\n", code_maps[code].op_name);
 
     addr1 = bus_read(0xFFFA);
     addr2 = bus_read(0xFFFB);
@@ -85,8 +71,8 @@ void show_code(ROM *rom)
 
     mem_init(rom);
 
-    parse_code();
+   // parse_code();
 
     // 显示部分IRQ 指令
-    // display_IRQ();
+    display_IRQ();
 }

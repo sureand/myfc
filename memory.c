@@ -45,10 +45,10 @@ BYTE bus_read(WORD address)
         return sram[address - 0x6000];
     }
 
-    /*PRG ROM 和 CHR ROM 主程序*/
+    /*PRG ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        address -= 0x8000;
-        return prg_rom[address - 0x8000];
+        WORD address_range = prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
+        return prg_rom[address & address_range];
     }
 
     printf("Read from unsupported address: %04X\n", address);
@@ -112,13 +112,22 @@ void bus_write(WORD address, BYTE data)
 
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        prg_rom[address - 0x8000] = data;
+
+        WORD address_range = prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
+
+        prg_rom[address & address_range] = data;
+
         return;
     }
+
 }
 
 void mem_init(ROM *rom)
 {
+    /* 储存ROM页面数目和对应的ROM数据 */
+    prg_rom_count = rom->header->prg_rom_count;
     prg_rom = rom->prg_rom;
+
+    chr_rom_count = rom->header->chr_rom_count;
     chr_rom = rom->chr_rom;
 }

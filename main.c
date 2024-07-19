@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    load_data("./test.nes");
+    load_data("nestest.nes");
 
     return 0;
 }

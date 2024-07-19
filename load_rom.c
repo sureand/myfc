@@ -89,7 +89,7 @@ ROM *parse_rom(FILE *fp)
         goto ERR_EXIT;
     }
 
-    if(!fread(rom->body, prg_rom_size + chr_rom_size, 1, fp)) {
+    if(fread(rom->body, prg_rom_size + chr_rom_size, 1, fp) == 0) {
         fprintf(stderr, "read nes rom error!\n");
         goto ERR_EXIT;
     }
@@ -98,13 +98,11 @@ ROM *parse_rom(FILE *fp)
     rom->chr_rom = rom->body + prg_rom_size;
     rom->header = header;
 
-    fclose(fp);
     return rom;
 
 ERR_EXIT:
     FREE(header);
     FREE(rom);
-    fclose(fp);
     return NULL;
 }
 
@@ -131,8 +129,8 @@ ROM *load_rom(const char *path)
 
 void show_header_info(ROM_HEADER *header)
 {
-    size_t prg_size = (header->prg_rom_count * 0x4000) >> 10;
-    size_t chr_size = (header->prg_rom_count * 0x2000) >> 10;
+    size_t prg_size = (header->prg_rom_count * PRG_ROM_PAGE_SIZE) >> 10;
+    size_t chr_size = (header->prg_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
 
     printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
 }
@@ -142,15 +140,16 @@ int load_data(const char *path)
     ROM *rom = load_rom(path);
     if(!rom) return -1;
 
-#ifdef __DEBUG
-    ROM_HEADER *header = rom->header;
-    show_header_info(header);
-#endif
+    //ROM_HEADER *header = rom->header;
+    //show_header_info(header);
 
     show_code(rom);
 
     FREE(rom->header);
     FREE(rom);
+
+    FREE(chr_rom);
+    FREE(prg_rom);
 
     return 0;
 }

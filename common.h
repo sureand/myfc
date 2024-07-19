@@ -112,9 +112,11 @@ typedef struct
 }_MEM;
 
 /* PRG ROM, 程序的rom 内容*/
+BYTE prg_rom_count;
 BYTE *prg_rom;
 
 /* CHR ROM, chr 的rom 内容*/
+BYTE chr_rom_count;
 BYTE *chr_rom;
 
 /* 电池空间, 8k*/
