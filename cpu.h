@@ -17,6 +17,13 @@ INS code_maps[0X100];
 
 void init_cpu();
 
+//NMI 中断
+void cpu_interrupt_NMI();
+BYTE cpu_read_byte(WORD address);
+void cpu_write_byte(WORD address, BYTE data);
+WORD cpu_read_word(WORD address);
+void cpu_write_word(WORD address, WORD data);
+
 #define op(c, s, n, p, func) \
     code_maps[0x##c].op_name = s; \
     code_maps[0x##c].op_len = n; \

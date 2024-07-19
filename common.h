@@ -21,6 +21,41 @@
 //ROM 相关
 #define HEADER_LEN (16)
 
+/*NES地址空间布局
+1. Zero Page: 0x0000-0x00FF(256 bytes)
+2. Stack: 0x0100-0x01FF(256 bytes)
+3. RAM: Ox0200-0x07FF(1.5 KB)
+4. Mirroring: 0x0800-0x1FFF(CPU RAM的镜像，每2KB重复)
+---上述都是CPU RAM
+5.PPU Registers: 0x2000-0x3FFF(PPU寄存器，每8字节重复)
+6. APU and l/0 Registers: 0x4000-0x401F
+7. Joypad and l/0 Ports: 0x4016-0x4017
+8.Expansion ROM: 0x4020-0x5FFF(可选，用于扩展硬件)
+9.SRAM: 0x6000-0x7FFF(Battery-backed Save RAM)
+10.PRG-ROM Lower Bank: 0x8000 -0xBFFF
+11.PRG-ROM Upper Bank: 0xC000 -0xFFFF
+*/
+
+#define CPU_RAM_SIZE 0x0800  // 2KB RAM
+#define PPU_REG_SIZE 0x0008  // 8 PPU寄存器
+#define APU_REG_SIZE 0x0020  // 32 APU寄存器
+#define OAM_SIZE     0x0100  // 256字节 OAM
+#define VRAM_SIZE    0x4000  // 16KB VRAM
+#define SRAM_SIZE    0x8000  // 32KB PRG ROM
+#define PRG_ROM_SIZE 0x8000  // 32KB PRG ROM
+
+// NES内存映射地址
+#define CPU_RAM_START 0x0000
+#define CPU_RAM_END   0x1FFF
+#define PPU_REG_START 0x2000
+#define PPU_REG_END   0x3FFF
+#define APU_REG_START 0x4000
+#define APU_REG_END   0x401F
+#define JOYPAD_START  0x4016
+#define JOYPAD_END    0x4017
+#define PRG_ROM_START 0x8000
+#define PRG_ROM_END   0xFFFF
+
 typedef struct
 {
     //nes 版本
@@ -57,7 +92,8 @@ typedef struct
 //内存相关
 typedef struct
 {
-    BYTE RAM[0x600];
+    BYTE cpu_ram[0x800];
+    BYTE ppu_reg[0x008];
     BYTE ZERO_PAGE[0x100];
     BYTE STACK[0x100];
     BYTE MIRROR[0x1800];
@@ -69,6 +105,12 @@ typedef struct
     BYTE *PROG_ROM_UPPER;
 
 }_MEM;
+
+/* PRG ROM 32k, 程序的rom 内容*/
+BYTE prg_rom[PRG_ROM_SIZE];
+
+/* 电池空间, 8k*/
+BYTE sram[SRAM_SIZE];
 
 
 _MEM *global_mem;
@@ -100,6 +142,7 @@ C:进位标志,结果最高位有进位则C=1,否则C=0
 #define CARRY (0)
 
 typedef struct {
+
     WORD IP; //指令寄存器
     BYTE SP; //栈指针
     BYTE A; //累加寄存器
@@ -113,10 +156,12 @@ typedef struct {
 
     size_t cycle;
 
+    BYTE ram[CPU_RAM_SIZE];  // 2KB RAM
 }_CPU;
 
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
 #define OAM_SIZE    0x100  // OAM大小为256字节
+#define APU_REG_SIZE 0x20 //APU 的大小
 
 typedef struct {
 
@@ -126,7 +171,6 @@ typedef struct {
     uint8_t oamaddr;    // OAM地址寄存器 ($2003)
     uint8_t oamdata[OAM_SIZE]; // OAM数据数组 ($2004)
     uint8_t ppuscroll;  // 滚动值，用于计算当前显示的tile
-    uint8_t ppuaddr_t; // PPU地址寄存器的临时值，用于两次写入
     uint16_t ppuaddr;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
     uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
@@ -144,16 +188,38 @@ typedef struct {
     uint8_t *nametable; // 指向当前名称表的指针
     uint8_t *pattern;   // 指向当前使用模式的指针（背景或精灵）
     // 其他可能的内部状态，如渲染状态机、精灵评估逻辑等
-} PPU;
+} _PPU;
 
-void ppu_init(PPU* ppu);
+// APU结构体
+typedef struct {
+    uint8_t registers[APU_REG_SIZE];  // APU寄存器
+} APU;
+
+// 手柄结构体
+typedef struct {
+    uint8_t state;
+} _Joypad;
+
+// NES总线结构体，包含各个组件
+typedef struct {
+    _CPU cpu;
+    _PPU ppu;
+    APU apu;
+    _Joypad joypad;
+} NES;
+
+void ppu_init();
 
 //详情看 https://www.nesdev.org/wiki/PPU_registers
 
 #define INLINE_VOID inline void
 
 _CPU cpu;
+_PPU ppu;
 
 #define PC (cpu.IP)
+
+BYTE bus_read(WORD address);
+void bus_write(WORD address, BYTE data);
 
 #endif

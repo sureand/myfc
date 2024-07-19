@@ -14,8 +14,8 @@ void display(BYTE *data, size_t count)
 
 void parse_code()
 {
-    BYTE addr1 = read_byte(0xFFFC);
-    BYTE addr2 = read_byte(0xFFFD);
+    BYTE addr1 = bus_read(0xFFFC);
+    BYTE addr2 = bus_read(0xFFFD);
 
     WORD addr = addr2 << 8 | addr1;
     PC = addr;
@@ -30,7 +30,7 @@ void parse_code()
 
     while(addr) {
 
-        BYTE code = read_byte(addr);
+        BYTE code = bus_read(addr);
         if(!code_maps[code].op_name) {
             printf("addr:%04X, code:%02X \n", addr, code);
             break;
@@ -51,28 +51,28 @@ void parse_code()
 
 void display_IRQ()
 {
-    BYTE addr1 = read_byte(0xFFFE);
-    BYTE addr2 = read_byte(0xFFFF);
+    BYTE addr1 = bus_read(0xFFFE);
+    BYTE addr2 = bus_read(0xFFFF);
 
     WORD addr = addr2 << 8 | addr1;
 
     printf("IRQ/BRK:%04X\n", addr);
 
-    addr1 = read_byte(0xFFFC);
-    addr2 = read_byte(0xFFFD);
+    addr1 = bus_read(0xFFFC);
+    addr2 = bus_read(0xFFFD);
 
     addr = addr2 << 8 | addr1;
 
     printf("RESET:%04X\n", addr);
 
-    BYTE code = read_byte(addr);
+    BYTE code = bus_read(addr);
     printf("code:%02X\n", code);
     getchar();
 
     printf("code:%s\n", code_maps[code].op_name);
 
-    addr1 = read_byte(0xFFFA);
-    addr2 = read_byte(0xFFFB);
+    addr1 = bus_read(0xFFFA);
+    addr2 = bus_read(0xFFFB);
 
     addr = addr2 << 8 | addr1;
 
@@ -83,7 +83,7 @@ void show_code(ROM *rom)
 {
     init_cpu();
 
-    mem_init(rom);
+    //mem_init(rom);
 
     parse_code();
 

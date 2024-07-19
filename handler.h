@@ -1,5 +1,7 @@
 #include "common.h"
 
+void push(BYTE data);
+
 void handler_ADC(WORD address);
 void handler_SBC(WORD address);
 void handler_ORA(WORD address);

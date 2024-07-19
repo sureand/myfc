@@ -1,131 +1,76 @@
 #include "memory.h"
+#include "cpu.h"
+#include "ppu.h"
 
-static BYTE *mem_addr(WORD address, _MEM *mem)
+BYTE bus_read(WORD address)
 {
-    assert(address >= 0);
-
-    //zero page
-    if(address <= 0xFF) return &mem->ZERO_PAGE[address];
-
-    //stack
-    if(address >= 0x100 && address <= 0x1FF) {
-        address -= 0x100;
-        return &mem->STACK[address];
+    /* 由于 0x0800 - 0x1FFF 是CPU RAM 的镜像, 直接取模*/
+    if (address <= 0x1FFF) {
+        return cpu_read_byte(address & 0x7FF);
     }
 
-    //RAM
-    if(address >= 0x200 && address <= 0x7FF) {
-        address -= 0x200;
-        return &mem->RAM[address];
+    /* ppu 的处理 */
+    if (address >= 0x2000 && address <= 0x3FFF) {
+        return ppu_read(address & 0x2007);
     }
 
-    //mirror
-    if(address >= 0x800 && address <= 0x2000) {
-        address -= 0x800;
-        address &= 0x07FF;
-        return &mem->MIRROR[address];
+    /* 手柄处理 */
+    if (address >= 0x4000 && address <= 0x401F) {
+        printf("incomplete interface!")
+        ;
     }
 
-    //io register
-    if(address >= 0x2000 && address <= 0x401F) {
-        address -= 0x2000;
-        return &mem->IO_Register[address];
+    /* Expansion ROM (可选，用于扩展硬件) */
+    if (address >= 0x4020 && address <= 0x5FFF) {
+        return rom_read(address);
     }
 
-    //Expansion ROM
-    if(address >= 0x4020 && address <= 0x5FFF) {
-        address -= 0x4020;
-        return &mem->IO_Register[address];
+    /* SRAM: 0x6000-0x7FFF(用于保存记录) */
+    if (address >= 0x6000 && address <= 0x7FFF) {
+        return sram[address - 0x6000];
     }
 
-    //SRAM
-    if(address >= 0x6000 && address <= 0x7FFF) {
-        address -= 0x6000;
-        return &mem->SRAM[address];
-    }
-
-    //PRG LOWER
-    if(address >= 0x8000 && address < 0xC000) {
+    /*PRG ROM 和 CHR ROM 主程序*/
+    if (address >= 0x8000 && address <= 0xFFFF) {
         address -= 0x8000;
-        return &mem->PROG_ROM_LOWER[address];
+        return rom_read(address);
     }
 
-    //PRG UPPER
-    if(address >= 0xC000) {
-        address -= 0xC000;
-        return &mem->PROG_ROM_UPPER[address];
+    printf("Read from unsupported address: %04X\n", address);
+    _exit(-1);
+
+    return 0;
+}
+
+void bus_write(WORD address, BYTE data)
+{
+    if (address < 0x1FFF) {
+        address %= CPU_RAM_SIZE;
+        return cpu_write_byte(address & 0x7FF, data);
     }
 
-    fprintf(stderr, "un expected address:%04X\n", address);
-    exit(-1);
-
-    return NULL;
-}
-
-static inline BYTE do_mem_read(WORD address, _MEM *mem)
-{
-    BYTE *addr = mem_addr(address, mem);
-    return *addr;
-}
-
-static inline BYTE mem_read(WORD address)
-{
-    return do_mem_read(address, global_mem);
-}
-
-static inline void do_mem_write(WORD address, BYTE data)
-{
-    BYTE *addr = mem_addr(address, global_mem);
-    *addr = data;
-}
-
-static inline void mem_write(WORD address, BYTE data)
-{
-    do_mem_write(address, data);
-}
-
-void write_byte(WORD address, BYTE data)
-{
-    mem_write(address, data);
-}
-
-void write_word(WORD address, WORD data)
-{
-    BYTE *bt = (BYTE*)&data;
-
-    //小端 低字节在前、高字节在后
-    mem_write(address, bt[1]);
-    mem_write(address + 1, bt[0]);
-}
-
-BYTE read_byte(WORD address)
-{
-    return mem_read(address);
-}
-
-WORD read_word(WORD address)
-{
-    BYTE bt1 = read_byte(address);
-    BYTE bt2 = read_byte(address + 1);
-
-    WORD bt = (bt2 << 1) | bt1;
-
-    return bt;
-}
-
-void mem_init(ROM *rom)
-{
-    assert(rom);
-
-    _MEM *mem = (_MEM*)malloc(sizeof(_MEM));
-
-    mem->PROG_ROM_LOWER = rom->prg_rom;
-    mem->PROG_ROM_UPPER = rom->prg_rom;
-
-    ROM_HEADER *header = rom->header;
-    if(header->prg_rom_count > 1) {
-        mem->PROG_ROM_UPPER = rom->prg_rom + 0x8000;
+    if (address >= 0x2000 && address <= 0x3FFF) {
+        return ppu_write(address & 0x2007, data);
     }
 
-    global_mem = mem;
+    /* 手柄处理 */
+    if (address >= 0x4000 && address <= 0x401F) {
+        printf("incomplete interface!")
+        ;
+    }
+
+    /* Expansion ROM (可选，用于扩展硬件) */
+    if (address >= 0x4020 && address <= 0x5FFF) {
+        return rom_write(address, data);
+    }
+
+    /* SRAM: 0x6000-0x7FFF(用于保存记录) */
+    if (address >= 0x6000 && address <= 0x7FFF) {
+        return sram[address - 0x6000] = data;
+    }
+
+    /*PRG ROM 和 CHR ROM 主程序*/
+    if (address >= 0x8000 && address <= 0xFFFF) {
+        return prg_rom[address - 0x8000] = data;
+    }
 }

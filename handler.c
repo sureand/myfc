@@ -58,7 +58,7 @@ void display_stack()
     printf("stack: [ ");
     while(spp) {
         if(c % 5 == 0) printf("\n");
-        printf("%04X:%02X ", addr + spp, read_byte(addr + spp));
+        printf("%04X:%02X ", addr + spp, bus_read(addr + spp));
         ++spp;
         ++c;
     }
@@ -86,10 +86,10 @@ static void set_nz(short value)
     clear_flag(ZERO);
 }
 
-static void push(BYTE data)
+void push(BYTE data)
 {
     WORD addr = 0x0100 + cpu.SP;
-    write_byte(addr, data);
+    bus_write(addr, data);
 
     --cpu.SP;
 }
@@ -99,14 +99,14 @@ static inline BYTE pop()
     ++cpu.SP;
     WORD addr = 0x0100 + cpu.SP;
 
-    BYTE value = read_byte(addr);
+    BYTE value = bus_read(addr);
     return value;
 }
 
 void jump(WORD address)
 {
-    BYTE addr1 = read_byte(address);
-    BYTE addr2 = read_byte(address + 1);
+    BYTE addr1 = bus_read(address);
+    BYTE addr2 = bus_read(address + 1);
 
     PC = addr2 << 8 | addr1;
 }
@@ -118,7 +118,7 @@ static inline WORD IRQ_vector()
 
 void handler_ADC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     WORD ret = cpu.A + value + (test_flag(CARRY) ? 1 : 0);
 
@@ -140,7 +140,7 @@ void handler_ADC(WORD address)
 
 void handler_SBC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     WORD ret = cpu.A - value - (test_flag(CARRY) ? 0 : 1);
 
@@ -161,7 +161,7 @@ void handler_SBC(WORD address)
 
 void handler_ORA(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A | value;
     set_nz(cpu.A);
@@ -169,7 +169,7 @@ void handler_ORA(WORD address)
 
 void handler_SLO(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE cf = value & 0x80;
     if(cf) { set_flag(CARRY); }
@@ -177,7 +177,7 @@ void handler_SLO(WORD address)
 
     value <<= 1;
 
-    write_byte(address, value);
+    bus_write(address, value);
     set_nz(value);
 
     cpu.A |= value;
@@ -186,7 +186,7 @@ void handler_SLO(WORD address)
 
 void handler_ASL(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE or = value & 0x80;
     value <<= 1;
@@ -201,14 +201,14 @@ void handler_ASL(WORD address)
         clear_flag(CARRY);
     }
 
-    write_byte(address, value);
+    bus_write(address, value);
 
     set_nz(value);
 }
 
 void handler_AND(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A & value;
     set_nz(cpu.A);
@@ -216,7 +216,7 @@ void handler_AND(WORD address)
 
 void handler_ROL(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE or = value & 0x80;
 
@@ -234,14 +234,14 @@ void handler_ROL(WORD address)
         clear_flag(CARRY);
     }
 
-    write_byte(address, value);
+    bus_write(address, value);
 
     set_nz(value);
 }
 
 void handler_EOR(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
     cpu.A = cpu.A ^ value;
 
     set_nz(cpu.A);
@@ -249,7 +249,7 @@ void handler_EOR(WORD address)
 
 void handler_LSR(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE or = value & 0x01;
     value >>= 1;
@@ -262,14 +262,14 @@ void handler_LSR(WORD address)
         clear_flag(CARRY);
     }
 
-    write_byte(address, value);
+    bus_write(address, value);
 
     set_nz(value);
 }
 
 void handler_ROR(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE or = value & 0x01;
 
@@ -284,14 +284,14 @@ void handler_ROR(WORD address)
         clear_flag(CARRY);
     }
 
-    write_byte(address, value);
+    bus_write(address, value);
 
     set_nz(value);
 }
 
 void handler_LDX(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.X = value;
     set_nz(cpu.X);
@@ -299,7 +299,7 @@ void handler_LDX(WORD address)
 
 void handler_LDY(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.Y = value;
 
@@ -308,7 +308,7 @@ void handler_LDY(WORD address)
 
 void handler_LDA(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = value;
     set_nz(value);
@@ -316,7 +316,7 @@ void handler_LDA(WORD address)
 
 void handler_CMP(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     short ret = cpu.A - value;
 
@@ -334,7 +334,7 @@ void handler_CMP(WORD address)
 
 void handler_CPY(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     short ret = cpu.Y - value;
 
@@ -352,10 +352,10 @@ void handler_CPY(WORD address)
 
 void handler_DCP(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     char ret = value - 1;
-    write_byte(address, ret);
+    bus_write(address, ret);
     set_nz(ret);
 
     short sr = (WORD)cpu.A - ret;
@@ -376,7 +376,7 @@ void handler_DCP(WORD address)
 
 void handler_CPX(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     short ret = cpu.X - value;
 
@@ -394,10 +394,10 @@ void handler_CPX(WORD address)
 
 void handler_ISC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     value += 1;
-    write_byte(address, value);
+    bus_write(address, value);
 
     WORD ret = cpu.A - value - (test_flag(CARRY) ? 0 : 1);
 
@@ -418,27 +418,27 @@ void handler_ISC(WORD address)
 
 void handler_INC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     char ret = value + 1;
-    write_byte(address, ret);
+    bus_write(address, ret);
 
     set_nz(ret);
 }
 
 void handler_DEC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     char ret = value - 1;
-    write_byte(address, ret);
+    bus_write(address, ret);
 
     set_nz(ret);
 }
 
 void handler_LAX(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = value;
     cpu.X = value;
@@ -448,7 +448,7 @@ void handler_LAX(WORD address)
 
 void handler_SRE(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE or = value & 0x01;
 
@@ -462,7 +462,7 @@ void handler_SRE(WORD address)
         clear_flag(CARRY);
     }
 
-    write_byte(address, value);
+    bus_write(address, value);
     set_nz(value);
 
     cpu.A ^= value;
@@ -492,7 +492,7 @@ void handler_ARR(WORD address)
 
 void handler_AAC(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     char ret = value & cpu.A;
     if(ret < 0) {set_flag(CARRY);}
@@ -503,7 +503,7 @@ void handler_AAC(WORD address)
 
 void handler_BIT(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     BYTE flag = test_bit(value, 6);
     if(flag) { set_bit(&cpu.P, 6); } else{
@@ -534,8 +534,8 @@ void handler_JSR(WORD address)
     push(*(bp + 1));
     push(*(bp));
 
-    BYTE addr1 = read_byte(cur_pc + 1);
-    BYTE addr2 = read_byte(cur_pc + 2);
+    BYTE addr1 = bus_read(cur_pc + 1);
+    BYTE addr2 = bus_read(cur_pc + 2);
     WORD addr = addr2 << 8 | addr1;
 
     PC = addr;
@@ -609,7 +609,7 @@ void handler_AXA(WORD address)
     cpu.X &= cpu.A;
     BYTE ret = cpu.X & 0x07;
 
-    write_byte(address, ret);
+    bus_write(address, ret);
 }
 
 void handler_CLC(WORD address)
@@ -788,19 +788,19 @@ void handler_SEI(WORD address)
 
 void handler_STA(WORD address)
 {
-    write_byte(address, cpu.A);
+    bus_write(address, cpu.A);
 }
 
 void handler_AAX(WORD address)
 {
     BYTE value = cpu.X & cpu.A;
 
-    write_byte(address, value);
+    bus_write(address, value);
 }
 
 void handler_STX(WORD address)
 {
-    write_byte(address, cpu.X);
+    bus_write(address, cpu.X);
 }
 
 void handler_TYA(WORD address)
@@ -820,7 +820,7 @@ void handler_TXS(WORD address)
 
 void handler_XAS(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A & value;
     set_nz(cpu.A);
@@ -831,7 +831,7 @@ void handler_XAS(WORD address)
 
 void handler_SYA(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A & value;
     set_nz(cpu.A);
@@ -842,7 +842,7 @@ void handler_SYA(WORD address)
 
 void handler_SXA(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A & value;
     set_nz(cpu.A);
@@ -869,7 +869,7 @@ void handler_TAX(WORD address)
 
 void handler_ATX(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A &= value;
     cpu.X = cpu.A;
@@ -904,7 +904,7 @@ void handler_TSX(WORD address)
 
 void handler_LAR(WORD address)
 {
-    cpu.A = read_byte(address);
+    cpu.A = bus_read(address);
     set_nz(cpu.A);
 
     cpu.X = cpu.SP;
@@ -932,7 +932,7 @@ void handler_DEX(WORD address)
 
 void handler_AXS(WORD address)
 {
-    write_byte(address, cpu.X & cpu.A);
+    bus_write(address, cpu.X & cpu.A);
 
     PC += 1;
 }
@@ -960,7 +960,7 @@ void handler_SED(WORD address)
 
 void handler_XAA(WORD address)
 {
-    BYTE value = read_byte(address);
+    BYTE value = bus_read(address);
 
     cpu.A = cpu.A & value;
     set_nz(cpu.A);
@@ -971,7 +971,7 @@ void handler_XAA(WORD address)
 
 void handler_STY(WORD address)
 {
-    write_byte(address, cpu.Y);
+    bus_write(address, cpu.Y);
 }
 
 void handler_DEY(WORD address)

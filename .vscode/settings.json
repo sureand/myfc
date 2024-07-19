@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "cpu.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "load_rom.h": "c",
+        "common.h": "c"
     }
 }

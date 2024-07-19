@@ -2,6 +2,6 @@
 #define __PPU_HEADER
 #include "common.h"
 
-BYTE ppu_read(PPU* ppu, uint16_t addr);
-void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
+BYTE ppu_read(WORD addr);
+void ppu_write(WORD addr, uint8_t data);
 #endif

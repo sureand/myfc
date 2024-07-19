@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -std=c99
 
 TARGET = fc
 
@@ -18,6 +18,6 @@ $(SRCDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(IDIR) -c -o $@ $<
 
 clean:
-	if exist $(TARGET) del $(TARGET)
+	rm -f $(TARGET)
 
 .PHONY: all clean

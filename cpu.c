@@ -14,8 +14,8 @@ static inline WORD immediate_addressing()
 //绝对寻址
 static inline WORD absolute_addressing()
 {
-    BYTE addr1 = read_byte(PC + 1);
-    BYTE addr2 = read_byte(PC + 2);
+    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr2 = bus_read(PC + 2);
     WORD addr = (addr2 << 8 | addr1);
     PC += 3;
 
@@ -25,7 +25,7 @@ static inline WORD absolute_addressing()
 //绝对零页寻址
 static inline WORD zero_absolute_addressing()
 {
-    BYTE addr = read_byte(PC + 1);
+    BYTE addr = bus_read(PC + 1);
     PC += 2;
 
     return (addr & 0xFF);
@@ -34,8 +34,8 @@ static inline WORD zero_absolute_addressing()
 //绝对 X 变址
 static inline WORD absolute_X_indexed_addressing(BYTE op)
 {
-    BYTE addr1 = read_byte(PC + 1);
-    BYTE addr2 = read_byte(PC + 2);
+    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr2 = bus_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
@@ -49,8 +49,8 @@ static inline WORD absolute_X_indexed_addressing(BYTE op)
 //绝对 Y 变址
 static inline WORD absolute_Y_indexed_addressing()
 {
-    BYTE addr1 = read_byte(PC + 1);
-    BYTE addr2 = read_byte(PC + 2);
+    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr2 = bus_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
@@ -63,7 +63,7 @@ static inline WORD absolute_Y_indexed_addressing()
 //零页 X 间接寻址
 static inline WORD zero_X_indexed_addressing()
 {
-    BYTE addr = read_byte(PC + 1);
+    BYTE addr = bus_read(PC + 1);
     addr += cpu.X;
     PC += 2;
 
@@ -73,7 +73,7 @@ static inline WORD zero_X_indexed_addressing()
 //零页 Y 间接 寻址
 static inline WORD zero_Y_indexed_addressing()
 {
-    BYTE addr = read_byte(PC + 1);
+    BYTE addr = bus_read(PC + 1);
     addr += cpu.Y;
     PC += 2;
 
@@ -82,20 +82,20 @@ static inline WORD zero_Y_indexed_addressing()
 
 static inline WORD indirect_addressing()
 {
-    BYTE addr1 = read_byte(PC + 1);
-    BYTE addr2 = read_byte(PC + 2);
+    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr2 = bus_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
 
     //这个是6502CPU的Bug
     if((addr & 0xFF) == 0xFF) {
-        addr = (read_byte(addr & 0xFF00) << 8) + read_byte(addr);
+        addr = (bus_read(addr & 0xFF00) << 8) + bus_read(addr);
         return addr;
     }
 
-    BYTE pc1 = read_byte(addr);
-    BYTE pc2 = read_byte(addr + 1);
+    BYTE pc1 = bus_read(addr);
+    BYTE pc2 = bus_read(addr + 1);
 
     return (pc2 << 8 )| pc1;
 }
@@ -103,11 +103,11 @@ static inline WORD indirect_addressing()
 // x 变址间接 寻址
 static inline WORD indexed_X_indirect_addressing()
 {
-    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr1 = bus_read(PC + 1);
     addr1 += cpu.X;
 
     BYTE addr2 = addr1 + 1;
-    WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
+    WORD addr = (bus_read(addr2) << 8) | bus_read(addr1);
 
     PC += 2;
 
@@ -117,9 +117,9 @@ static inline WORD indexed_X_indirect_addressing()
 //Y 间接 变址寻址
 static inline WORD indirect_Y_indexed_addressing()
 {
-    BYTE addr1 = read_byte(PC + 1);
+    BYTE addr1 = bus_read(PC + 1);
     BYTE addr2 = addr1 + 1;
-    WORD addr = (read_byte(addr2) << 8) | read_byte(addr1);
+    WORD addr = (bus_read(addr2) << 8) | bus_read(addr1);
     PC += 2;
 
     if( (addr >> 8) != (addr + cpu.Y) >> 8) ++cpu.cycle;
@@ -130,7 +130,7 @@ static inline WORD indirect_Y_indexed_addressing()
 static inline WORD relative_addressing()
 {
     //先算下一条指令的地址, 再算偏移
-    char of = (char)read_byte(PC + 1);
+    char of = (char)bus_read(PC + 1);
     PC += 2;
 
     WORD addr = PC + of;
@@ -1191,7 +1191,7 @@ void STY_94(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
 
-    write_byte(addr, cpu.Y);
+    bus_write(addr, cpu.Y);
 }
 
 void STA_95(BYTE op)
@@ -2243,4 +2243,52 @@ void init_cpu()
     init_reg();
 
     init_code();
+}
+
+void cpu_interrupt_NMI()
+{
+    //把当前的IP 压栈, 具体看RTI 实现
+    push((cpu.IP >> 8) & 0xFF);
+    push(cpu.IP & 0xFF);
+
+    //把cpu 状态压栈
+    push(cpu.P);
+
+    //设置禁用中断, 预防被其他的中断打断
+   cpu.P |= 0x04;
+
+    //取出NMI 地址
+    WORD nmi_vector = cpu_read_byte(0xFFFB) << 8 | cpu_read_byte(0xFFFA);
+
+    cpu.IP = nmi_vector;
+}
+
+BYTE cpu_read_byte(WORD address)
+{
+    return cpu.ram[address];
+}
+
+void cpu_write_byte(WORD address, BYTE data)
+{
+    cpu.ram[address] = data;
+}
+
+WORD cpu_read_word(WORD address)
+{
+    //小端 低字节在前、高字节在后
+    BYTE low_byte = cpu.ram[address];
+    BYTE high_byte = cpu.ram[address + 1];
+
+    WORD data = low_byte | ( high_byte << 8);
+
+    return data;
+}
+
+void cpu_write_word(WORD address, WORD data)
+{
+    BYTE *ptr = (BYTE*)&data;
+
+    //小端 低字节在前、高字节在后
+    cpu.ram[address] = ptr[1];
+    cpu.ram[address + 1] = ptr[0];
 }
