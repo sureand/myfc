@@ -1,5 +1,6 @@
 #ifndef __FC_COMMON_HEADER__
 #define __FC_COMMON_HEADER__
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -43,6 +44,10 @@
 #define VRAM_SIZE    0x4000  // 16KB VRAM
 #define SRAM_SIZE    0x8000  // 32KB PRG ROM
 #define PRG_ROM_SIZE 0x8000  // 32KB PRG ROM
+#define CHR_ROM_SIZE 0x2000  // 8KB CHR ROM
+
+#define PRG_ROM_PAGE_SIZE 0x4000 // 每页 16 KB
+#define CHR_ROM_PAGE_SIZE 0x2000 // 每页 8 KB
 
 // NES内存映射地址
 #define CPU_RAM_START 0x0000
@@ -106,8 +111,11 @@ typedef struct
 
 }_MEM;
 
-/* PRG ROM 32k, 程序的rom 内容*/
-BYTE prg_rom[PRG_ROM_SIZE];
+/* PRG ROM, 程序的rom 内容*/
+BYTE *prg_rom;
+
+/* CHR ROM, chr 的rom 内容*/
+BYTE *chr_rom;
 
 /* 电池空间, 8k*/
 BYTE sram[SRAM_SIZE];
@@ -163,7 +171,6 @@ typedef struct {
 }_CPU;
 
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
-#define OAM_SIZE    0x100  // OAM大小为256字节
 #define APU_REG_SIZE 0x20 //APU 的大小
 
 typedef struct {
@@ -224,5 +231,6 @@ _PPU ppu;
 
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
+void mem_init(ROM *rom);
 
 #endif

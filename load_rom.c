@@ -35,7 +35,7 @@ ROM_HEADER *parse_header(FILE *fp)
     BYTE header[HEADER_LEN] = {0};
     size_t len = fread(header, 1, HEADER_LEN, fp);
     if(len != HEADER_LEN) {
-        fprintf(stderr, "read game header error, read len:%lu\n", len);
+        fprintf(stderr, "read game header error, read len:%I64u\n", len);
         return NULL;
     }
 
@@ -80,29 +80,31 @@ ROM *parse_rom(FILE *fp)
         fseek(fp, 512, SEEK_CUR);
     }
 
-    size_t len1 = header->prg_rom_count * 0x4000;
-    size_t len2 = header->chr_rom_count * 0x2000;
+    size_t prg_rom_size = header->prg_rom_count * PRG_ROM_PAGE_SIZE;
+    size_t chr_rom_size = header->chr_rom_count * CHR_ROM_PAGE_SIZE;
 
-    rom->body = (BYTE*)calloc(len1 + len2, 1);
+    rom->body = (BYTE*)calloc(prg_rom_size + chr_rom_size, 1);
     if(!rom->body) {
         fprintf(stderr, "error, malloc failed!\n");
         goto ERR_EXIT;
     }
 
-    if(!fread(rom->body, len1 + len2, 1, fp)) {
+    if(!fread(rom->body, prg_rom_size + chr_rom_size, 1, fp)) {
         fprintf(stderr, "read nes rom error!\n");
         goto ERR_EXIT;
     }
 
     rom->prg_rom = rom->body;
-    rom->chr_rom = rom->body + len1;
+    rom->chr_rom = rom->body + prg_rom_size;
     rom->header = header;
 
+    fclose(fp);
     return rom;
 
 ERR_EXIT:
     FREE(header);
     FREE(rom);
+    fclose(fp);
     return NULL;
 }
 
@@ -132,7 +134,7 @@ void show_header_info(ROM_HEADER *header)
     size_t prg_size = (header->prg_rom_count * 0x4000) >> 10;
     size_t chr_size = (header->prg_rom_count * 0x2000) >> 10;
 
-    printf("PRG:%zuk, CHR:%zuK\n", prg_size, chr_size);
+    printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
 }
 
 int load_data(const char *path)
@@ -151,16 +153,4 @@ int load_data(const char *path)
     FREE(rom);
 
     return 0;
-}
-
-void extend_rom_read(WORD address)
-{
-    BYTE data = extend_rom[address - 0x4020];
-
-    return data;
-}
-
-void extend_rom_write(WORD address, BYTE data)
-{
-    extend_rom[address - 0x4020] = data;
 }

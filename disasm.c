@@ -36,7 +36,7 @@ void parse_code()
             break;
         }
 
-        printf("%04X %02X A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%zu\n", \
+        printf("%04X %02X A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
                PC, code, cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, cpu.cycle);
 
         code_maps[code].op_func(code);
@@ -83,7 +83,7 @@ void show_code(ROM *rom)
 {
     init_cpu();
 
-    //mem_init(rom);
+    mem_init(rom);
 
     parse_code();
 

@@ -16,19 +16,22 @@ BYTE bus_read(WORD address)
 
     /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
     if (address >= 0x4000 && address <= 0x4013) {
-        printf("incomplete interface!");
+        printf("Read from unsupported address: %04X\n", address);
+        return 0;
         //TODO: apu_read(address, data); // 需要实现的函数
     }
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
-    if (address = 0x4015) {
-        printf("incomplete interface!");
+    if (address == 0x4015) {
+        printf("Read from unsupported address: %04X\n", address);
+        return 0;
         //TODO: apu_status_read(address); // 需要实现的函数
     }
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        printf("incomplete interface!");
+        printf("Read from unsupported address: %04X\n", address);
+        return 0;
         //TODO: controller_read(address);
     }
 
@@ -45,7 +48,7 @@ BYTE bus_read(WORD address)
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
         address -= 0x8000;
-        return rom_read(address);
+        return prg_rom[address - 0x8000];
     }
 
     printf("Read from unsupported address: %04X\n", address);
@@ -57,17 +60,20 @@ BYTE bus_read(WORD address)
 void bus_write(WORD address, BYTE data)
 {
     if (address < 0x1FFF) {
-        return cpu_write_byte(address & 0x7FF, data);
+        cpu_write_byte(address & 0x7FF, data);
+        return;
     }
 
     if (address >= 0x2000 && address <= 0x3FFF) {
-        return ppu_write(address & 0x2007, data);
+        ppu_write(address & 0x2007, data);
+        return;
     }
 
     /* APU 的读写 */
     if (address >= 0x4000 && address <= 0x4013) {
-        printf("incomplete interface!");
+        printf("Write from unsupported address: %04X\n", address);
         //TODO: apu_write(address, data); // 需要实现的函数
+        return;
     }
 
     /* OAM DMA 写入 */
@@ -80,15 +86,17 @@ void bus_write(WORD address, BYTE data)
     }
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
-    if (address = 0x4015) {
+    if (address == 0x4015) {
         printf("incomplete interface!");
         //apu_status_write(data); // 需要实现的函数
+        return;
     }
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        printf("incomplete interface!");
+        printf("Write from unsupported address: %04X\n", address);
         //TODO: controller_write(address);
+        return;
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
@@ -98,11 +106,19 @@ void bus_write(WORD address, BYTE data)
 
     /* SRAM: 0x6000-0x7FFF(用于保存记录) */
     if (address >= 0x6000 && address <= 0x7FFF) {
-        return sram[address - 0x6000] = data;
+        sram[address - 0x6000] = data;
+        return;
     }
 
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        return prg_rom[address - 0x8000] = data;
+        prg_rom[address - 0x8000] = data;
+        return;
     }
+}
+
+void mem_init(ROM *rom)
+{
+    prg_rom = rom->prg_rom;
+    chr_rom = rom->chr_rom;
 }
