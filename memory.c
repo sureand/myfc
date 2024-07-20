@@ -2,6 +2,8 @@
 #include "cpu.h"
 #include "ppu.h"
 
+// TODO: 后期优化, 把整个RAM直接映射64k全部空间
+
 BYTE bus_read(WORD address)
 {
     /* 由于 0x0800 - 0x1FFF 是CPU RAM 的镜像, 直接取模*/
@@ -80,10 +82,14 @@ void bus_write(WORD address, BYTE data)
 
     /* OAM DMA 写入 */
     if (address == 0x4014) {
+
         WORD dma_address = data << 8;
-        for (int i = 0; i < 256; i++) {
-            ppu.oamdata[i] = cpu_read_byte(dma_address + i); // bus_read 函数需要访问 CPU 内存
+        if (dma_address >= CPU_RAM_SIZE) {
+            printf("Write from unsupported address: %04X\n", dma_address);
+            return;
         }
+
+        memcpy(ppu.oamdata, cpu.ram + dma_address, OAM_SIZE);
         return;
     }
 
