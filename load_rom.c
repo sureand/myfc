@@ -5,13 +5,6 @@
 #include "cpu.h"
 #include <assert.h>
 
-#define FREE(p) \
-do { \
-    if(!(p)) break;\
-    free((p)); \
-    (p) = NULL; \
-}while(0); \
-
 ROM_HEADER *make_header()
 {
     ROM_HEADER *header = (ROM_HEADER *)calloc(1, sizeof(ROM_HEADER));
@@ -133,23 +126,4 @@ void show_header_info(ROM_HEADER *header)
     size_t chr_size = (header->prg_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
 
     printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
-}
-
-int load_data(const char *path)
-{
-    ROM *rom = load_rom(path);
-    if(!rom) return -1;
-
-    //ROM_HEADER *header = rom->header;
-    //show_header_info(header);
-
-    show_code(rom);
-
-    FREE(rom->header);
-    FREE(rom);
-
-    FREE(chr_rom);
-    FREE(prg_rom);
-
-    return 0;
 }

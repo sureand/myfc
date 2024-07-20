@@ -13,8 +13,9 @@ BYTE bus_read(WORD address)
 
     /* ppu 的处理 */
     if (address >= 0x2000 && address <= 0x3FFF) {
-        //printf("\nread ppu address: 0X%04X\n", address);
-        return ppu_read(address & 0x2007);
+        BYTE data = ppu_read(address & 0x2007);
+        printf("read ppu address: 0X%04X, got data:[0X%02X]\n", address, data);
+        return data;
     }
 
     /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
@@ -68,7 +69,7 @@ void bus_write(WORD address, BYTE data)
     }
 
     if (address >= 0x2000 && address <= 0x3FFF) {
-        printf("write ppu address: 0X%04X, data:[%d]\n", address, data);
+        printf("write ppu address: 0X%04X, data:[0X%02X]\n", address, data);
         ppu_write(address & 0x2007, data);
         return;
     }

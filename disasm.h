@@ -3,7 +3,8 @@
 #include "common.h"
 
 void display(BYTE *data, size_t count);
+void disassemble();
 void parse_code();
-void show_code(ROM *rom);
+void show_code();
 
 #endif

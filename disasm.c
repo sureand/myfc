@@ -48,8 +48,8 @@ void disassemble()
     cpu.P = 0x24;
     cpu.cycle = 7;
 
-    WORD addr = 0xC000;
-    PC = 0xC000;
+    WORD addr = 0xC5AF;
+    PC = 0xC5AF;
 
     while (addr) {
 
@@ -107,15 +107,12 @@ void display_IRQ()
 
     addr = addr2 << 8 | addr1;
 
+    /* nestest.nes 的NMI 地址 是 0xC5AF*/
     printf("NMI:%04X\n", addr);
 }
 
-void show_code(ROM *rom)
+void show_code()
 {
-    init_cpu();
-
-    mem_init(rom);
-
     disassemble();
 
     // 显示部分IRQ 指令

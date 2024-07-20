@@ -235,4 +235,11 @@ BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
 void mem_init(ROM *rom);
 
+#define FREE(p) \
+do { \
+    if(!(p)) break;\
+    free((p)); \
+    (p) = NULL; \
+}while(0); \
+
 #endif
