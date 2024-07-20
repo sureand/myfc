@@ -138,4 +138,7 @@ void mem_init(ROM *rom)
 
     chr_rom_count = rom->header->chr_rom_count;
     chr_rom = rom->chr_rom;
+
+    /* 拷贝到 ppu 的vram  */
+    memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 }

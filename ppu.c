@@ -6,13 +6,52 @@ void ppu_init()
     memset(&ppu, 0, sizeof(_PPU));
 }
 
+// 读取 VRAM
+BYTE ppu_vram_read(WORD address)
+{
+    address &= 0x3FFF; // 确保地址在 0x0000 到 0x3FFF 范围内
+
+    if (address < 0x2000) {
+        // Pattern Tables
+        return ppu.vram[address];
+    } else if (address < 0x3F00) {
+        // Name Tables and Mirrors
+        WORD mirrored_address = address & 0x2FFF; // 镜像处理
+        return ppu.vram[mirrored_address];
+    } else if (address < 0x4000) {
+        // Palettes and Mirrors
+        WORD mirrored_address = address & 0x3F1F; // 镜像处理
+        return ppu.vram[mirrored_address];
+    }
+
+    fprintf(stderr, "PPU vram address out of range: 0x%04X\n", address);
+    return 0;
+}
+
+// 写入 VRAM
+void ppu_vram_write(WORD address, uint8_t data)
+{
+    address &= 0x3FFF; // 确保地址在 0x0000 到 0x3FFF 范围内
+
+    if (address < 0x2000) {
+        // Pattern Tables
+        ppu.vram[address] = data;
+    } else if (address < 0x3F00) {
+        // Name Tables and Mirrors
+        WORD mirrored_address = address & 0x2FFF; // 镜像处理
+        ppu.vram[mirrored_address] = data;
+    } else if (address < 0x4000) {
+        // Palettes and Mirrors
+        WORD mirrored_address = address & 0x3F1F; // 镜像处理
+        ppu.vram[mirrored_address] = data;
+    }
+
+    fprintf(stderr, "PPU vram address out of range: 0x%04X\n", address);
+}
+
 BYTE ppu_read(WORD address)
 {
     BYTE data = 0;
-
-    if (address < 0x2000) {
-        return ppu.vram[address];
-    }
 
     switch (address) {
 
@@ -33,10 +72,10 @@ BYTE ppu_read(WORD address)
             // 缓冲区读取逻辑
             if (ppu.ppuaddr < 0x3F00) {
                 data = ppu.vram_buffer;
-                ppu.vram_buffer = ppu.vram[ppu.ppuaddr];
+                ppu.vram_buffer = ppu_vram_read(ppu.ppuaddr);
             } else {
                 // 直接读取调色板数据，无需缓冲
-                data = ppu.vram[ppu.ppuaddr & 0x3F1F];
+                data = ppu_vram_read(ppu.ppuaddr & 0x3F1F);
             }
 
             // 更新PPU地址
@@ -57,11 +96,6 @@ BYTE ppu_read(WORD address)
 
 void ppu_write(WORD address, uint8_t data)
 {
-    if (address < 0x2000) {
-       ppu.vram[address] = data;
-       return;
-    }
-
     switch (address) {
         case 0x2000: // PPUCTRL
             ppu.ppuctrl = data;
@@ -96,7 +130,7 @@ void ppu_write(WORD address, uint8_t data)
             break;
         case 0x2007: // PPUDATA
 
-            ppu.vram[ppu.ppuaddr & 0x3F1F] = data;
+            ppu_vram_write(ppu.ppuaddr & 0x3F1F, data);
 
             if (ppu.ppuctrl & 0x04) {
                 ppu.ppuaddr += 32; // 垂直增量模式
