@@ -1,6 +1,24 @@
 
 #include "ppu.h"
 
+/*
+
+$0000-$0FFF: Pattern Table 0
+$1000-$1FFF: Pattern Table 1
+$2000-$23BF: Name Table 0
+$23C0-$23FF: Attribute Table 0
+$2400-$27BF: Name Table 1
+$27C0-$27FF: Attribute Table 1
+$2800-$2BBF: Name Table 2 (镜像或实际存在)
+$2BC0-$2BFF: Attribute Table 2
+$2C00-$2FBF: Name Table 3 (镜像或实际存在)
+$2FC0-$2FFF: Attribute Table 3
+$3000-$3EFF: 镜像地址
+$3F00-$3F0F: Background Palette
+$3F10-$3F1F: Sprite Palette
+$3F20-$3FFF: 调色板镜像
+*/
+
 void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
@@ -9,44 +27,29 @@ void ppu_init()
 // 读取 VRAM
 BYTE ppu_vram_read(WORD address)
 {
-    address &= 0x3FFF; // 确保地址在 0x0000 到 0x3FFF 范围内
+    address &= 0x3FFF;
 
     if (address < 0x2000) {
-        // Pattern Tables
         return ppu.vram[address];
-    } else if (address < 0x3F00) {
-        // Name Tables and Mirrors
-        WORD mirrored_address = address & 0x2FFF; // 镜像处理
-        return ppu.vram[mirrored_address];
-    } else if (address < 0x4000) {
-        // Palettes and Mirrors
-        WORD mirrored_address = address & 0x3F1F; // 镜像处理
-        return ppu.vram[mirrored_address];
+    } else if (address >= 0x2000 && address < 0x3F00) {
+        return ppu.vram[address & 0x2FFF];
     }
 
-    fprintf(stderr, "PPU vram address out of range: 0x%04X\n", address);
-    return 0;
+    return ppu.vram[address & 0x3F1F];
 }
 
 // 写入 VRAM
-void ppu_vram_write(WORD address, uint8_t data)
+void ppu_vram_write(WORD address, BYTE data)
 {
-    address &= 0x3FFF; // 确保地址在 0x0000 到 0x3FFF 范围内
+    address &= 0x3FFF;
 
     if (address < 0x2000) {
-        // Pattern Tables
         ppu.vram[address] = data;
-    } else if (address < 0x3F00) {
-        // Name Tables and Mirrors
-        WORD mirrored_address = address & 0x2FFF; // 镜像处理
-        ppu.vram[mirrored_address] = data;
-    } else if (address < 0x4000) {
-        // Palettes and Mirrors
-        WORD mirrored_address = address & 0x3F1F; // 镜像处理
-        ppu.vram[mirrored_address] = data;
+    } else if (address >= 0x2000 && address < 0x3F00) {
+        ppu.vram[address & 0x2FFF] = data;
     }
 
-    fprintf(stderr, "PPU vram address out of range: 0x%04X\n", address);
+    ppu.vram[address & 0x3F1F] = data;
 }
 
 BYTE ppu_read(WORD address)
@@ -75,7 +78,7 @@ BYTE ppu_read(WORD address)
                 ppu.vram_buffer = ppu_vram_read(ppu.ppuaddr);
             } else {
                 // 直接读取调色板数据，无需缓冲
-                data = ppu_vram_read(ppu.ppuaddr & 0x3F1F);
+                data = ppu_vram_read(ppu.ppuaddr);
             }
 
             // 更新PPU地址
@@ -84,7 +87,6 @@ BYTE ppu_read(WORD address)
             } else {
                 ppu.ppuaddr += 1;  // 水平增量模式
             }
-            ppu.ppuaddr &= 0x3FFF; // 确保地址在VRAM范围内
             break;
         default:
             fprintf(stderr, "incomplete register:[0x%X]!\n", address);
@@ -130,14 +132,13 @@ void ppu_write(WORD address, uint8_t data)
             break;
         case 0x2007: // PPUDATA
 
-            ppu_vram_write(ppu.ppuaddr & 0x3F1F, data);
+            ppu_vram_write(ppu.ppuaddr, data);
 
             if (ppu.ppuctrl & 0x04) {
                 ppu.ppuaddr += 32; // 垂直增量模式
             } else {
                 ppu.ppuaddr += 1;  // 水平增量模式
             }
-            ppu.ppuaddr &= 0x3FFF; // 确保地址在VRAM范围内
             break;
         default:
             fprintf(stderr, "Write to unsupported PPU register: [0x%X]!\n", address);
