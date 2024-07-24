@@ -181,7 +181,7 @@ typedef struct {
     uint8_t ppumask;    // PPU掩码寄存器 ($2001)
     uint8_t ppustatus;  // PPU状态寄存器 ($2002)，读取时会更新
     uint8_t oamaddr;    // OAM地址寄存器 ($2003)
-    uint8_t oamdata[OAM_SIZE]; // OAM数据数组 ($2004)
+    uint8_t oam[OAM_SIZE]; // OAM数据数组 ($2004)
     uint8_t ppuscroll;  // 滚动值，用于计算当前显示的tile
     uint16_t ppuaddr;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
     uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
@@ -199,6 +199,7 @@ typedef struct {
     uint8_t vram_buffer;// 用于存储从VRAM读取的数据
     uint8_t *nametable; // 指向当前名称表的指针
     uint8_t *pattern;   // 指向当前使用模式的指针（背景或精灵）
+    uint8_t *palette;
     // 其他可能的内部状态，如渲染状态机、精灵评估逻辑等
 } _PPU;
 
@@ -234,6 +235,10 @@ _PPU ppu;
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
 void mem_init(ROM *rom);
+//NMI 中断
+void cpu_interrupt_NMI();
+void show_code();
+void init_cpu();
 
 #define FREE(p) \
 do { \

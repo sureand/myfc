@@ -15,10 +15,6 @@ typedef struct
 
 INS code_maps[0X100];
 
-void init_cpu();
-
-//NMI 中断
-void cpu_interrupt_NMI();
 BYTE cpu_read_byte(WORD address);
 void cpu_write_byte(WORD address, BYTE data);
 WORD cpu_read_word(WORD address);

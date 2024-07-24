@@ -7,6 +7,8 @@ int run(ROM *rom)
     init_cpu();
 
     show_code();
+
+    return 0;
 }
 
 void release_memory(ROM *rom)

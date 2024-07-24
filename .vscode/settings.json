@@ -4,6 +4,7 @@
         "type_traits": "c",
         "load_rom.h": "c",
         "common.h": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "ppu.h": "c"
     }
 }
