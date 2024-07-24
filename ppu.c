@@ -271,7 +271,7 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
 
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
-    uint32_t frame_buffer[256 * 240];
+    uint32_t frame_buffer[256 * 240] = {0};
 
     // 1. 处理当前扫描线
     if (ppu.scanline < 240) {
@@ -299,7 +299,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         ppu.ppustatus |= 0x80;  // 设置VBlank标志
 
         // 生成NMI中断
-        if (ppu.ppustatus & 0x80) {
+        if (ppu.ppuctrl & 0x80) {
             cpu_interrupt_NMI();
         }
     } else if (ppu.scanline >= 261) {

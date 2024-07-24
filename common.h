@@ -239,6 +239,7 @@ void mem_init(ROM *rom);
 void cpu_interrupt_NMI();
 void show_code();
 void init_cpu();
+void ppu_init();
 
 #define FREE(p) \
 do { \

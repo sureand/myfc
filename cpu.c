@@ -2243,6 +2243,8 @@ void init_cpu()
     init_reg();
 
     init_code();
+
+    PC = 0xC000;
 }
 
 void cpu_interrupt_NMI()
@@ -2291,4 +2293,18 @@ void cpu_write_word(WORD address, WORD data)
     //小端 低字节在前、高字节在后
     cpu.ram[address] = ptr[1];
     cpu.ram[address + 1] = ptr[0];
+}
+
+void step_cpu()
+{
+    WORD addr = PC;
+    BYTE opcode = bus_read(addr);
+
+    // 执行操作码对应的操作函数
+    code_maps[opcode].op_func(opcode);
+
+    // 更新CPU周期
+    cpu.cycle += code_maps[opcode].cycle;
+
+    addr = PC;
 }

@@ -5,6 +5,7 @@
         "load_rom.h": "c",
         "common.h": "c",
         "typeinfo": "c",
-        "ppu.h": "c"
+        "ppu.h": "c",
+        "sdl_events.h": "c"
     }
 }

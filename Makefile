@@ -1,10 +1,10 @@
 CC = gcc
 
 # 定义编译选项
-CFLAGS = -Wall -g -std=c99 -I"SDL2/include"
+CFLAGS = -Wall -g -std=c99 -I"SDL2/include" -Dmain=SDL_main
 
 # 定义链接选项
-LDFLAGS = -L"SDL2/lib" -lSDL2 -lSDL2main
+LDFLAGS = -L"SDL2/lib" -lmingw32 -lSDL2 -lSDL2main
 
 TARGET = fc
 
