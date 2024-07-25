@@ -188,7 +188,7 @@ typedef struct {
     uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
     uint8_t oamdma;     // OAM DMA寄存器 ($4014)，用于CPU到OAM的DMA传输
-    uint8_t cycle;      // 当前的PPU周期计数
+    uint16_t cycle;      // 当前的PPU周期计数
     uint8_t scanline;   // 当前的扫描线计数
     uint8_t scroll_x;
     uint8_t scroll_y;

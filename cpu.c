@@ -2230,37 +2230,101 @@ static void init_code()
 
 static void init_reg()
 {
-    cpu.IP = 0xC004;
+    cpu.IP = 0;
     cpu.SP = 0xFD;
     cpu.X = 0;
     cpu.Y = 0;
-    cpu.P = 0;
+    cpu.P = 0x24;
     cpu.A = 0;
+    cpu.is_lock = 0;
+    cpu.cycle = 0;
 }
 
-void init_cpu()
+// 读取复位向量的函数
+uint16_t get_reset_vector()
+{
+    uint8_t low_byte = bus_read(0xFFFC);
+    uint8_t high_byte = bus_read(0xFFFD);
+
+    return (high_byte << 8) | low_byte;
+}
+
+// 读取 NMI 向量的函数
+uint16_t get_nmi_vector()
+{
+    uint8_t low_byte = bus_read(0xFFFA);
+    uint8_t high_byte = bus_read(0xFFFB);
+
+    return (high_byte << 8) | low_byte;
+}
+
+// 读取 IRQ 向量的函数
+uint16_t get_irq_vector()
+{
+    uint8_t low_byte = bus_read(0xFFFE);
+    uint8_t high_byte = bus_read(0xFFFF);
+
+    return (high_byte << 8) | low_byte;
+}
+
+// NMI 中断处理函数
+void handle_nmi()
+{
+    uint16_t nmi_address = get_nmi_vector();
+    // 将 CPU 程序计数器设置为 NMI 向量地址
+    cpu.IP = nmi_address;
+    // 处理 NMI 中断的其他操作，如压栈、更新状态等
+}
+
+// IRQ 中断处理函数
+void handle_irq()
+{
+    if (!(cpu.P & 0x04)) { // 检查 I 标志是否被清除
+        uint16_t irq_address = get_irq_vector();
+        // 将 CPU 程序计数器设置为 IRQ 向量地址
+        cpu.IP = irq_address;
+        // 处理 IRQ 中断的其他操作，如压栈、更新状态等
+    }
+}
+
+// Reset 处理函数
+void handle_reset()
+{
+    uint16_t reset_address = get_reset_vector();
+    cpu.IP = reset_address;
+    init_reg();
+}
+
+WORD get_start_address()
+{
+    BYTE addr1 = bus_read(0xFFFC);
+    BYTE addr2 = bus_read(0xFFFD);
+
+    return addr2 << 8 | addr1;
+}
+
+void cpu_init()
 {
     init_reg();
 
     init_code();
-
-    PC = 0xC000;
 }
 
 void cpu_interrupt_NMI()
 {
-    //把当前的IP 压栈, 具体看RTI 实现
+    // 将当前的 IP 压栈
     push((cpu.IP >> 8) & 0xFF);
     push(cpu.IP & 0xFF);
 
-    //把cpu 状态压栈
-    push(cpu.P);
+    // 将 P 状态寄存器压栈（清除 B 标志）
+    push(cpu.P & ~0x30); // 清除 B 和未使用标志（位 4 和位 5）
 
-    //设置禁用中断, 预防被其他的中断打断
-   cpu.P |= 0x04;
+    // 设置禁用中断标志
+    cpu.P |= 0x04;
 
-    //取出NMI 地址
-    WORD nmi_vector = cpu_read_byte(0xFFFB) << 8 | cpu_read_byte(0xFFFA);
+    // 取出 NMI 向量地址
+    WORD nmi_vector = bus_read(0xFFFB) << 8 | bus_read(0xFFFA);
+    printf("NMI:0X%X\n", nmi_vector);
 
     cpu.IP = nmi_vector;
 }
@@ -2298,6 +2362,7 @@ void cpu_write_word(WORD address, WORD data)
 void step_cpu()
 {
     WORD addr = PC;
+
     BYTE opcode = bus_read(addr);
 
     // 执行操作码对应的操作函数
@@ -2305,6 +2370,4 @@ void step_cpu()
 
     // 更新CPU周期
     cpu.cycle += code_maps[opcode].cycle;
-
-    addr = PC;
 }

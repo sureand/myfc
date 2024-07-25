@@ -622,8 +622,7 @@ void handler_CLC(WORD address)
 void handler_KIL(WORD address)
 {
     (void)address;
-
-    getchar();
+    cpu.is_lock = 1;
 }
 
 void handler_DOP(WORD address)

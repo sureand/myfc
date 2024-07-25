@@ -25,14 +25,16 @@ uint32_t timer_callback(uint32_t interval, void *param)
 void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 {
     uint64_t i;
-    const uint64_t CPU_CYCLES_PER_FRAME = 29830; // 大约为1/60秒内的CPU周期数    // // 每执行一个CPU周期，执行三个PPU周期
-    for (i = 0; i < CPU_CYCLES_PER_FRAME; ++i) {
+    const uint64_t CPU_CYCLES_PER_FRAME = 1000;
+
+    for (i = 0; i < CPU_CYCLES_PER_FRAME; i++) {
 
         step_cpu();
-
-        for (int j = 0; j < 3; i++) {
+        for (int j = 0; j < 3; j++) {
             step_ppu(renderer, texture);
         }
+    }
+    if (ppu.scanline == 240) {
         cpu_interrupt_NMI();
     }
 }
@@ -54,14 +56,12 @@ void main_loop(SDL_Renderer *renderer)
 
     while (running) {
         SDL_Event event;
-        while (SDL_WaitEvent(&event)) {
+        while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
                 break;
             } else if (event.type == SDL_USEREVENT) {
                 handle_user_event(renderer, texture);
-
-                // 检查退出条件, break
 
                 // 渲染模拟器的画面
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -70,6 +70,9 @@ void main_loop(SDL_Renderer *renderer)
                 SDL_RenderPresent(renderer);
             }
         }
+
+        // 通过定时器触发事件的频率来控制帧率
+        SDL_Delay(16); // 大约每秒60帧
     }
 
     // 清理SDL
@@ -84,7 +87,7 @@ int start()
         return -1;
     }
 
-    SDL_Window *window = SDL_CreateWindow("NES Emulator",
+    SDL_Window *window = SDL_CreateWindow("MY FC",
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           256, 240, SDL_WINDOW_SHOWN);
@@ -126,11 +129,10 @@ ROM *fc_init()
 {
     ROM * rom = load_rom("nestest.nes");
 
-    ppu_init();
-
     mem_init(rom);
 
-    init_cpu();
+    ppu_init();
+    cpu_init();
 
     return rom;
 }

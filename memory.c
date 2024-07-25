@@ -4,6 +4,39 @@
 
 // TODO: 后期优化, 把整个RAM直接映射64k全部空间
 
+
+uint8_t controller_state[2] = {0};  // 模拟手柄状态
+uint8_t controller_index[2] = {0};  // 手柄按钮读取索引
+
+// 模拟手柄读取
+uint8_t controller_read(uint16_t address)
+{
+    uint8_t controller_num = address - 0x4016;
+    uint8_t value = (controller_state[controller_num] >> controller_index[controller_num]) & 1;
+
+    controller_index[controller_num]++;
+    if (controller_index[controller_num] >= 8) {
+        controller_index[controller_num] = 0;
+    }
+
+    return value | 0x40; // 返回状态，保证高两位为 01
+}
+
+// 模拟手柄写入
+void controller_write(uint16_t address, uint8_t value) {
+    if (address == 0x4016) {
+        if (value & 1) {
+            // 重置手柄读取索引
+            controller_index[0] = 0;
+            controller_index[1] = 0;
+        } else {
+            // 更新手柄状态，模拟按下 A 键 (bit 0 为 0)
+            controller_state[0] = 0xFE; // A 键按下
+            controller_state[1] = 0xFF; // 其他键未按下
+        }
+    }
+}
+
 BYTE bus_read(WORD address)
 {
     /* 由于 0x0800 - 0x1FFF 是CPU RAM 的镜像, 直接取模*/
@@ -34,9 +67,7 @@ BYTE bus_read(WORD address)
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        printf("Read from unsupported address: %04X\n", address);
-        return 0;
-        //TODO: controller_read(address);
+        return controller_read(address);
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
@@ -56,7 +87,6 @@ BYTE bus_read(WORD address)
     }
 
     printf("\nRead from unsupported address: %04X\n", address);
-    _exit(-1);
 
     return 0;
 }
@@ -103,9 +133,9 @@ void bus_write(WORD address, BYTE data)
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        printf("Write from unsupported address: %04X\n", address);
-        //TODO: controller_write(address);
-        return;
+        if (address == 0x4016) {
+            controller_write(address, data);
+        }
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
@@ -123,7 +153,6 @@ void bus_write(WORD address, BYTE data)
     if (address >= 0x8000 && address <= 0xFFFF) {
 
         WORD address_range = prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
-
         prg_rom[address & address_range] = data;
 
         return;
@@ -139,7 +168,4 @@ void mem_init(ROM *rom)
 
     chr_rom_count = rom->header->chr_rom_count;
     chr_rom = rom->chr_rom;
-
-    /* 拷贝到 ppu 的vram  */
-    memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 }
