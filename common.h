@@ -168,6 +168,7 @@ typedef struct {
     BYTE reversed; //保留, 用来作为结构体对齐使用
 
     size_t cycle;
+    BYTE is_lock;
 
     BYTE ram[CPU_RAM_SIZE];  // 2KB RAM
 }_CPU;
@@ -238,8 +239,9 @@ void mem_init(ROM *rom);
 //NMI 中断
 void cpu_interrupt_NMI();
 void show_code();
-void init_cpu();
+void cpu_init();
 void ppu_init();
+void do_disassemble(WORD addr, BYTE opcode);
 
 #define FREE(p) \
 do { \

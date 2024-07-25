@@ -43,6 +43,35 @@ void parse_code()
 
 }
 
+void do_disassemble(WORD addr, BYTE opcode)
+{
+    printf("%04X  %02X", addr, opcode);
+
+    BYTE operand_length = code_maps[opcode].op_len - 1;
+    BYTE operand1 = 0, operand2 = 0;
+    if (operand_length == 1) {
+        operand1 = bus_read(addr + 1);
+        printf(" %02X", operand1);
+    } else if (operand_length == 2) {
+        operand1 = bus_read(addr + 1);
+        operand2 = bus_read(addr + 2);
+        printf(" %02X %02X", operand1, operand2);
+    }
+
+    printf("  %-4s", code_maps[opcode].op_name);
+
+    if (operand_length == 1) {
+        printf(" $%02X", operand1);
+    } else if (operand_length == 2) {
+        WORD address = (operand2 << 8) | operand1;
+        printf(" $%04X", address);
+    }
+
+    printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
+            cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,cpu.cycle);
+
+}
+
 void disassemble()
 {
     cpu.P = 0x24;
@@ -55,32 +84,8 @@ void disassemble()
 
         BYTE opcode = bus_read(addr);
 
-        printf("%04X  %02X", addr, opcode);
+        do_disassemble(addr, opcode);
 
-        BYTE operand_length = code_maps[opcode].op_len - 1;
-        BYTE operand1 = 0, operand2 = 0;
-        if (operand_length == 1) {
-            operand1 = bus_read(addr + 1);
-            printf(" %02X", operand1);
-        } else if (operand_length == 2) {
-            operand1 = bus_read(addr + 1);
-            operand2 = bus_read(addr + 2);
-            printf(" %02X %02X", operand1, operand2);
-        }
-
-        printf("  %-4s", code_maps[opcode].op_name);
-
-        if (operand_length == 1) {
-            printf(" $%02X", operand1);
-        } else if (operand_length == 2) {
-            WORD address = (operand2 << 8) | operand1;
-            printf(" $%04X", address);
-        }
-
-        printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
-               cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,cpu.cycle);
-
-        getchar();
         code_maps[opcode].op_func(opcode);
         cpu.cycle += code_maps[opcode].cycle;
 
