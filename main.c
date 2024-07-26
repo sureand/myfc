@@ -48,9 +48,6 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
     const uint64_t CPU_CYCLES_PER_FRAME = NTSC_CPU_CYCLES_PER_FRAME;
     SDL_Event event;
 
-    // 初始化定时器
-    uint32_t frame_start = SDL_GetTicks();
-
     while (cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
@@ -82,8 +79,8 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 void main_loop(SDL_Renderer *renderer)
 {
     uint8_t running = 1;
-    int windowWidth = 256, windowHeight = 240;
-    float scaleX = 1.0f, scaleY = 1.0f;
+    int width = 256, height = 240;
+    float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
     SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
@@ -108,20 +105,27 @@ void main_loop(SDL_Renderer *renderer)
             else if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                     // 当窗口大小改变时，更新窗口的宽度和高度
-                    windowWidth = event.window.data1;
-                    windowHeight = event.window.data2;
+                    width = event.window.data1;
+                    height = event.window.data2;
 
                     // 重新设置渲染器的缩放比例
-                    scaleX = (float)windowWidth / 256.0f; // 假设原始宽度为800
-                    scaleY = (float)windowHeight / 240.0f; // 假设原始高度为600
-                    SDL_RenderSetScale(renderer, scaleX, scaleY);
+                    scale_x = (float)width / 256.0f;
+                    scale_x = (float)height / 240.0f;
+                    SDL_RenderSetScale(renderer, scale_x, scale_y);
                 }
             }
-            SDL_RenderSetScale(renderer, scaleX, scaleY);
-            // 渲染模拟器的画面
+            SDL_RenderSetScale(renderer, scale_x, scale_y);
+
+            // 设置绘图颜色为黑色
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+
+            // 清空屏幕（填充为黑色）
             SDL_RenderClear(renderer);
+
+            // 将纹理复制到渲染器
             SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+            // 显示渲染结果
             SDL_RenderPresent(renderer);
         }
 
@@ -179,7 +183,7 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM * rom = load_rom("nestest.nes");
+    ROM * rom = load_rom("test.nes");
 
     mem_init(rom);
 
@@ -201,7 +205,7 @@ void fc_release(ROM *rom)
 #undef main
 int main(int argc, char *argv[])
 {
-    ROM * rom = fc_init();
+    ROM *rom = fc_init();
 
     handle_reset();
 
