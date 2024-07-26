@@ -20,6 +20,7 @@ void cpu_write_byte(WORD address, BYTE data);
 WORD cpu_read_word(WORD address);
 void cpu_write_word(WORD address, WORD data);
 void step_cpu();
+void handle_reset();
 
 #define op(c, s, n, p, func) \
     code_maps[0x##c].op_name = s; \

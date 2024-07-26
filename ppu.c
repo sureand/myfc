@@ -127,7 +127,7 @@ BYTE ppu_read(WORD address)
             }
             break;
         default:
-            fprintf(stderr, "incomplete register:[0x%X]!\n", address);
+            //fprintf(stderr, "incomplete register:[0x%X]!\n", address);
             break;
     }
 
@@ -145,8 +145,10 @@ void ppu_write(WORD address, uint8_t data)
             break;
         case 0x2003: // OAMADDR
             ppu.oamaddr = data;
+            printf("write oam:0X%X, data:0X%X\n", ppu.oamaddr, data);
             break;
         case 0x2004: // OAMDATA
+            printf("write oam:0X%X, data:0X%X\n", ppu.oamaddr, data);
             ppu.oam[ppu.oamaddr] = data;
             ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环OAM地址
             break;
@@ -271,6 +273,8 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
 
+        //printf("pattern_table_address:0X%X, tile_lsb:0x%X, tile_msb:0X%X\n", pattern_table_address, tile_lsb, tile_msb);
+
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         for (int x = 0; x < 8; x++) {
 
@@ -326,7 +330,8 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             SDL_UpdateTexture(texture, NULL, rgb_frame_buffer, 256 * sizeof(uint32_t));
         }
-    } else if (ppu.scanline == 241) {
+    } else if (ppu.scanline == 241 && ppu.cycle == 1) {
+
         // VBlank开始
         ppu.ppustatus |= 0x80;  // 设置VBlank标志
 

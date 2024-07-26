@@ -526,16 +526,15 @@ void handler_BIT(WORD address)
 
 void handler_JSR(WORD address)
 {
-    WORD cur_pc = PC;
-    PC += 2;
-
     //返回地址压栈
-    BYTE *bp = (BYTE*)&PC;
-    push(*(bp + 1));
-    push(*(bp));
+    WORD return_address = PC + 2; // 当前 PC 加 2，因为我们希望返回时跳过 JSR 指令
 
-    BYTE addr1 = bus_read(cur_pc + 1);
-    BYTE addr2 = bus_read(cur_pc + 2);
+    // 返回地址压栈
+    push((return_address >> 8) & 0xFF); // 高字节
+    push(return_address & 0xFF); // 低字节
+
+    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr2 = bus_read(PC + 2);
     WORD addr = addr2 << 8 | addr1;
 
     PC = addr;

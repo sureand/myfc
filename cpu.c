@@ -2292,7 +2292,6 @@ void handle_reset()
 {
     uint16_t reset_address = get_reset_vector();
     cpu.IP = reset_address;
-    init_reg();
 }
 
 WORD get_start_address()
@@ -2324,7 +2323,8 @@ void cpu_interrupt_NMI()
 
     // 取出 NMI 向量地址
     WORD nmi_vector = bus_read(0xFFFB) << 8 | bus_read(0xFFFA);
-    printf("NMI:0X%X\n", nmi_vector);
+
+    printf("NMI current IP:0X%X, nmi_vector:0X%X\n", cpu.IP, nmi_vector);
 
     cpu.IP = nmi_vector;
 }
@@ -2361,9 +2361,9 @@ void cpu_write_word(WORD address, WORD data)
 
 void step_cpu()
 {
-    WORD addr = PC;
+    BYTE opcode = bus_read(PC);
 
-    BYTE opcode = bus_read(addr);
+    do_disassemble(PC, opcode);
 
     // 执行操作码对应的操作函数
     code_maps[opcode].op_func(opcode);

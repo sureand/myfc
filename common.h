@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_events.h"
 
 #ifndef NULL
 #define NULL (void*)0
@@ -189,7 +191,7 @@ typedef struct {
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
     uint8_t oamdma;     // OAM DMA寄存器 ($4014)，用于CPU到OAM的DMA传输
     uint16_t cycle;      // 当前的PPU周期计数
-    uint8_t scanline;   // 当前的扫描线计数
+    int16_t scanline;   // 当前的扫描线计数
     uint8_t scroll_x;
     uint8_t scroll_y;
     uint8_t write_latch; // 用于跟踪第一次和第二次写入
@@ -242,6 +244,17 @@ void show_code();
 void cpu_init();
 void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
+
+#define BUTTON_A      0x01
+#define BUTTON_B      0x02
+#define BUTTON_SELECT 0x04
+#define BUTTON_START  0x08
+#define BUTTON_UP     0x10
+#define BUTTON_DOWN   0x20
+#define BUTTON_LEFT   0x40
+#define BUTTON_RIGHT  0x80
+
+void update_controller_state(SDL_Event* event);
 
 #define FREE(p) \
 do { \
