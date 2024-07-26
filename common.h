@@ -77,6 +77,9 @@ typedef struct
     //程序只读存储器个数, 以4K 为单位
     BYTE prg_rom_count;
 
+    //是否支持镜像显示
+    BYTE mirroring;
+
     //角色只读存储器个数, 以2K 为单位
     BYTE chr_rom_count;
 
@@ -120,6 +123,14 @@ BYTE *prg_rom;
 /* CHR ROM, chr 的rom 内容*/
 BYTE chr_rom_count;
 BYTE *chr_rom;
+
+#define HORIZONTAL_MIRRORING 0
+#define VERTICAL_MIRRORING 1
+#define SINGLE_SCREEN_MIRRORING_0 2
+#define SINGLE_SCREEN_MIRRORING_1 3
+#define FOUR_SCREEN_MIRRORING 4
+
+BYTE mirroring;
 
 /* 电池空间, 8k*/
 BYTE sram[SRAM_SIZE];
@@ -203,6 +214,8 @@ typedef struct {
     uint8_t *nametable; // 指向当前名称表的指针
     uint8_t *pattern;   // 指向当前使用模式的指针（背景或精灵）
     uint8_t *palette;
+
+    uint8_t mirroring; //是否支持镜像
     // 其他可能的内部状态，如渲染状态机、精灵评估逻辑等
 } _PPU;
 

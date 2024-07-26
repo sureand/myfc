@@ -50,6 +50,18 @@ void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
 
+    // 假设 header[6] 的第 0 位决定水平或垂直镜像
+    if (mirroring & 0x01) {
+        ppu.mirroring = VERTICAL_MIRRORING;
+    } else {
+        ppu.mirroring = HORIZONTAL_MIRRORING;
+    }
+
+    // 检查是否支持四屏镜像
+    if (mirroring & 0x08) {
+        ppu.mirroring = FOUR_SCREEN_MIRRORING;
+    }
+
     /* 拷贝到 ppu 的vram  */
     memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 
@@ -62,18 +74,58 @@ void ppu_init()
     }
 }
 
+// 计算实际的 Name Table 地址
+WORD get_name_table_address(WORD address, BYTE mirroring)
+{
+    address &= 0x0FFF; // 限制在 Name Table 范围内
+    switch (mirroring) {
+        case HORIZONTAL_MIRRORING:
+            return (address < 0x0800) ? (0x2000 + address) : (0x2400 + (address - 0x0800));
+        case VERTICAL_MIRRORING:
+            return (address < 0x0400 || (address >= 0x0800 && address < 0x0C00)) ? (0x2000 + (address & 0x07FF)) : (0x2400 + (address & 0x03FF));
+        case SINGLE_SCREEN_MIRRORING_0:
+            return 0x2000 + (address & 0x03FF);
+        case SINGLE_SCREEN_MIRRORING_1:
+            return 0x2400 + (address & 0x03FF);
+        case FOUR_SCREEN_MIRRORING:
+            return 0x2000 + address;
+        default:
+            return 0x2000 + address;
+    }
+}
+
+// 处理调色板地址的镜像
+WORD get_palette_address(WORD address)
+{
+    address = 0x3F00 | (address & 0x1F); // 限制在 $3F00-$3F1F 范围内
+    if (address == 0x3F10 || address == 0x3F14 || address == 0x3F18 || address == 0x3F1C) {
+        address -= 0x10; // 镜像 $3F10/$3F14/$3F18/$3F1C 到 $3F00/$3F04/$3F08/$3F0C
+    }
+    return address;
+}
+
 // 读取 VRAM
 BYTE ppu_vram_read(WORD address)
 {
     address &= 0x3FFF;
 
-    if (address < 0x2000) {
-        return ppu.vram[address];
-    } else if (address >= 0x2000 && address < 0x3F00) {
-        return ppu.vram[address & 0x2FFF];
-    }
+    WORD real_address = address;
 
-    return ppu.vram[address & 0x3F1F];
+    if (address < 0x2000) {
+        // Pattern tables 区域
+        return ppu.vram[address];
+    } else if (address < 0x3F00) {
+        // Name tables 和 Attribute tables 区域
+        if (address >= 0x3000) {
+            address -= 0x1000; // 处理 $3000-$3FFF 镜像到 $2000-$2FFF
+        }
+        real_address = get_name_table_address(address - 0x2000, ppu.mirroring);
+        return ppu.vram[real_address];
+    } else {
+        // Palette 区域
+        real_address = get_palette_address(address);
+        return ppu.vram[real_address];
+    }
 }
 
 // 写入 VRAM
@@ -81,13 +133,24 @@ void ppu_vram_write(WORD address, BYTE data)
 {
     address &= 0x3FFF;
 
-    if (address < 0x2000) {
-        ppu.vram[address] = data;
-    } else if (address >= 0x2000 && address < 0x3F00) {
-        ppu.vram[address & 0x2FFF] = data;
-    }
+    WORD real_address = address;
 
-    ppu.vram[address & 0x3F1F] = data;
+    if (address < 0x2000) {
+        // Pattern tables 区域
+        ppu.vram[address] = data;
+    } else if (address < 0x3F00) {
+        // Name tables 和 Attribute tables 区域
+        if (address >= 0x3000) {
+            address -= 0x1000; // 处理 $3000-$3FFF 镜像到 $2000-$2FFF
+        }
+        real_address = get_name_table_address(address - 0x2000, ppu.mirroring);
+        ppu.vram[real_address] = data;
+
+    } else {
+        // Palette 区域
+        real_address = get_palette_address(address);
+        ppu.vram[real_address] = data;
+    }
 }
 
 BYTE ppu_read(WORD address)
@@ -145,10 +208,8 @@ void ppu_write(WORD address, uint8_t data)
             break;
         case 0x2003: // OAMADDR
             ppu.oamaddr = data;
-            printf("write oam:0X%X, data:0X%X\n", ppu.oamaddr, data);
             break;
         case 0x2004: // OAMDATA
-            printf("write oam:0X%X, data:0X%X\n", ppu.oamaddr, data);
             ppu.oam[ppu.oamaddr] = data;
             ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环OAM地址
             break;
@@ -187,6 +248,11 @@ void ppu_write(WORD address, uint8_t data)
     }
 }
 
+static inline WORD get_name_table_base()
+{
+    return 0x2000 + (ppu.ppuctrl & 0x03) * 0x400;
+}
+
 /* 根据扫描线来渲染背景*/
 void render_background(uint8_t* frame_buffer, int scanline)
 {
@@ -196,13 +262,14 @@ void render_background(uint8_t* frame_buffer, int scanline)
     for (int tile_x = 0; tile_x < 32; tile_x++) {
 
         /*根据命名表取得图块的索引, 命名表是按照屏幕的布局排布存储的, 每个字节都是存储的图块的所有*/
-        uint16_t name_table_address = 0x2000 + tile_y * 32 + tile_x;
+        WORD name_table_base = get_name_table_base();
+        uint16_t name_table_address = name_table_base + tile_y * 32 + tile_x;
         uint8_t tile_index = ppu_vram_read(name_table_address);
 
         /* 属性表的存储也是按照屏幕布局来存储的, 根据属性表取得调色板得索引, 把宽256 * 240 分成 32 * 32 的 小图块, 那么可以有8 行 7.5列 */
         /* 再把32 * 32 划分, 就可以得到 4个 16 * 16 的图块, 那么tile_y / 4 就是取得这个16 * 16 的图块对应的图块*/
         /* *8 是由于每8个一行，超过8个就是下一行的图块了, 根据 *8 就可以得到一维数组中对应的具体地址 */
-        uint16_t attribute_table_address = 0x23C0 + (tile_y / 4) * 8 + (tile_x / 4);
+        uint16_t attribute_table_address = name_table_base + 0x3C0 + (tile_y / 4) * 8 + (tile_x / 4) + 0x400;
         uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
 
         /* 根据图块索引取得调试板索引的位置*/
@@ -227,7 +294,7 @@ void render_background(uint8_t* frame_buffer, int scanline)
 
                 /* 取得颜色值, 更新到 frame_buffer 中 */
                 WORD addr = palette_index * 4 + pixel_value;
-                uint8_t color_index = ppu.palette[addr & 0x1F];
+                uint8_t color_index = ppu.palette[addr];
                 frame_buffer[scanline * 256 + (tile_x * 8 + col)] = color_index;
             }
         }

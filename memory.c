@@ -168,4 +168,6 @@ void mem_init(ROM *rom)
 
     chr_rom_count = rom->header->chr_rom_count;
     chr_rom = rom->chr_rom;
+
+    mirroring = rom->header->flag1;
 }
