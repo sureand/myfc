@@ -54,8 +54,11 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 exit(0);
+            }else if (event.type == SDL_KEYDOWN) {
+                handle_key(event.key.keysym.sym, 1);
+            } else if (event.type == SDL_KEYUP) {
+                handle_key(event.key.keysym.sym, 0);
             }
-            //读取手柄等外部输入 update_controller_state(&event);
         }
 
         // 执行 CPU 和 PPU 步骤

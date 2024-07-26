@@ -4,37 +4,45 @@
 
 // TODO: 后期优化, 把整个RAM直接映射64k全部空间
 
+//按键状态寄存器, 手柄这块还没想好放哪里, 先统一放这里
+uint8_t controller_state = 0x00;
 
-uint8_t controller_state[2] = {0};  // 模拟手柄状态
-uint8_t controller_index[2] = {0};  // 手柄按钮读取索引
+//移位寄存器
+uint8_t shift_register = 0x00;
 
-// 模拟手柄读取
-uint8_t controller_read(uint16_t address)
+
+void set_button_state(int button, BYTE pressed)
 {
-    uint8_t controller_num = address - 0x4016;
-    uint8_t value = (controller_state[controller_num] >> controller_index[controller_num]) & 1;
-
-    controller_index[controller_num]++;
-    if (controller_index[controller_num] >= 8) {
-        controller_index[controller_num] = 0;
+    if (pressed) {
+        controller_state |= (1 << button);
+        return;
     }
 
-    return value | 0x40; // 返回状态，保证高两位为 01
+    controller_state &= ~(1 << button);
+
+    return;
 }
 
-// 模拟手柄写入
-void controller_write(uint16_t address, uint8_t value) {
-    if (address == 0x4016) {
-        if (value & 1) {
-            // 重置手柄读取索引
-            controller_index[0] = 0;
-            controller_index[1] = 0;
-        } else {
-            // 更新手柄状态，模拟按下 A 键 (bit 0 为 0)
-            controller_state[0] = 0xFE; // A 键按下
-            controller_state[1] = 0xFF; // 其他键未按下
-        }
+void handle_key(SDL_Keycode key, BYTE pressed)
+{
+    switch (key) {
+        case SDLK_j: set_button_state(0, pressed); break; // A button
+        case SDLK_k: set_button_state(1, pressed); break; // B button
+        case SDLK_u: set_button_state(2, pressed); break; // Select button
+        case SDLK_RETURN: set_button_state(3, pressed); break; // Start button
+        case SDLK_UP: set_button_state(4, pressed); break; // Up button
+        case SDLK_DOWN: set_button_state(5, pressed); break; // Down button
+        case SDLK_LEFT: set_button_state(6, pressed); break; // Left button
+        case SDLK_RIGHT: set_button_state(7, pressed); break; // Right button
     }
+}
+
+uint8_t get_button_state()
+{
+    uint8_t state = shift_register & 1;
+    shift_register >>= 1;
+
+    return state;
 }
 
 BYTE bus_read(WORD address)
@@ -47,27 +55,25 @@ BYTE bus_read(WORD address)
     /* ppu 的处理 */
     if (address >= 0x2000 && address <= 0x3FFF) {
         BYTE data = ppu_read(address & 0x2007);
-        printf("read ppu address: 0X%04X, got data:[0X%02X]\n", address, data);
         return data;
     }
 
     /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
     if (address >= 0x4000 && address <= 0x4013) {
-        printf("Read from unsupported address: %04X\n", address);
         return 0;
         //TODO: apu_read(address, data); // 需要实现的函数
     }
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (address == 0x4015) {
-        printf("Read from unsupported address: %04X\n", address);
+        //printf("Read from unsupported address: %04X\n", address);
         return 0;
         //TODO: apu_status_read(address); // 需要实现的函数
     }
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        return controller_read(address);
+        return get_button_state();
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
@@ -86,8 +92,6 @@ BYTE bus_read(WORD address)
         return prg_rom[address & address_range];
     }
 
-    printf("\nRead from unsupported address: %04X\n", address);
-
     return 0;
 }
 
@@ -99,14 +103,14 @@ void bus_write(WORD address, BYTE data)
     }
 
     if (address >= 0x2000 && address <= 0x3FFF) {
-        printf("write ppu address: 0X%04X, data:[0X%02X]\n", address, data);
+        //printf("write ppu address: 0X%04X, data:[0X%02X]\n", address, data);
         ppu_write(address & 0x2007, data);
         return;
     }
 
     /* APU 的读写 */
     if (address >= 0x4000 && address <= 0x4013) {
-        printf("Write from unsupported address: %04X\n", address);
+        //printf("Write from unsupported address: %04X\n", address);
         //TODO: apu_write(address, data); // 需要实现的函数
         return;
     }
@@ -126,16 +130,20 @@ void bus_write(WORD address, BYTE data)
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (address == 0x4015) {
-        printf("Write from unsupported address: %04X\n", address);
+        //printf("Write from unsupported address: %04X\n", address);
         //apu_status_write(data); // 需要实现的函数
         return;
     }
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        if (address == 0x4016) {
-            controller_write(address, data);
+
+        //重置手柄状态
+        if (address == 0x4016 && (data & 1)) {
+            shift_register = controller_state;
         }
+
+        return;
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */

@@ -340,8 +340,6 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
 
-        //printf("pattern_table_address:0X%X, tile_lsb:0x%X, tile_msb:0X%X\n", pattern_table_address, tile_lsb, tile_msb);
-
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         for (int x = 0; x < 8; x++) {
 
@@ -392,6 +390,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             // 清屏并渲染背景和精灵
             render_background(frame_buffer, ppu.scanline);
+
             render_sprites(frame_buffer, ppu.scanline);
 
             // 将 frame_buffer 中的索引值转换为实际的 RGB 颜色

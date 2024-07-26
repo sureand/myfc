@@ -267,7 +267,7 @@ void do_disassemble(WORD addr, BYTE opcode);
 #define BUTTON_LEFT   0x40
 #define BUTTON_RIGHT  0x80
 
-void update_controller_state(SDL_Event* event);
+void handle_key(SDL_Keycode key, BYTE pressed);
 
 #define FREE(p) \
 do { \
