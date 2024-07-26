@@ -106,6 +106,7 @@ void display_IRQ()
     addr = addr2 << 8 | addr1;
 
     BYTE code = bus_read(addr);
+    (void)code;
 
     addr1 = bus_read(0xFFFA);
     addr2 = bus_read(0xFFFB);

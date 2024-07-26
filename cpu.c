@@ -2324,8 +2324,6 @@ void cpu_interrupt_NMI()
     // 取出 NMI 向量地址
     WORD nmi_vector = bus_read(0xFFFB) << 8 | bus_read(0xFFFA);
 
-    printf("NMI current IP:0X%X, nmi_vector:0X%X\n", cpu.IP, nmi_vector);
-
     cpu.IP = nmi_vector;
 }
 
@@ -2363,7 +2361,7 @@ void step_cpu()
 {
     BYTE opcode = bus_read(PC);
 
-    do_disassemble(PC, opcode);
+    //do_disassemble(PC, opcode);
 
     // 执行操作码对应的操作函数
     code_maps[opcode].op_func(opcode);

@@ -67,11 +67,6 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
         cpu_cycles++;
     }
 
-    // 检查并处理 NMI
-    if (ppu.scanline == 240) {
-        cpu_interrupt_NMI();
-    }
-
     // 限制帧率
     wait_for_frame();
 }
