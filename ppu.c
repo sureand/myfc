@@ -57,7 +57,7 @@ void ppu_init()
     ppu.palette = &ppu.vram[0x3F00];
 
     // 这里使用rgb 调色板的索引即可.
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 64; i++) {
         ppu.palette[i] = i;
     }
 }
@@ -306,7 +306,9 @@ void convert_palette(uint8_t* frame_buffer, uint32_t* rgb_frame_buffer)
         uint8_t index = frame_buffer[i];
         uint32_t color_index = ppu.palette[index];
         color c = nes_palette[color_index]; // 获取调色板中的颜色
-        rgb_frame_buffer[i] = (c.r << 16) | (c.g << 8) | c.b;
+        // 使用 ARGB 格式，将 Alpha 通道放在最高字节，接下来是红色、绿色和蓝色通道
+        uint32_t color_value = (0xFF << 24) | (c.r << 16) | (c.g << 8) | c.b;
+        rgb_frame_buffer[i] = color_value;
     }
 }
 

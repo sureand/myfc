@@ -94,7 +94,7 @@ void main_loop(SDL_Renderer *renderer)
     }
 
     // 创建一个纹理，用于渲染PPU输出
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
 
     while (running) {
         SDL_Event event;
