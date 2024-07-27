@@ -43,6 +43,8 @@ uint32_t rgb_palette[64] = {
     0xFF9FFFF3, 0xFF000000, 0xFF000000, 0xFF000000
 };
 
+void ppu_vram_write(WORD address, BYTE data);
+
 void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
@@ -63,12 +65,8 @@ void ppu_init()
     memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 
     // 这里使用rgb 调色板的索引即可.
-    for (int i = 0; i < 32; i++) {
-        if (i % 4 == 0) {
-            ppu.vram[0x3F00 + i] = 0; // 背景色
-        } else {
-            ppu.vram[0x3F00 + i] = i % 64; // 使用调色板中的颜色索引
-        }
+    for (int i = 0; i < 64; i++) {
+        ppu_vram_write(0x3F00 + i, i);
     }
 }
 
@@ -291,15 +289,11 @@ void render_background(uint32_t* frame_buffer, int scanline)
 
             /*pixel_value 是由两个位组成的 2 位值，用于索引调色板, 因此tile_msb 需要 << 1 以便和后面的 tile_lsb 做 bit or 运算*/
             uint8_t pixel_value = ((tile_msb >> (7 - col)) & 1) << 1 | ((tile_lsb >> (7 - col)) & 1);
-            if (pixel_value != 0) {
 
-                /* 取得颜色值, 更新到 frame_buffer 中 */
-                WORD addr = palette_index * 4 + pixel_value;
-                color_index = ppu_vram_read(0X3F00 + addr);
-                frame_buffer[scanline * 256 + (tile_x * 8 + col)] = rgb_palette[color_index];
-            } else {
-                frame_buffer[scanline * 256 + (tile_x * 8 + col)] = 0x00000000;
-            }
+            /* 取得颜色值, 更新到 frame_buffer 中 */
+            WORD addr = palette_index * 4 + pixel_value;
+            color_index = ppu_vram_read(0X3F00 + addr);
+            frame_buffer[scanline * 256 + (tile_x * 8 + col)] = rgb_palette[color_index];
         }
     }
 }
