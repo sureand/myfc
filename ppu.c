@@ -20,30 +20,27 @@ $3F20-$3FFF: 调色板镜像
 */
 
 
-typedef struct {
-    BYTE r;
-    BYTE g;
-    BYTE b;
-} color;
-
 /*调色板数据来自官方资料*/
-color nes_palette[64] = {
-    {0x75, 0x75, 0x75}, {0x27, 0x1B, 0x8F}, {0x00, 0x00, 0xAB}, {0x47, 0x00, 0x9F},
-    {0x8F, 0x00, 0x77}, {0xAB, 0x00, 0x13}, {0xA7, 0x00, 0x00}, {0x7F, 0x0B, 0x00},
-    {0x43, 0x2F, 0x00}, {0x00, 0x47, 0x00}, {0x00, 0x51, 0x00}, {0x00, 0x3F, 0x17},
-    {0x1B, 0x3F, 0x5F}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    {0xBC, 0xBC, 0xBC}, {0x00, 0x73, 0xEF}, {0x23, 0x3B, 0xEF}, {0x83, 0x00, 0xF3},
-    {0xBF, 0x00, 0xBF}, {0xE7, 0x00, 0x5B}, {0xDB, 0x2B, 0x00}, {0xCB, 0x4F, 0x0F},
-    {0x8B, 0x73, 0x00}, {0x00, 0x97, 0x00}, {0x00, 0xAB, 0x00}, {0x00, 0x93, 0x3B},
-    {0x00, 0x83, 0x8B}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    {0xFF, 0xFF, 0xFF}, {0x3F, 0xBF, 0xFF}, {0x5F, 0x97, 0xFF}, {0xA7, 0x8B, 0xFD},
-    {0xF7, 0x7B, 0xFF}, {0xFF, 0x77, 0xB7}, {0xFF, 0x77, 0x63}, {0xFF, 0x9B, 0x3B},
-    {0xF3, 0xBF, 0x3F}, {0x83, 0xD3, 0x13}, {0x4F, 0xDF, 0x4B}, {0x58, 0xF8, 0x98},
-    {0x00, 0xEB, 0xDB}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    {0xFF, 0xFF, 0xFF}, {0xAB, 0xE7, 0xFF}, {0xC7, 0xD7, 0xFF}, {0xD7, 0xCB, 0xFF},
-    {0xFF, 0xC7, 0xFF}, {0xFF, 0xC7, 0xDB}, {0xFF, 0xBF, 0xB3}, {0xFF, 0xDB, 0xAB},
-    {0xFF, 0xE7, 0xA3}, {0xE3, 0xFF, 0xA3}, {0xAB, 0xF3, 0xBF}, {0xB3, 0xFF, 0xCF},
-    {0x9F, 0xFF, 0xF3}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}
+uint32_t rgb_palette[64] = {
+    0x00757575, 0x00271B8F, 0x000000AB, 0x0047009F,
+    0x008F0077, 0x00AB0013, 0x00A70000, 0x007F0B00,
+    0x00432F00, 0x00004700, 0x00005100, 0x00003F17,
+    0x001B3F5F, 0x00000000, 0x00000000, 0x00000000,
+
+    0x00BCBCBC, 0x000073EF, 0x00233BEF, 0x008300F3,
+    0x00BF00BF, 0x00E7005B, 0x00DB2B00, 0x00CB4F0F,
+    0x008B7300, 0x00009700, 0x0000AB00, 0x0000933B,
+    0x0000838B, 0x00000000, 0x00000000, 0x00000000,
+
+    0x00FFFFFF, 0x003FBFFF, 0x005F97FF, 0x00A78BFD,
+    0x00F77BFF, 0x00FF77B7, 0x00FF7763, 0x00FF9B3B,
+    0x00F3BF3F, 0x0083D313, 0x004FDF4B, 0x0058F898,
+    0x0000EBDB, 0x00000000, 0x00000000, 0x00000000,
+
+    0x00FFFFFF, 0x00ABE7FF, 0x00C7D7FF, 0x00D7CBFF,
+    0x00FFC7FF, 0x00FFC7DB, 0x00FFBFB3, 0x00FFDBAB,
+    0x00FFE7A3, 0x00E3FFA3, 0x00ABF3BF, 0x00B3FFCF,
+    0x009FFFF3, 0x00000000, 0x00000000, 0x00000000
 };
 
 void ppu_init()
@@ -65,12 +62,13 @@ void ppu_init()
     /* 拷贝到 ppu 的vram  */
     memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 
-    /* 初始化调色板 */
-    ppu.palette = &ppu.vram[0x3F00];
-
     // 这里使用rgb 调色板的索引即可.
-    for (int i = 0; i < 64; i++) {
-        ppu.palette[i] = i;
+    for (int i = 0; i < 32; i++) {
+        if (i % 4 == 0) {
+            ppu.vram[0x3F00 + i] = 0; // 背景色
+        } else {
+            ppu.vram[0x3F00 + i] = i % 64; // 使用调色板中的颜色索引
+        }
     }
 }
 
@@ -254,7 +252,7 @@ static inline WORD get_name_table_base()
 }
 
 /* 根据扫描线来渲染背景 */
-void render_background(uint8_t* frame_buffer, int scanline)
+void render_background(uint32_t* frame_buffer, int scanline)
 {
     //取得以8个像素位一个单位的tile 的纵坐标
     int tile_y = scanline / 8;
@@ -297,15 +295,15 @@ void render_background(uint8_t* frame_buffer, int scanline)
 
                 /* 取得颜色值, 更新到 frame_buffer 中 */
                 WORD addr = palette_index * 4 + pixel_value;
-                color_index = ppu.palette[addr];
+                color_index = ppu_vram_read(0X3F00 + addr);
             }
-            frame_buffer[scanline * 256 + (tile_x * 8 + col)] = color_index;
+            frame_buffer[scanline * 256 + (tile_x * 8 + col)] = rgb_palette[color_index];;
         }
     }
 }
 
 /* 根据扫描线来渲染精灵 */
-void render_sprites(uint8_t* frame_buffer, int scanline)
+void render_sprites(uint32_t* frame_buffer, int scanline)
 {
     BYTE sprite_0_hit_detected = 0;
     BYTE sprites_on_scanline = 0; // 计数在当前扫描线上渲染的精灵数量
@@ -383,16 +381,16 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
             if (pixel_value != 0) {
                 /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素 */
                 WORD addr = palette_index * 4 + pixel_value;
-                color_index = ppu.palette[addr];
+                color_index = ppu_vram_read(0X3F00 + addr);
             }
 
             /* 确保像素不超出屏幕边界 */
             int screen_x = x_position + x;
             if (screen_x < 256 && scanline < 240) {
                 /* 检查精灵优先级和背景像素 */
-                uint8_t background_color = frame_buffer[scanline * 256 + screen_x];
+                uint32_t background_color = frame_buffer[scanline * 256 + screen_x];
                 if (color_index != 0 && (!sprite_behind_background || background_color == 0)) {
-                    frame_buffer[scanline * 256 + screen_x] = color_index;
+                    frame_buffer[scanline * 256 + screen_x] = rgb_palette[color_index];
                 }
 
                 // 检查精灵 0 命中, 背景颜色和精灵颜色都不是透明的情况即精灵0命中
@@ -409,22 +407,9 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
     }
 }
 
-void convert_palette(uint8_t* frame_buffer, uint32_t* rgb_frame_buffer)
-{
-    for (int i = 0; i < 256 * 240; ++i) {
-        uint8_t index = frame_buffer[i];
-        uint32_t color_index = ppu.palette[index];
-        color c = nes_palette[color_index]; // 获取调色板中的颜色
-        // 使用 ARGB 格式，将 Alpha 通道放在最高字节，接下来是红色、绿色和蓝色通道
-        uint32_t color_value = (0xFF << 24) | (c.r << 16) | (c.g << 8) | c.b;
-        rgb_frame_buffer[i] = color_value;
-    }
-}
-
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
-    static uint8_t frame_buffer[256 * 240] = {0x00};
-    static uint32_t rgb_frame_buffer[256 * 240] = {0x00}; // 用于存储 RGB 颜色值
+    static uint32_t frame_buffer[256 * 240] = {0x00};
 
     // 1. 处理当前扫描线
     if (ppu.scanline < 240) {
@@ -437,10 +422,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             render_sprites(frame_buffer, ppu.scanline);
 
-            // 将 frame_buffer 中的索引值转换为实际的 RGB 颜色
-            convert_palette(frame_buffer, rgb_frame_buffer);
-
-            SDL_UpdateTexture(texture, NULL, rgb_frame_buffer, 256 * sizeof(uint32_t));
+            SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
         }
     } else if (ppu.scanline == 241 && ppu.cycle == 1) {
 
