@@ -326,20 +326,25 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
 
         /* 处理垂直翻转 */
         BYTE flip_vertical = attributes & 0x80;
+
+        /* 获取tile 的行偏移 */
         int v_y = flip_vertical ? (sprite_height - 1 - y_in_tile) : y_in_tile;
 
         /* 计算图案表地址 */
-        uint16_t pattern_table_address;
+        uint16_t pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
+
+        /* 假如是 8 * 16 的, 需要从新算地址 */
         if (sprite_height == 16) {
-            // 8x16 sprites can span two tiles
-            tile_index &= 0xFE; // ignore the LSB of the tile index
+            /* 8x16 由两个 8 * 8 tile 组成, 每一帧都是相同大小的精灵, 每次从偶数开始算就是对的。 */
+            tile_index &= 0xFE;
             pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
             if (v_y >= 8) {
+                /* 已经渲染到了8 * 16 的下半部分, 那么地址需要 +16 */
                 pattern_table_address += 16;
+
+                /* 确保从下一个tile 开始算偏移 */
                 v_y -= 8;
             }
-        } else {
-            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
         }
 
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
@@ -347,6 +352,7 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
 
         /* 取得具体得子调色板的索引, 4 - 7 */
         uint8_t palette_index = (attributes & 0x03) + 4;
+
         BYTE flip_horizontal = attributes & 0x40;
         BYTE sprite_behind_background = attributes & 0x20;
 
