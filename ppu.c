@@ -362,7 +362,7 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
 
                 /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素*/
                 WORD addr = palette_index * 4 + pixel_value;
-                color_index = ppu.palette[addr & 0x1F];
+                color_index = ppu.palette[addr];
             }
             frame_buffer[scanline * 256 + (x_position + x)] = color_index;
         }
