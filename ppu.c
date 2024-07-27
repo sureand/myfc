@@ -256,7 +256,10 @@ static inline WORD get_name_table_base()
 /* 根据扫描线来渲染背景*/
 void render_background(uint8_t* frame_buffer, int scanline)
 {
+    //取得以8个像素位一个单位的tile 的纵坐标
     int tile_y = scanline / 8;
+
+    /* 这个是扫描线在单个tile 的行内偏移, 就是相对tile的左上角开始位置的纵向方向的偏移*/
     int row_in_tile = scanline % 8;
 
     for (int tile_x = 0; tile_x < 32; tile_x++) {
@@ -266,10 +269,8 @@ void render_background(uint8_t* frame_buffer, int scanline)
         uint16_t name_table_address = name_table_base + tile_y * 32 + tile_x;
         uint8_t tile_index = ppu_vram_read(name_table_address);
 
-        /* 属性表的存储也是按照屏幕布局来存储的, 根据属性表取得调色板得索引, 把宽256 * 240 分成 32 * 32 的 小图块, 那么可以有8 行 7.5列 */
-        /* 再把32 * 32 划分, 就可以得到 4个 16 * 16 的图块, 那么tile_y / 4 就是取得这个16 * 16 的图块对应的图块*/
         /* *8 是由于每8个一行，超过8个就是下一行的图块了, 根据 *8 就可以得到一维数组中对应的具体地址 */
-        uint16_t attribute_table_address = name_table_base + 0x3C0 + (tile_y / 4) * 8 + (tile_x / 4) + 0x400;
+        uint16_t attribute_table_address = name_table_base + 0x3C0 + (tile_y / 4) * 8 + (tile_x / 4);
         uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
 
         /* 根据图块索引取得调试板索引的位置*/
@@ -279,14 +280,16 @@ void render_background(uint8_t* frame_buffer, int scanline)
         /* 通过 &0x3 提取这两个位出来 */
         uint8_t palette_index = (attribute_byte >> shift) & 0x03;
 
-        /* 取得 高低平面字节*/
-        /* 根据图案表取得属性value, 使用 scanline/4 会更加直观 */
+        /* 取得所在行的像素点对应的高低平面字节*/
+        /* 根据图案表取得颜色值, 每个位都是一个颜色, 对应的是8个列， pattern_table_address 16字节中的每一个字节对应一行 */
         uint16_t pattern_table_address = (tile_index * 16) + ((ppu.ppuctrl & 0x10) ? 0x1000 : 0);
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + row_in_tile);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + row_in_tile + 8);
 
-        /*从左到右取得每个像素值*/
+        /*从左到右取得每个像素值, 一个字节对应8列*/
         for (int col = 0; col < 8; col++) {
+
+            uint8_t color_index = 0x00;
 
             /*pixel_value 是由两个位组成的 2 位值，用于索引调色板, 因此tile_msb 需要 << 1 以便和后面的 tile_lsb 做 bit or 运算*/
             uint8_t pixel_value = ((tile_msb >> (7 - col)) & 1) << 1 | ((tile_lsb >> (7 - col)) & 1);
@@ -294,9 +297,9 @@ void render_background(uint8_t* frame_buffer, int scanline)
 
                 /* 取得颜色值, 更新到 frame_buffer 中 */
                 WORD addr = palette_index * 4 + pixel_value;
-                uint8_t color_index = ppu.palette[addr];
-                frame_buffer[scanline * 256 + (tile_x * 8 + col)] = color_index;
+                color_index = ppu.palette[addr];
             }
+            frame_buffer[scanline * 256 + (tile_x * 8 + col)] = color_index;
         }
     }
 }
@@ -343,6 +346,8 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         for (int x = 0; x < 8; x++) {
 
+            uint8_t color_index = 0x00;
+
             int h_x = flip_horizontal ? x : (7 - x);
 
             /* 翻转低字节的一个bit */
@@ -357,9 +362,9 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
 
                 /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素*/
                 WORD addr = palette_index * 4 + pixel_value;
-                uint8_t color_index = ppu.palette[addr & 0x1F];
-                frame_buffer[scanline * 256 + (x_position + x)] = color_index;
+                color_index = ppu.palette[addr & 0x1F];
             }
+            frame_buffer[scanline * 256 + (x_position + x)] = color_index;
         }
     }
 
