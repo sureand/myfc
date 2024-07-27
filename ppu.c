@@ -307,6 +307,8 @@ void render_background(uint8_t* frame_buffer, int scanline)
 /* 根据扫描线来渲染精灵 */
 void render_sprites(uint8_t* frame_buffer, int scanline)
 {
+    BYTE sprite_0_hit_detected = 0;
+
     /* 遍历64 个精灵 */
     for (int i = 0; i < 64; i++) {
         uint8_t y_position = ppu.oam[i * 4];
@@ -377,8 +379,18 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
                 if (color_index != 0 && (!sprite_behind_background || background_color == 0)) {
                     frame_buffer[scanline * 256 + screen_x] = color_index;
                 }
+
+                // 检查精灵 0 命中, 背景颜色和精灵颜色都不是透明的情况即精灵0命中
+                if (i == 0 && color_index != 0 && background_color != 0) {
+                    sprite_0_hit_detected = 1;
+                }
             }
         }
+    }
+
+    // 设置精灵 0 命中标志
+    if (sprite_0_hit_detected) {
+        ppu.ppustatus |= 0x40; // 设置 PPU 状态寄存器的第 6 位
     }
 }
 
