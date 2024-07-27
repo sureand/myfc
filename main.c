@@ -25,6 +25,20 @@ uint32_t timer_callback(uint32_t interval, void *param)
     return interval;
 }
 
+void process_events()
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            exit(0);
+        } else if (event.type == SDL_KEYDOWN) {
+            handle_key(event.key.keysym.sym, 1);
+        } else if (event.type == SDL_KEYUP) {
+            handle_key(event.key.keysym.sym, 0);
+        }
+    }
+}
+
 void wait_for_frame()
 {
     static uint32_t last_frame_time = 0;
@@ -35,7 +49,17 @@ void wait_for_frame()
 
     // 如果当前帧时间小于每帧的持续时间，则等待
     if (frame_time < FRAME_DURATION) {
-        SDL_Delay(FRAME_DURATION - frame_time);
+        uint32_t wait_time = FRAME_DURATION - frame_time;
+        uint32_t start_wait_time = SDL_GetTicks();
+
+        while (SDL_GetTicks() - start_wait_time < wait_time) {
+
+            // 在等待期间处理事件
+            process_events();
+
+            // 为了防止 CPU 占用过高，稍微延迟一下
+            SDL_Delay(1);
+        }
     }
 
     // 更新上一帧的时间
@@ -46,20 +70,11 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 {
     uint64_t cpu_cycles = 0;
     const uint64_t CPU_CYCLES_PER_FRAME = NTSC_CPU_CYCLES_PER_FRAME;
-    SDL_Event event;
 
     while (cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                exit(0);
-            }else if (event.type == SDL_KEYDOWN) {
-                handle_key(event.key.keysym.sym, 1);
-            } else if (event.type == SDL_KEYUP) {
-                handle_key(event.key.keysym.sym, 0);
-            }
-        }
+        process_events();
 
         // 执行 CPU 和 PPU 步骤
         step_cpu();
