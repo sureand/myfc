@@ -253,14 +253,14 @@ static inline WORD get_name_table_base()
     return 0x2000 + (ppu.ppuctrl & 0x03) * 0x400;
 }
 
-/* 根据扫描线来渲染背景*/
+/* 根据扫描线来渲染背景 */
 void render_background(uint8_t* frame_buffer, int scanline)
 {
     //取得以8个像素位一个单位的tile 的纵坐标
     int tile_y = scanline / 8;
 
     /* 这个是扫描线在单个tile 的行内偏移, 就是相对tile的左上角开始位置的纵向方向的偏移*/
-    int row_in_tile = scanline % 8;
+    int row_in_tile = scanline & 0x7;
 
     for (int tile_x = 0; tile_x < 32; tile_x++) {
 
@@ -304,7 +304,7 @@ void render_background(uint8_t* frame_buffer, int scanline)
     }
 }
 
-/* 根据扫描线来渲染精灵*/
+/* 根据扫描线来渲染精灵 */
 void render_sprites(uint8_t* frame_buffer, int scanline)
 {
     /* 遍历64 个精灵 */
@@ -314,61 +314,74 @@ void render_sprites(uint8_t* frame_buffer, int scanline)
         uint8_t attributes = ppu.oam[i * 4 + 2];
         uint8_t x_position = ppu.oam[i * 4 + 3];
 
-        /*  跳过非扫描线的精灵 */
-        if (scanline < y_position || scanline >= (y_position + (ppu.ppuctrl & 0x20 ? 16 : 8)))
+        /* 跳过非扫描线的精灵 */
+        int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
+        if (scanline < y_position || scanline >= (y_position + sprite_height))
             continue;
-
-        /* 8*16 精灵 的地址是 0x1000, 每个tile 16 字节, 通过index 取得在vram 中的位置 */
-        uint16_t pattern_table_address = (tile_index * 16) + ((ppu.ppuctrl & 0x08) ? 0x1000 : 0);
-        BYTE flip_horizontal = attributes & 0x40;
-        BYTE flip_vertical = attributes & 0x80;
-
-        /* 取得具体得子调色板的索引, 4 - 7 */
-        uint8_t palette_index = (attributes & 0x03) + 4;
 
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
         int y_in_tile = scanline - y_position;
-        if (ppu.ppuctrl & 0x20) {
-            if (y_in_tile >= 8) {
 
-                /* 取得下半部分的偏移, 8 * 16 的图块，其实就是使用两个 8 * 8 的图块来存储的 */
-                y_in_tile -= 8;
+        /* 处理垂直翻转 */
+        BYTE flip_vertical = attributes & 0x80;
+        int v_y = flip_vertical ? (sprite_height - 1 - y_in_tile) : y_in_tile;
+
+        /* 计算图案表地址 */
+        uint16_t pattern_table_address;
+        if (sprite_height == 16) {
+            // 8x16 sprites can span two tiles
+            tile_index &= 0xFE; // ignore the LSB of the tile index
+            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
+            if (v_y >= 8) {
                 pattern_table_address += 16;
+                v_y -= 8;
             }
+        } else {
+            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
         }
 
-        /* 处理垂直翻转, 翻转图块的高低字节 */
-        /* 由于是nes 想要节省内存和增加灵活性, 因此把像素使用颜色索引的方式压缩在vram 中, 导致这么恶心的反人类的实现 */
-        int v_y = flip_vertical ? (7 - y_in_tile) : y_in_tile;
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
+
+        /* 取得具体得子调色板的索引, 4 - 7 */
+        uint8_t palette_index = (attributes & 0x03) + 4;
+        BYTE flip_horizontal = attributes & 0x40;
+        BYTE sprite_behind_background = attributes & 0x20;
 
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         for (int x = 0; x < 8; x++) {
 
             uint8_t color_index = 0x00;
 
-            int h_x = flip_horizontal ? x : (7 - x);
+            int h_x = flip_horizontal ? (7 - x) : x;
 
             /* 翻转低字节的一个bit */
-            uint8_t lsb_bit = (tile_lsb >> h_x) & 1;
+            uint8_t lsb_bit = (tile_lsb >> (7 - h_x)) & 1;
 
             /* 翻转高字节的一个bit */
-            uint8_t msb_bit = (tile_msb >> h_x) & 1;
+            uint8_t msb_bit = (tile_msb >> (7 - h_x)) & 1;
 
             /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
             uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
             if (pixel_value != 0) {
-
-                /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素*/
+                /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素 */
                 WORD addr = palette_index * 4 + pixel_value;
                 color_index = ppu.palette[addr];
             }
-            frame_buffer[scanline * 256 + (x_position + x)] = color_index;
+
+            /* 确保像素不超出屏幕边界 */
+            int screen_x = x_position + x;
+            if (screen_x < 256 && scanline < 240) {
+                /* 检查精灵优先级和背景像素 */
+                uint8_t background_color = frame_buffer[scanline * 256 + screen_x];
+                if (color_index != 0 && (!sprite_behind_background || background_color == 0)) {
+                    frame_buffer[scanline * 256 + screen_x] = color_index;
+                }
+            }
         }
     }
-
 }
+
 
 void convert_palette(uint8_t* frame_buffer, uint32_t* rgb_frame_buffer)
 {
