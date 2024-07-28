@@ -124,7 +124,6 @@ void main_loop(SDL_Renderer *renderer)
                     SDL_RenderSetScale(renderer, scale_x, scale_y);
                 }
             }
-            SDL_RenderSetScale(renderer, scale_x, scale_y);
 
             // 设置绘图颜色为黑色
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -156,7 +155,7 @@ int start()
     SDL_Window *window = SDL_CreateWindow("MY FC",
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          256, 240, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
+                                          512, 480, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
     if (!window) {
         fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_Quit();
@@ -170,6 +169,8 @@ int start()
         SDL_Quit();
         return -1;
     }
+
+    SDL_RenderSetLogicalSize(renderer, 256, 240);
 
     // 启动模拟器主循环
     main_loop(renderer);
@@ -193,7 +194,7 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test.nes");
+    ROM *rom = load_rom("test/0.nes");
 
     mem_init(rom);
 
