@@ -26,6 +26,6 @@ $(SRCDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	del *.o *.exe
 
 .PHONY: all clean

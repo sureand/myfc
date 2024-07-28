@@ -19,28 +19,31 @@ $3F10-$3F1F: Sprite Palette
 $3F20-$3FFF: 调色板镜像
 */
 
+#define IS_VISIBLE(x, y) ((x) < 256 && (y) < 240)
+#define IS_TRANSPARENT(color) ((color) == 0)
+#define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
 
 /*调色板数据来自官方资料*/
 uint32_t rgb_palette[64] = {
-    0xFF757575, 0xFF271B8F, 0xFF0000AB, 0xFF47009F,
-    0xFF8F0077, 0xFFAB0013, 0xFFA70000, 0xFF7F0B00,
-    0xFF432F00, 0xFF004700, 0xFF005100, 0xFF003F17,
-    0xFF1B3F5F, 0xFF000000, 0xFF000000, 0xFF000000,
+    0x00757575, 0x00271B8F, 0x000000AB, 0x0047009F,
+    0x008F0077, 0x00AB0013, 0x00A70000, 0x007F0B00,
+    0x00432F00, 0x00004700, 0x00005100, 0x00003F17,
+    0x001B3F5F, 0x00000000, 0x00000000, 0x00000000,
 
-    0xFFBCBCBC, 0xFF0073EF, 0xFF233BEF, 0xFF8300F3,
-    0xFFBF00BF, 0xFFE7005B, 0xFFDB2B00, 0xFFCB4F0F,
-    0xFF8B7300, 0xFF009700, 0xFF00AB00, 0xFF00933B,
-    0xFF00838B, 0xFF000000, 0xFF000000, 0xFF000000,
+    0x00BCBCBC, 0x000073EF, 0x00233BEF, 0x008300F3,
+    0x00BF00BF, 0x00E7005B, 0x00DB2B00, 0x00CB4F0F,
+    0x008B7300, 0x00009700, 0x0000AB00, 0x0000933B,
+    0x0000838B, 0x00000000, 0x00000000, 0x00000000,
 
-    0xFFFFFFFF, 0xFF3FBFFF, 0xFF5F97FF, 0xFFA78BFD,
-    0xFFF77BFF, 0xFFFF77B7, 0xFFFF7763, 0xFFFF9B3B,
-    0xFFF3BF3F, 0xFF83D313, 0xFF4FDF4B, 0xFF58F898,
-    0xFF00EBDB, 0xFF000000, 0xFF000000, 0xFF000000,
+    0x00FFFFFF, 0x003FBFFF, 0x005F97FF, 0x00A78BFD,
+    0x00F77BFF, 0x00FF77B7, 0x00FF7763, 0x00FF9B3B,
+    0x00F3BF3F, 0x0083D313, 0x004FDF4B, 0x0058F898,
+    0x0000EBDB, 0x00000000, 0x00000000, 0x00000000,
 
-    0xFFFFFFFF, 0xFFABE7FF, 0xFFC7D7FF, 0xFFD7CBFF,
-    0xFFFFC7FF, 0xFFFFC7DB, 0xFFFFBFB3, 0xFFFFDBAB,
-    0xFFFFE7A3, 0xFFE3FFA3, 0xFFABF3BF, 0xFFB3FFCF,
-    0xFF9FFFF3, 0xFF000000, 0xFF000000, 0xFF000000
+    0x00FFFFFF, 0x00ABE7FF, 0x00C7D7FF, 0x00D7CBFF,
+    0x00FFC7FF, 0x00FFC7DB, 0x00FFBFB3, 0x00FFDBAB,
+    0x00FFE7A3, 0x00E3FFA3, 0x00ABF3BF, 0x00B3FFCF,
+    0x009FFFF3, 0x00000000, 0x00000000, 0x00000000
 };
 
 void ppu_vram_write(WORD address, BYTE data);
@@ -60,9 +63,6 @@ void ppu_init()
     if (mirroring & 0x08) {
         ppu.mirroring = FOUR_SCREEN_MIRRORING;
     }
-
-    /* 拷贝到 ppu 的vram  */
-    memcpy(ppu.vram, chr_rom, CHR_ROM_SIZE);
 
     // 这里使用rgb 调色板的索引即可.
     for (int i = 0; i < 64; i++) {
@@ -109,7 +109,7 @@ BYTE ppu_vram_read(WORD address)
 
     if (address < 0x2000) {
         // Pattern tables 区域
-        return ppu.vram[address];
+        return chr_rom[address];
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
         if (address >= 0x3000) {
@@ -132,8 +132,9 @@ void ppu_vram_write(WORD address, BYTE data)
     WORD real_address = address;
 
     if (address < 0x2000) {
-        // Pattern tables 区域
-        ppu.vram[address] = data;
+        // Pattern tables 区域 (通常不允许写入，CHR ROM 是只读的)
+        // 通常情况下，这里会抛弃写操作或抛出错误
+        printf("Attempted write to CHR ROM address 0x%04X, which is read-only.\n", address);
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
         if (address >= 0x3000) {
@@ -291,8 +292,14 @@ void render_background(uint32_t* frame_buffer, int scanline)
             uint8_t pixel_value = ((tile_msb >> (7 - col)) & 1) << 1 | ((tile_lsb >> (7 - col)) & 1);
 
             /* 取得颜色值, 更新到 frame_buffer 中 */
-            WORD addr = palette_index * 4 + pixel_value;
-            color_index = ppu_vram_read(0X3F00 + addr);
+            if (pixel_value != 0x00) {
+                WORD addr = palette_index * 4 + pixel_value;
+                color_index = ppu_vram_read(0X3F00 + addr);
+            } else {
+                /* 透明的情况使用背景色 */
+                color_index = ppu_vram_read(0X3F00);
+            }
+
             frame_buffer[scanline * 256 + (tile_x * 8 + col)] = rgb_palette[color_index];
         }
     }
@@ -357,7 +364,7 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
         uint8_t palette_index = (attributes & 0x03) + 4;
 
         BYTE flip_horizontal = attributes & 0x40;
-        BYTE sprite_behind_background = attributes & 0x20;
+        int sprite_behind_background = attributes & 0x20;
 
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         for (int x = 0; x < 8; x++) {
@@ -374,23 +381,23 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
 
             /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
             uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
-            if (pixel_value != 0) {
-                /* palette_index * 4 + pixel_value 取得具体颜色索引, 用来取得每一个像素 */
-                WORD addr = palette_index * 4 + pixel_value;
-                color_index = ppu_vram_read(0X3F00 + addr);
+
+            if (!IS_TRANSPARENT(pixel_value)) {
+                WORD addr = PALETTE_ADDR(palette_index, pixel_value);
+                color_index = ppu_vram_read(0x3F00 + addr);
             }
 
-            /* 确保像素不超出屏幕边界 */
             int screen_x = x_position + x;
-            if (screen_x < 256 && scanline < 240) {
-                /* 检查精灵优先级和背景像素 */
+
+            if (IS_VISIBLE(screen_x, scanline)) {
                 uint32_t background_color = frame_buffer[scanline * 256 + screen_x];
-                if (color_index != 0 && (!sprite_behind_background || background_color == 0)) {
+
+                /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
+                if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
                     frame_buffer[scanline * 256 + screen_x] = rgb_palette[color_index];
                 }
 
-                // 检查精灵 0 命中, 背景颜色和精灵颜色都不是透明的情况即精灵0命中
-                if (i == 0 && color_index != 0 && background_color != 0) {
+                if (i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
                     sprite_0_hit_detected = 1;
                 }
             }

@@ -84,9 +84,6 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 
         cpu_cycles++;
     }
-
-    // 限制帧率
-    wait_for_frame();
 }
 
 void main_loop(SDL_Renderer *renderer)
@@ -96,7 +93,7 @@ void main_loop(SDL_Renderer *renderer)
     float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
-    SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
+    SDL_TimerID timerID = SDL_AddTimer(500 / 60, timer_callback, NULL);
 
     if (timerID == 0) {
         fprintf(stderr, "SDL_AddTimer failed! SDL_Error: %s\n", SDL_GetError());
@@ -196,7 +193,7 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM * rom = load_rom("test.nes");
+    ROM *rom = load_rom("test.nes");
 
     mem_init(rom);
 

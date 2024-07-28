@@ -45,13 +45,14 @@ ROM_HEADER *parse_header(FILE *fp)
 
     ROM_HEADER *rom_header = make_header();
     rom_header->version = 1;
-    rom_header->prg_rom_count = (BYTE)header[4];
-    rom_header->chr_rom_count = (BYTE)header[5];
-    rom_header->flag1 = (BYTE)header[6];
+    rom_header->prg_rom_count = header[4];
+    rom_header->chr_rom_count = header[5];
+
+    rom_header->flag1 = header[6];
 
     //高四位第一位判断是否是1, 是则包含Trainer
     rom_header->type = rom_header->flag1 & (1 << 4);
-    rom_header->flag2 = (BYTE)header[7];
+    rom_header->flag2 = header[7];
 
     return rom_header;
 }
@@ -76,13 +77,14 @@ ROM *parse_rom(FILE *fp)
     size_t prg_rom_size = header->prg_rom_count * PRG_ROM_PAGE_SIZE;
     size_t chr_rom_size = header->chr_rom_count * CHR_ROM_PAGE_SIZE;
 
-    rom->body = (BYTE*)calloc(prg_rom_size + chr_rom_size, 1);
+    size_t total_rom_size = prg_rom_size + chr_rom_size;
+    rom->body = (BYTE*)calloc(total_rom_size, 1);
     if(!rom->body) {
         fprintf(stderr, "error, malloc failed!\n");
         goto ERR_EXIT;
     }
 
-    if(fread(rom->body, prg_rom_size + chr_rom_size, 1, fp) == 0) {
+    if (fread(rom->body, total_rom_size, 1, fp) != 1) {
         fprintf(stderr, "read nes rom error!\n");
         goto ERR_EXIT;
     }
