@@ -163,31 +163,30 @@ BYTE ppu_read(WORD address)
         case 0x2002:
             // 返回PPU状态寄存器的值，并清除VBlank标志位
             data = ppu.ppustatus;
-            ppu.ppustatus &= 0x7F; // 清除VBlank标志位（bit7）
-            ppu.write_latch = 0; // Reset toggle
+
+            // 读取 PPUSTATUS 时重置 w 寄存器
+            ppu.w = 0;
+
+            // 清除 VBlank 标志 (bit 7)
+            ppu.ppustatus &= 0x7F;
             break;
         case 0x2004:
             data = ppu.oam[ppu.oamaddr];
             break;
         case 0x2007:
-            // 缓冲区读取逻辑
-            if (ppu.ppuaddr < 0x3F00) {
+            if (ppu.v < 0x3F00) {
                 data = ppu.vram_buffer;
-                ppu.vram_buffer = ppu_vram_read(ppu.ppuaddr);
+                ppu.vram_buffer = ppu_vram_read(ppu.v);
             } else {
                 // 直接读取调色板数据，无需缓冲
-                data = ppu_vram_read(ppu.ppuaddr);
+                data = ppu_vram_read(ppu.v);
             }
 
-            // 更新PPU地址
-            if (ppu.ppuctrl & 0x04) {
-                ppu.ppuaddr += 32; // 垂直增量模式
-            } else {
-                ppu.ppuaddr += 1;  // 水平增量模式
-            }
+            ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
             break;
+
         default:
-            //fprintf(stderr, "incomplete register:[0x%X]!\n", address);
+            fprintf(stderr, "Read from unsupported PPU register: [0x%X]!\n", address);
             break;
     }
 
@@ -199,6 +198,7 @@ void ppu_write(WORD address, uint8_t data)
     switch (address) {
         case 0x2000: // PPUCTRL
             ppu.ppuctrl = data;
+            ppu.t = (ppu.t & 0xF3FF) | ((data & 0x03) << 10); // 更新临时 VRAM 地址
             break;
         case 0x2001: // PPUMASK
             ppu.ppumask = data;
@@ -208,39 +208,35 @@ void ppu_write(WORD address, uint8_t data)
             break;
         case 0x2004: // OAMDATA
             ppu.oam[ppu.oamaddr] = data;
-            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环OAM地址
+            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
             break;
         case 0x2005: // PPUSCROLL
-            if (ppu.write_latch == 0) {
-                ppu.scroll_x = data;
-                ppu.write_latch = 1;
+            if (ppu.w == 0) {
+                ppu.t = (ppu.t & 0xFFE0) | (data >> 3);
+                ppu.x = data & 0x07;
+                ppu.w = 1;
             } else {
-                ppu.scroll_y = data;
-                ppu.write_latch = 0;
+                ppu.t = (ppu.t & 0x8FFF) | ((data & 0x07) << 12);
+                ppu.t = (ppu.t & 0xFC1F) | ((data & 0xF8) << 2);
+                ppu.w = 0;
             }
             break;
         case 0x2006: // PPUADDR
-            if (ppu.write_latch == 0) {
-                ppu.ppuaddr = (ppu.ppuaddr & 0x00FF) | (data << 8); // 设置高8位地址
-                ppu.write_latch = 1;
+            if (ppu.w == 0) {
+                ppu.t = (ppu.t & 0x80FF) | ((data & 0x3F) << 8);
+                ppu.w = 1;
             } else {
-                ppu.ppuaddr = (ppu.ppuaddr & 0xFF00) | data; // 设置低8位地址
-                ppu.write_latch = 0;
+                ppu.t = (ppu.t & 0xFF00) | data;
+                ppu.v = ppu.t;
+                ppu.w = 0;
             }
             break;
         case 0x2007: // PPUDATA
-
-            ppu_vram_write(ppu.ppuaddr, data);
-
-            if (ppu.ppuctrl & 0x04) {
-                ppu.ppuaddr += 32; // 垂直增量模式
-            } else {
-                ppu.ppuaddr += 1;  // 水平增量模式
-            }
+            ppu_vram_write(ppu.v, data);
+            ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
             break;
         default:
             fprintf(stderr, "Write to unsupported PPU register: [0x%X]!\n", address);
-            // 忽略未定义的写入
             break;
     }
 }

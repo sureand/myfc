@@ -99,23 +99,6 @@ typedef struct
     BYTE *chr_rom;
 }ROM;
 
-//内存相关
-typedef struct
-{
-    BYTE cpu_ram[0x800];
-    BYTE ppu_reg[0x008];
-    BYTE ZERO_PAGE[0x100];
-    BYTE STACK[0x100];
-    BYTE MIRROR[0x1800];
-    BYTE IO_Register[0x8];
-    BYTE PPU_DISRegister[0x8];
-    BYTE SRAM[0x2000];
-    BYTE EXPAND_ROM[0x1FE0];
-    BYTE *PROG_ROM_LOWER;
-    BYTE *PROG_ROM_UPPER;
-
-}_MEM;
-
 /* PRG ROM, 程序的rom 内容*/
 BYTE prg_rom_count;
 BYTE *prg_rom;
@@ -138,8 +121,6 @@ BYTE sram[SRAM_SIZE];
 /* 拓展rom */
 BYTE extend_rom[0x2000]; // 一般的拓展rom 是8k 左右
 
-
-_MEM *global_mem;
 
 //CPU 相关
 /*
@@ -197,26 +178,20 @@ typedef struct {
     uint8_t oamaddr;    // OAM地址寄存器 ($2003)
     uint8_t oam[OAM_SIZE]; // OAM数据数组 ($2004)
     uint8_t ppuscroll;  // 滚动值，用于计算当前显示的tile
-    uint16_t ppuaddr;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
+    uint16_t v;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
     uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
     uint8_t oamdma;     // OAM DMA寄存器 ($4014)，用于CPU到OAM的DMA传输
     uint16_t cycle;      // 当前的PPU周期计数
     int16_t scanline;   // 当前的扫描线计数
-    uint8_t scroll_x;
-    uint8_t scroll_y;
-    uint8_t write_latch; // 用于跟踪第一次和第二次写入
+    uint8_t w; // 用于跟踪第一次和第二次写入
 
     // 以下寄存器用于模拟PPU内部渲染逻辑
-    uint8_t fineX;      // 用于渲染时的微分X位置
-    uint16_t vram_tmp;  // 临时VRAM地址，用于内部计算
+    uint8_t x;      // 用于渲染时的微分X位置
+    uint16_t t;  // 临时VRAM地址，用于内部计算
     uint8_t vram_buffer;// 用于存储从VRAM读取的数据
-    uint8_t *nametable; // 指向当前名称表的指针
-    uint8_t *pattern;   // 指向当前使用模式的指针（背景或精灵）
-    uint8_t *palette;
 
     uint8_t mirroring; //是否支持镜像
-    // 其他可能的内部状态，如渲染状态机、精灵评估逻辑等
 } _PPU;
 
 // APU结构体
