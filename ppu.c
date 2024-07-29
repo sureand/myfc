@@ -410,6 +410,10 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
     static uint32_t frame_buffer[256 * 240] = {0x00};
 
+    if (ppu.scanline == -1 && ppu.cycle == 1) {
+        ppu.ppustatus &= ~0x40;
+    }
+
     // 1. 处理当前扫描线
     if (ppu.scanline < 240) {
 
