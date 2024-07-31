@@ -27,6 +27,16 @@ $3F10-$3F1F: Sprite Palette
 $3F20-$3FFF: 调色板镜像
 */
 
+static inline BYTE is_vblank()
+{
+    return (ppu.scanline > 240 && ppu.scanline <= 260);
+}
+
+static inline BYTE is_visible_frame()
+{
+    return (ppu.scanline >= 0 && ppu.scanline <= 239);
+}
+
 #define IS_VISIBLE(x, y) ((x) < 256 && (y) < 240)
 #define IS_TRANSPARENT(color) ((color) == 0)
 #define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
@@ -126,10 +136,10 @@ uint16_t increment_vertical_scroll(uint16_t v)
 uint16_t increment_horizontal_scroll(uint16_t v)
 {
     if ((v & 0x001F) == 31) {
-        v &= ~0x001F;
-        v ^= 0x0400;
+        v &= ~0x001F; // 清零 coarse X
+        v ^= 0x0400; // 切换名称表的水平位
     } else {
-        v++;
+        ++v;
     }
     return v;
 }
@@ -179,7 +189,7 @@ void ppu_vram_write(WORD old_address, BYTE data)
         // Pattern tables 区域 (通常不允许写入，CHR ROM 是只读的)
         // 通常情况下，这里会抛弃写操作或抛出错误
        // printf("Attempted write to CHR ROM address 0x%04X, which is read-only.\n", address);
-        printf("Attempted write to CHR ROM address 0x%X - 0x%X, scanling: %d-------------------->\n", old_address, address, ppu.scanline);
+        printf("Attempted write to CHR ROM address 0x%X - 0x%X, scanline: %d, cycle: %d-------------------->\n", old_address, address, ppu.scanline, ppu.cycle);
         exit(1);
 
     } else if (address < 0x3F00) {
@@ -271,7 +281,7 @@ void ppu_write(WORD address, uint8_t data)
                 ppu.t = (ppu.t & 0xFC1F) | ((data & 0xF8) << 2);
                 ppu.w = 0;
             }
-            printf("Write to PPUSCROLL: %02X, scanline: %d, t: %04X, x: %02X, w: %d\n", data, ppu.scanline, ppu.t, ppu.x, ppu.w);
+            //printf("Write to PPUSCROLL: scanline: 0x%X, cycle: %d\n", ppu.scanline, ppu.cycle);
             break;
         case 0x2006: // PPUADDR
             if (ppu.w == 0) {
@@ -282,12 +292,12 @@ void ppu_write(WORD address, uint8_t data)
                 ppu.v = ppu.t;
                 ppu.w = 0;
             }
-            printf("Write to PPUADDR: %02X, scanline: %d, t: %04X, v: %04X, w: %d\n", data, ppu.scanline, ppu.t, ppu.v, ppu.w);
+            //printf("Write to PPUADDR: %02X, scanline: %d, cycle: %d\n", data, ppu.scanline, ppu.cycle);
             break;
         case 0x2007: // PPUDATA
             ppu_vram_write(ppu.v, data);
             ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
-            printf("Write to PPUDATA: %02X, scanline: %d, v: %04X\n", data, ppu.scanline, ppu.v);
+            printf("Write to PPUDATA: %02X, scanline: %d, cycle: %d, vblank: %d\n", data, ppu.scanline, ppu.cycle, ppu.in_vblank);
             break;
         default:
             DEBUG_PRINT(stderr, "Write to unsupported PPU register: [0x%X]!\n", address);
@@ -298,7 +308,7 @@ void ppu_write(WORD address, uint8_t data)
 
 static inline WORD get_name_table_base()
 {
-    return 0x2000 + (ppu.ppuctrl & 0x03) * 0x400;
+    return 0x2000 | (ppu.v & 0x0C00);
 }
 
 /* 根据扫描线来渲染背景 */
@@ -316,7 +326,7 @@ void render_background(uint32_t* frame_buffer, int scanline)
     int coarse_x = v & 0x1F;
 
     // 计算名称表基地址
-    uint16_t name_table_base = 0x2000 | (v & 0x0C00);
+    uint16_t name_table_base = get_name_table_base();
 
     for (int tile_x = 0; tile_x < 32; tile_x++) {
 
@@ -472,86 +482,84 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
     }
 }
 
-
-void start_new_frame() {
-    ppu.w = 0; // 重置写入状态
+void clear_ppu_state()
+{
     ppu.ppustatus &= ~0x80; // 清除VBlank标志
     ppu.ppustatus &= ~0x40; // 清除精灵0命中标志
+    ppu.w = 0;
+    ppu.in_vblank = 0;
 }
 
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
     static uint32_t frame_buffer[256 * 240] = {0x00};
 
-    uint16_t old_v = 0;
+    /* 非vblank 期间做修改滚动寄存器 */
+    if (!is_vblank()) {
 
-    // 在预渲染扫描线的第一个周期开始新的帧
-    if (ppu.scanline == -1 && ppu.cycle == 1) {
-        start_new_frame();
-        memset(frame_buffer, 0, sizeof(frame_buffer));
+        // 在预渲染扫描线的第一个周期开始新的帧
+        if (ppu.scanline == 261) {
 
-        old_v = ppu.v;
-        ppu.v = ppu.t;
-        printf("111 old v: 0x%X, new v: 0x%X\n", old_v, ppu.v);
-    }
+            /*渲染阶段开始*/
+            if (ppu.cycle == 1) {
+                memset(frame_buffer, 0, sizeof(frame_buffer));
+                ppu.v = ppu.t;
 
-    // 在预渲染扫描线的特定周期复制垂直滚动信息
-    if (ppu.scanline == -1 && ppu.cycle >= 280 && ppu.cycle <= 340) {
-        ppu.v = (ppu.v & 0x841F) | (ppu.t & 0x7BE0);
-        printf("222 old v: 0x%X, new v: 0x%X\n", old_v, ppu.v);
-    }
+                clear_ppu_state();
+            }
 
-    // 处理当前扫描线
-    if (ppu.scanline >= 0 && ppu.scanline < 240) {
+            // 复制垂直滚动信息
+            if (ppu.cycle >= 280 && ppu.cycle <= 304) {
+                ppu.v = (ppu.v & 0x841F) | (ppu.t & 0x7BE0);
+            }
+        }
 
-        // 在每个扫描线周期中渲染背景和精灵
-        if (ppu.cycle >= 1 && ppu.cycle <= 256) {
+        // 可见区域, 开始渲染
+        if (is_visible_frame()) {
+            if (ppu.cycle >= 1 && ppu.cycle < 256) {
+                render_background(frame_buffer, ppu.scanline);
+                render_sprites(frame_buffer, ppu.scanline);
+            }
+        }
 
-            render_background(frame_buffer, ppu.scanline);
-            render_sprites(frame_buffer, ppu.scanline);
+        // 在每帧结束时更新屏幕纹理
+        if (ppu.scanline == 240 && ppu.cycle == 0) {
+            SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
+        }
 
-            // 每个周期都需要进行水平滚动更新
-            old_v = ppu.v;
+        /* 非 vblan 的 这些周期点, 需要做水平更新*/
+        if ((ppu.cycle >= 8 && ppu.cycle <= 248 && ppu.cycle % 8 == 0) || (ppu.cycle == 328 || ppu.cycle == 336)) {
             ppu.v = increment_horizontal_scroll(ppu.v);
-            printf("333 old v: 0x%X, new v: 0x%X\n", old_v, ppu.v);
         }
 
-        // 在扫描线结束时更新垂直滚动寄存器
+        // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
-            old_v = ppu.v;
             ppu.v = increment_vertical_scroll(ppu.v);
-
-            printf("444 old v: 0x%X, new v: 0x%X\n", old_v, ppu.v);
         }
 
-        // 在特定周期更新水平滚动寄存器
+        // 水平滚动信息复制
         if (ppu.cycle == 257) {
-            old_v = ppu.v;
             ppu.v = (ppu.v & 0x7BE0) | (ppu.t & 0x041F);
-            printf("555 old v: 0x%X, new v: 0x%X\n", old_v, ppu.v);
+        }
+    } else {
+        // 在VBlank开始时设置VBlank标志并生成NMI中断
+        if (ppu.scanline == 241 && ppu.cycle == 1) {
+
+            printf("Entering VBlank at scanline %d, cycle %d\n", ppu.scanline, ppu.cycle);
+            ppu.in_vblank = 1;
+
+            ppu.ppustatus |= 0x80;
+            if (ppu.ppuctrl & 0x80) {
+                cpu_interrupt_NMI();
+            }
         }
     }
 
-    // 在每帧结束时更新屏幕纹理
-    if (ppu.scanline == 240) {
-        SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
-    }
-
-    // 在VBlank开始时设置VBlank标志并生成NMI中断
-    if (ppu.scanline == 241 && ppu.cycle == 1) {
-        ppu.ppustatus |= 0x80;
-        if (ppu.ppuctrl & 0x80) {
-            cpu_interrupt_NMI();
-        }
-    }
-
-    // 更新周期和扫描线计数器
     ppu.cycle++;
     if (ppu.cycle > 340) {
+
+        // 周期结束, 更新扫描线和重置周期计数
         ppu.cycle = 0;
-        ppu.scanline++;
-        if (ppu.scanline >= 261) {
-            ppu.scanline = -1;
-        }
+        ppu.scanline = (ppu.scanline + 1) % 262;
     }
 }

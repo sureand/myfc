@@ -2357,7 +2357,7 @@ void cpu_write_word(WORD address, WORD data)
     cpu.ram[address + 1] = ptr[0];
 }
 
-void step_cpu()
+BYTE step_cpu()
 {
     BYTE opcode = bus_read(PC);
 
@@ -2367,5 +2367,9 @@ void step_cpu()
     code_maps[opcode].op_func(opcode);
 
     // 更新CPU周期
-    cpu.cycle += code_maps[opcode].cycle;
+
+    BYTE actual_cycles = code_maps[opcode].cycle;
+    cpu.cycle += actual_cycles;
+
+    return actual_cycles;
 }

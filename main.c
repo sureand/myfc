@@ -2,7 +2,9 @@
 #include "cpu.h"
 #include "ppu.h"
 
-#define NTSC_CPU_CYCLES_PER_FRAME 33200 // 精确值，以避免窗口卡顿
+#define NTSC_CPU_CYCLES_PER_FRAME 29781 // 精确值，以避免窗口卡顿
+#define PAL_CPU_CYCLES_PER_FRAME 33248 // 精确值，以避免窗口卡顿
+
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
 #define FRAME_DURATION 1000 / 60 // 60 FPS
@@ -74,15 +76,24 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
     while (cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
-        process_events();
-
-        // 执行 CPU 和 PPU 步骤
-        step_cpu();
-        for (int j = 0; j < PPU_CYCLES_PER_CPU_CYCLE; j++) {
-            step_ppu(renderer, texture);
+        if (cpu_cycles % 1000 == 0) {
+            process_events();
         }
 
-        cpu_cycles++;
+        // 执行 CPU 步骤，并获取执行该指令所需的实际周期数
+        int actual_cpu_cycles = step_cpu();
+
+        // 根据实际 CPU 周期数执行相应的 PPU 步骤
+        for (int i = 0; i < actual_cpu_cycles; i++) {
+
+            // 执行 PPU 步骤
+            for (int j = 0; j < 3; j++) {
+                step_ppu(renderer, texture);
+            }
+        }
+
+        // 更新 CPU 周期计数
+        cpu_cycles += actual_cpu_cycles;
     }
 }
 
@@ -93,7 +104,7 @@ void main_loop(SDL_Renderer *renderer)
     float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
-    SDL_TimerID timerID = SDL_AddTimer(500 / 60, timer_callback, NULL);
+    SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
 
     if (timerID == 0) {
         fprintf(stderr, "SDL_AddTimer failed! SDL_Error: %s\n", SDL_GetError());
@@ -194,7 +205,7 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test/0.nes");
+    ROM *rom = load_rom("test.nes");
 
     mem_init(rom);
 

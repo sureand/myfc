@@ -1,6 +1,15 @@
 #ifndef __FC_COMMON_HEADER__
 #define __FC_COMMON_HEADER__
 
+#include <stdarg.h>
+
+
+#ifdef DEBUG
+    #define DEBUG_PRINT(...) debug_printf(__VA_ARGS__)
+#else
+    #define DEBUG_PRINT(...) // 空实现
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -177,13 +186,10 @@ typedef struct {
     uint8_t ppustatus;  // PPU状态寄存器 ($2002)，读取时会更新
     uint8_t oamaddr;    // OAM地址寄存器 ($2003)
     uint8_t oam[OAM_SIZE]; // OAM数据数组 ($2004)
-    uint8_t ppuscroll;  // 滚动值，用于计算当前显示的tile
     uint16_t v;   // PPU地址寄存器 ($2006/$2007)，用于VRAM访问
-    uint8_t ppudat;     // PPU数据寄存器，用于VRAM读写的临时存储
-    uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
     uint8_t oamdma;     // OAM DMA寄存器 ($4014)，用于CPU到OAM的DMA传输
-    uint16_t cycle;      // 当前的PPU周期计数
-    int16_t scanline;   // 当前的扫描线计数
+    int cycle;      // 当前的PPU周期计数
+    int scanline;   // 当前的扫描线计数
     uint8_t w; // 用于跟踪第一次和第二次写入
 
     // 以下寄存器用于模拟PPU内部渲染逻辑
@@ -192,6 +198,10 @@ typedef struct {
     uint8_t vram_buffer;// 用于存储从VRAM读取的数据
 
     uint8_t mirroring; //是否支持镜像
+    uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
+
+    uint8_t in_vblank;
+
 } _PPU;
 
 // APU结构体
@@ -232,6 +242,8 @@ void show_code();
 void cpu_init();
 void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
+BYTE step_cpu();
+void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
 
 #define BUTTON_A      0x01
 #define BUTTON_B      0x02
