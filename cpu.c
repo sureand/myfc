@@ -2230,7 +2230,7 @@ static void init_code()
 
 static void init_reg()
 {
-    cpu.IP = 0;
+    cpu.IP = bus_read(0xFFFC) | (bus_read(0xFFFD) << 8);
     cpu.SP = 0xFD;
     cpu.X = 0;
     cpu.Y = 0;
@@ -2304,27 +2304,31 @@ WORD get_start_address()
 
 void cpu_init()
 {
-    init_reg();
-
     init_code();
+
+    init_reg();
 }
 
 void cpu_interrupt_NMI()
 {
     // 将当前的 IP 压栈
-    push((cpu.IP >> 8) & 0xFF);
-    push(cpu.IP & 0xFF);
+    push((cpu.IP >> 8) & 0xFF);  // 高字节
+    push(cpu.IP & 0xFF);  // 低字节
 
     // 将 P 状态寄存器压栈（清除 B 标志）
-    push(cpu.P & ~0x30); // 清除 B 和未使用标志（位 4 和位 5）
+    push(cpu.P & ~0x30);  // 清除 B 和未使用标志（位 4 和位 5）
 
     // 设置禁用中断标志
     cpu.P |= 0x04;
 
     // 取出 NMI 向量地址
-    WORD nmi_vector = bus_read(0xFFFB) << 8 | bus_read(0xFFFA);
+    WORD nmi_vector = bus_read(0xFFFA) | (bus_read(0xFFFB) << 8);
 
+    // 加载新的程序计数器地址
     cpu.IP = nmi_vector;
+
+    // 更新 CPU 周期
+    cpu.cycle += 7;  // NMI 处理大约需要 7 个周期
 }
 
 BYTE cpu_read_byte(WORD address)
@@ -2363,13 +2367,16 @@ BYTE step_cpu()
 
     //do_disassemble(PC, opcode);
 
+    // 初始的周期数
+    int initial_cycles = cpu.cycle;
+
     // 执行操作码对应的操作函数
     code_maps[opcode].op_func(opcode);
 
-    // 更新CPU周期
+    cpu.cycle += code_maps[opcode].cycle;
 
-    BYTE actual_cycles = code_maps[opcode].cycle;
-    cpu.cycle += actual_cycles;
+    // 计算指令消耗的实际周期数
+    int cycles_consumed = cpu.cycle - initial_cycles;
 
-    return actual_cycles;
+    return cycles_consumed;
 }

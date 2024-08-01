@@ -70,13 +70,18 @@ void wait_for_frame()
 
 void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 {
-    uint64_t cpu_cycles = 0;
     const uint64_t CPU_CYCLES_PER_FRAME = NTSC_CPU_CYCLES_PER_FRAME;
+    uint64_t total_cpu_cycles = 0; // 用于记录总的CPU周期数
 
-    while (cpu_cycles < CPU_CYCLES_PER_FRAME) {
+    uint64_t frame_start_cycles = total_cpu_cycles; // 记录每帧开始时的CPU周期数
+
+    static uint32_t frame_buffer[256 * 240] = {0x00};
+    memset(frame_buffer, 0, sizeof(frame_buffer));
+
+    while (total_cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
-        if (cpu_cycles % 1000 == 0) {
+        if ((total_cpu_cycles - frame_start_cycles) % 1000 == 0) {
             process_events();
         }
 
@@ -88,12 +93,12 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 
             // 执行 PPU 步骤
             for (int j = 0; j < 3; j++) {
-                step_ppu(renderer, texture);
+                step_ppu(renderer, texture, frame_buffer);
             }
         }
 
         // 更新 CPU 周期计数
-        cpu_cycles += actual_cpu_cycles;
+       total_cpu_cycles += actual_cpu_cycles;
     }
 }
 
@@ -228,8 +233,6 @@ void fc_release(ROM *rom)
 int main(int argc, char *argv[])
 {
     ROM *rom = fc_init();
-
-    handle_reset();
 
     start();
 

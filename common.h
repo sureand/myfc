@@ -243,7 +243,7 @@ void cpu_init();
 void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
 BYTE step_cpu();
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
+void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buffer);
 
 #define BUTTON_A      0x01
 #define BUTTON_B      0x02

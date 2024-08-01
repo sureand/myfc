@@ -45,7 +45,7 @@ void parse_code()
 
 void do_disassemble(WORD addr, BYTE opcode)
 {
-    printf("%04X  %02X", addr, opcode);
+    printf("c%I64u           $%04X  %02X", cpu.cycle, addr, opcode);
 
     BYTE operand_length = code_maps[opcode].op_len - 1;
     BYTE operand1 = 0, operand2 = 0;
@@ -67,8 +67,8 @@ void do_disassemble(WORD addr, BYTE opcode)
         printf(" $%04X", address);
     }
 
-    printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%I64u\n", \
-            cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP,cpu.cycle);
+    printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  %d,%d\n", \
+            cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, ppu.scanline, ppu.cycle);
 
 }
 
