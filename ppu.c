@@ -37,6 +37,21 @@ static inline BYTE is_visible_frame()
     return (ppu.scanline >= 0 && ppu.scanline <= 239);
 }
 
+static inline BYTE is_visible_background()
+{
+    return ppu.ppumask & 0x08;
+}
+
+static inline BYTE is_visible_sprites()
+{
+    return ppu.ppumask & 0x010;
+}
+
+static inline BYTE is_rendering_enabled()
+{
+    return (ppu.ppumask & 0x18) != 0;
+}
+
 #define IS_VISIBLE(x, y) ((x) < 256 && (y) < 240)
 #define IS_TRANSPARENT(color) ((color) == 0)
 #define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
@@ -69,6 +84,8 @@ void ppu_vram_write(WORD address, BYTE data);
 void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
+
+    ppu.scanline = -1;
 
     // 假设 header[6] 的第 0 位决定水平或垂直镜像
     if (mirroring & 0x01) {
@@ -188,8 +205,8 @@ void ppu_vram_write(WORD old_address, BYTE data)
     if (address < 0x2000) {
         // Pattern tables 区域 (通常不允许写入，CHR ROM 是只读的)
         // 通常情况下，这里会抛弃写操作或抛出错误
-       // printf("Attempted write to CHR ROM address 0x%04X, which is read-only.\n", address);
-        printf("Attempted write to CHR ROM address 0x%X - 0x%X, scanline: %d, cycle: %d-------------------->\n", old_address, address, ppu.scanline, ppu.cycle);
+        //chr_rom[address] = data;
+        printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
         exit(1);
 
     } else if (address < 0x3F00) {
@@ -297,7 +314,6 @@ void ppu_write(WORD address, uint8_t data)
         case 0x2007: // PPUDATA
             ppu_vram_write(ppu.v, data);
             ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
-            printf("Write to PPUDATA: %02X, scanline: %d, cycle: %d, vblank: %d\n", data, ppu.scanline, ppu.cycle, ppu.in_vblank);
             break;
         default:
             DEBUG_PRINT(stderr, "Write to unsupported PPU register: [0x%X]!\n", address);
@@ -490,35 +506,36 @@ void clear_ppu_state()
     ppu.in_vblank = 0;
 }
 
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
+void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buffer)
 {
-    static uint32_t frame_buffer[256 * 240] = {0x00};
+    // 在预渲染扫描线的第一个周期开始新的帧
+    if (ppu.scanline == -1) {
+
+        /*渲染阶段开始*/
+        if (ppu.cycle == 1) {
+            clear_ppu_state();
+        }
+
+        // 复制垂直滚动信息
+        if (ppu.cycle >= 280 && ppu.cycle <= 304 && is_rendering_enabled()) {
+            ppu.v = (ppu.v & 0x841F) | (ppu.t & 0x7BE0);
+        }
+    }
 
     /* 非vblank 期间做修改滚动寄存器 */
-    if (!is_vblank()) {
-
-        // 在预渲染扫描线的第一个周期开始新的帧
-        if (ppu.scanline == 261) {
-
-            /*渲染阶段开始*/
-            if (ppu.cycle == 1) {
-                memset(frame_buffer, 0, sizeof(frame_buffer));
-                ppu.v = ppu.t;
-
-                clear_ppu_state();
-            }
-
-            // 复制垂直滚动信息
-            if (ppu.cycle >= 280 && ppu.cycle <= 304) {
-                ppu.v = (ppu.v & 0x841F) | (ppu.t & 0x7BE0);
-            }
-        }
+    if (!is_vblank() && is_rendering_enabled()) {
 
         // 可见区域, 开始渲染
         if (is_visible_frame()) {
+
             if (ppu.cycle >= 1 && ppu.cycle < 256) {
-                render_background(frame_buffer, ppu.scanline);
-                render_sprites(frame_buffer, ppu.scanline);
+                if (is_visible_background()) {
+                    render_background(frame_buffer, ppu.scanline);
+                }
+
+                if (is_visible_sprites()) {
+                    render_sprites(frame_buffer, ppu.scanline);
+                }
             }
         }
 
@@ -545,7 +562,6 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         // 在VBlank开始时设置VBlank标志并生成NMI中断
         if (ppu.scanline == 241 && ppu.cycle == 1) {
 
-            printf("Entering VBlank at scanline %d, cycle %d\n", ppu.scanline, ppu.cycle);
             ppu.in_vblank = 1;
 
             ppu.ppustatus |= 0x80;
@@ -560,6 +576,9 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         // 周期结束, 更新扫描线和重置周期计数
         ppu.cycle = 0;
-        ppu.scanline = (ppu.scanline + 1) % 262;
+        ppu.scanline++;
+        if (ppu.scanline > 260) {
+            ppu.scanline = -1;
+        }
     }
 }
