@@ -378,7 +378,7 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
     color_index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
-    int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0XFF;
+    int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0xFF;
     frame_buffer[scanline * SCREEN_WIDTH + pixel_x] = rgb_palette[color_index];
 }
 
@@ -493,6 +493,8 @@ void clear_ppu_state()
 {
     ppu.ppustatus &= ~0x80; // 清除VBlank标志
     ppu.ppustatus &= ~0x40; // 清除精灵0命中标志
+    ppu.ppustatus &= ~0x20; // 设置 PPU 状态寄存器的第 5 位
+
     ppu.w = 0;
     ppu.in_vblank = 0;
 }
@@ -533,22 +535,24 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
     /* 非vblank 期间做修改滚动寄存器 */
     if (!is_vblank() && is_rendering_enabled() && !is_post_render_line()) {
 
+        /* 非 vblan 的 这些周期点, 需要做水平更新*/
+        if ((ppu.cycle >= 8 && ppu.cycle <= 248 && ppu.cycle % 8 == 0)) {
+            ppu.v = increment_horizontal_scroll(ppu.v);
+        }
+
         // 可见区域, 开始渲染
         if (is_visible_frame()) {
 
-            if (is_visible_background()) {
-                render_background_pixel(frame_buffer, ppu.cycle, ppu.scanline);
-            }
+            if (ppu.cycle >= 0 && ppu.cycle < 256) {
+                if (is_visible_background()) {
+                        render_background_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+                    }
 
-            if (is_visible_sprites()) {
-                render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+                    if (is_visible_sprites()) {
+                        render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+                    }
+                }
             }
-        }
-
-        /* 非 vblan 的 这些周期点, 需要做水平更新*/
-        if ((ppu.cycle >= 8 && ppu.cycle <= 256 && ppu.cycle % 8 == 0) || (ppu.cycle >= 328 && ppu.cycle % 8 == 0)) {
-            ppu.v = increment_horizontal_scroll(ppu.v);
-        }
 
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
