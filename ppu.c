@@ -343,7 +343,6 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
     int coarse_y = (v >> 5) & 0x1F;
     int coarse_x = v & 0x1F;
     int fine_x = ppu.x;  // Fine X scroll from PPU's register
-    //int fine_x = v & 0x7;  // Fine X scroll from PPU's register
 
     // 获取名称表地址
     uint16_t name_table_address = 0x2000 | (v & 0x0FFF);
@@ -371,26 +370,24 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
     uint8_t pixel_value = ((tile_msb >> (7 - pixel_x_in_tile)) & 1) << 1 | ((tile_lsb >> (7 - pixel_x_in_tile)) & 1);
 
     // 计算调色板颜色索引
-    uint8_t color_index = 0x00;
+    uint16_t addr = 0x3F00;
+    uint32_t color_index = ppu_vram_read(addr);
     if (pixel_value != 0x00) {
-        uint16_t addr = 0x3F00 + (palette_index << 2) + pixel_value;
-        color_index = ppu_vram_read(addr);
-    } else {
-        color_index = ppu_vram_read(0x3F00);
+        addr = 0x3F00 + (palette_index << 2) + pixel_value;
     }
+    color_index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
     int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0XFF;
     frame_buffer[scanline * 256 + pixel_x] = rgb_palette[color_index];
 }
 
-/* 根据扫描线来渲染精灵 */
-void render_sprites(uint32_t* frame_buffer, int scanline)
+void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
 {
     BYTE sprite_0_hit_detected = 0;
     BYTE sprites_on_scanline = 0; // 计数在当前扫描线上渲染的精灵数量
 
-    /* 遍历64 个精灵 */
+    /* 遍历64个精灵 */
     for (int i = 0; i < 64; i++) {
         uint8_t y_position = ppu.oam[i * 4];
         uint8_t tile_index = ppu.oam[i * 4 + 1];
@@ -402,12 +399,16 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
         if (scanline < y_position || scanline >= (y_position + sprite_height))
             continue;
 
+        /* 检查当前PPU周期是否在精灵的水平范围内 */
+        if (cycle < x_position || cycle >= (x_position + 8))
+            continue;
+
         // 增加当前扫描线上的精灵数量
         sprites_on_scanline++;
         if (sprites_on_scanline > 8) {
             // 设置 sprite 溢出 标志
             ppu.ppustatus |= 0x20; // 设置 PPU 状态寄存器的第 5 位
-            continue;
+            return; // 跳出循环，避免继续处理其他精灵
         }
 
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
@@ -446,39 +447,38 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
         int sprite_behind_background = attributes & 0x20;
 
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
-        for (int x = 0; x < 8; x++) {
+        int x = cycle - x_position;
 
-            uint8_t color_index = 0x00;
+        uint8_t color_index = 0x00;
 
-            int h_x = flip_horizontal ? (7 - x) : x;
+        int h_x = flip_horizontal ? (7 - x) : x;
 
-            /* 翻转低字节的一个bit */
-            uint8_t lsb_bit = (tile_lsb >> (7 - h_x)) & 1;
+        /* 翻转低字节的一个bit */
+        uint8_t lsb_bit = (tile_lsb >> (7 - h_x)) & 1;
 
-            /* 翻转高字节的一个bit */
-            uint8_t msb_bit = (tile_msb >> (7 - h_x)) & 1;
+        /* 翻转高字节的一个bit */
+        uint8_t msb_bit = (tile_msb >> (7 - h_x)) & 1;
 
-            /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
-            uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
+        /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
+        uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
 
-            if (!IS_TRANSPARENT(pixel_value)) {
-                WORD addr = PALETTE_ADDR(palette_index, pixel_value);
-                color_index = ppu_vram_read(0x3F00 + addr);
+        if (!IS_TRANSPARENT(pixel_value)) {
+            WORD addr = PALETTE_ADDR(palette_index, pixel_value);
+            color_index = ppu_vram_read(0x3F00 + addr);
+        }
+
+        int screen_x = cycle;
+
+        if (IS_VISIBLE(screen_x, scanline)) {
+            uint32_t background_color = frame_buffer[scanline * 256 + screen_x];
+
+            /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
+            if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
+                frame_buffer[scanline * 256 + screen_x] = rgb_palette[color_index];
             }
 
-            int screen_x = x_position + x;
-
-            if (IS_VISIBLE(screen_x, scanline)) {
-                uint32_t background_color = frame_buffer[scanline * 256 + screen_x];
-
-                /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
-                if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
-                    frame_buffer[scanline * 256 + screen_x] = rgb_palette[color_index];
-                }
-
-                if (i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
-                    sprite_0_hit_detected = 1;
-                }
+            if (i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
+                sprite_0_hit_detected = 1;
             }
         }
     }
@@ -489,13 +489,27 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
     }
 }
 
-
 void clear_ppu_state()
 {
     ppu.ppustatus &= ~0x80; // 清除VBlank标志
     ppu.ppustatus &= ~0x40; // 清除精灵0命中标志
     ppu.w = 0;
     ppu.in_vblank = 0;
+}
+
+void display_frame(uint32_t* frame_buffer, SDL_Renderer* renderer, SDL_Texture* texture)
+{
+    // 更新纹理
+    SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
+
+    // 清除渲染器
+    SDL_RenderClear(renderer);
+
+    // 复制纹理到渲染器
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+    // 显示渲染内容
+    SDL_RenderPresent(renderer);
 }
 
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
@@ -527,7 +541,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
             }
 
             if (is_visible_sprites()) {
-               render_sprites(frame_buffer, ppu.scanline);
+               render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
             }
         }
 
@@ -547,9 +561,8 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         }
     } else {
 
-        if (ppu.scanline == 240 && ppu.cycle == 0) {
-            SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
-            memset(frame_buffer, 0, sizeof(frame_buffer));
+        if (ppu.scanline == 240 && ppu.cycle == 1) {
+            display_frame(frame_buffer, renderer, texture);
         }
 
         // 在VBlank开始时设置VBlank标志并生成NMI中断

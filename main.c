@@ -135,18 +135,6 @@ void main_loop(SDL_Renderer *renderer)
                     SDL_RenderSetScale(renderer, scale_x, scale_y);
                 }
             }
-
-            // 设置绘图颜色为黑色
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-
-            // 清空屏幕（填充为黑色）
-            SDL_RenderClear(renderer);
-
-            // 将纹理复制到渲染器
-            SDL_RenderCopy(renderer, texture, NULL, NULL);
-
-            // 显示渲染结果
-            SDL_RenderPresent(renderer);
         }
 
     }
@@ -173,7 +161,7 @@ int start()
         return -1;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
@@ -205,7 +193,7 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test.nes");
+    ROM *rom = load_rom("test/0.nes");
 
     mem_init(rom);
 
