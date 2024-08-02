@@ -75,15 +75,10 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 
     uint64_t frame_start_cycles = total_cpu_cycles; // 记录每帧开始时的CPU周期数
 
-    static uint32_t frame_buffer[256 * 240] = {0x00};
-    memset(frame_buffer, 0, sizeof(frame_buffer));
-
     while (total_cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
-        if ((total_cpu_cycles - frame_start_cycles) % 1000 == 0) {
-            process_events();
-        }
+        process_events();
 
         // 执行 CPU 步骤，并获取执行该指令所需的实际周期数
         int actual_cpu_cycles = step_cpu();
@@ -93,7 +88,7 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 
             // 执行 PPU 步骤
             for (int j = 0; j < 3; j++) {
-                step_ppu(renderer, texture, frame_buffer);
+                step_ppu(renderer, texture);
             }
         }
 
@@ -109,7 +104,7 @@ void main_loop(SDL_Renderer *renderer)
     float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
-    SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
+    SDL_TimerID timerID = SDL_AddTimer(500 / 60, timer_callback, NULL);
 
     if (timerID == 0) {
         fprintf(stderr, "SDL_AddTimer failed! SDL_Error: %s\n", SDL_GetError());

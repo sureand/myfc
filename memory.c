@@ -103,7 +103,6 @@ void bus_write(WORD address, BYTE data)
     }
 
     if (address >= 0x2000 && address <= 0x3FFF) {
-        //printf("write ppu address: 0X%04X, data:[0X%02X]\n", address, data);
         ppu_write(address & 0x2007, data);
         return;
     }
