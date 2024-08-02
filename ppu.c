@@ -52,6 +52,11 @@ static inline BYTE is_rendering_enabled()
     return (ppu.ppumask & 0x18) != 0;
 }
 
+static inline BYTE is_post_render_line()
+{
+    return ppu.scanline == 240;
+}
+
 #define IS_VISIBLE(x, y) ((x) < 256 && (y) < 240)
 #define IS_TRANSPARENT(color) ((color) == 0)
 #define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
@@ -284,8 +289,10 @@ void ppu_write(WORD address, uint8_t data)
             //DEBUG_PRINT("Write to OAMADDR: %02X\n", data);
             break;
         case 0x2004: // OAMDATA
-            ppu.oam[ppu.oamaddr] = data;
-            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
+            if (!is_rendering_enabled()) {
+                ppu.oam[ppu.oamaddr] = data;
+                ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
+            }
             //DEBUG_PRINT("Write to OAMDATA: %02X, OAMADDR: %02X\n", data, ppu.oamaddr);
             break;
         case 0x2005: // PPUSCROLL
@@ -324,73 +331,57 @@ void ppu_write(WORD address, uint8_t data)
 
 static inline WORD get_name_table_base()
 {
-    return 0x2000 | (ppu.v & 0x0C00);
+    return 0x2000 | (ppu.v & 0x0FFF);
 }
 
 /* 根据扫描线来渲染背景 */
-void render_background(uint32_t* frame_buffer, int scanline)
+void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 {
     uint16_t v = ppu.v;
 
-    /* 用来计算当前行的图块*/
     int fine_y = (v >> 12) & 0x07;
-
-    /* 取得垂直方向的起始图块的索引 */
     int coarse_y = (v >> 5) & 0x1F;
-
-    /* 取得水平方向起始图块的索引 */
     int coarse_x = v & 0x1F;
+    int fine_x = ppu.x;  // Fine X scroll from PPU's register
+    //int fine_x = v & 0x7;  // Fine X scroll from PPU's register
 
-    // 计算名称表基地址
-    uint16_t name_table_base = get_name_table_base();
+    // 获取名称表地址
+    uint16_t name_table_address = 0x2000 | (v & 0x0FFF);
+    int tile_x = coarse_x;
+    int tile_y = coarse_y;
 
-    for (int tile_x = 0; tile_x < 32; tile_x++) {
+    // 计算图块索引
+    uint8_t tile_index = ppu_vram_read(name_table_address);
 
-        int tile_index_x = (coarse_x + tile_x) & 0x1F;
-        int tile_index_y = coarse_y;
+    // 获取属性表地址
+    uint16_t attribute_table_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+    uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
 
-        // 根据名称表地址获取图块索引
-        uint16_t name_table_address = name_table_base + tile_index_y * 32 + tile_index_x;
-        uint8_t tile_index = ppu_vram_read(name_table_address);
+    // 计算调色板索引
+    uint8_t shift = ((tile_y & 2) << 1) + (tile_x & 2);
+    uint8_t palette_index = (attribute_byte >> shift) & 0x03;
 
-        // 计算属性表地址
-        uint16_t attribute_table_address = name_table_base + 0x3C0 + (tile_index_y / 4) * 8 + (tile_index_x / 4);
-        uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
+    // 获取图块数据地址
+    uint16_t pattern_table_address = ((ppu.ppuctrl & 0x10) ? 0x1000 : 0x0000) + tile_index * 16 + fine_y;
+    uint8_t tile_lsb = ppu_vram_read(pattern_table_address);
+    uint8_t tile_msb = ppu_vram_read(pattern_table_address + 8);
 
-        // 根据图块索引获取调色板索引的位置
-        uint8_t shift = ((tile_index_y & 2) << 1) + (tile_index_x & 2);
-        uint8_t palette_index = (attribute_byte >> shift) & 0x03;
+    // 计算当前像素在图块中的位置
+    int pixel_x_in_tile = (cycle + fine_x) & 0x07;
+    uint8_t pixel_value = ((tile_msb >> (7 - pixel_x_in_tile)) & 1) << 1 | ((tile_lsb >> (7 - pixel_x_in_tile)) & 1);
 
-        // 获取图样表基地址
-        uint16_t pattern_table_base = ((ppu.ppuctrl & 0x10) ? 0x1000 : 0x0000);
-
-        // 根据图案表获取高低平面字节
-        uint16_t pattern_table_address = pattern_table_base + tile_index * 16 + fine_y;
-        uint8_t tile_lsb = ppu_vram_read(pattern_table_address);
-        uint8_t tile_msb = ppu_vram_read(pattern_table_address + 8);
-
-        // 从左到右获取每个像素值，一个字节对应8列
-        for (int col = 0; col < 8; col++) {
-            uint8_t pixel_value = ((tile_msb >> (7 - col)) & 1) << 1 | ((tile_lsb >> (7 - col)) & 1);
-            uint8_t color_index;
-
-            // 获取颜色索引
-            if (pixel_value != 0x00) {
-                uint16_t addr = 0x3F00 + (palette_index << 2) + pixel_value;
-                color_index = ppu_vram_read(addr);
-            } else {
-                // 透明的情况使用背景色
-                color_index = ppu_vram_read(0x3F00);
-            }
-
-            // 计算像素位置
-            int pixel_x = (tile_x * 8 + col - (ppu.x & 0x07)) % 256;
-            if (pixel_x < 0) pixel_x += 256;
-            if (scanline >= 0 && scanline < 240 && pixel_x >= 0 && pixel_x < 256) {
-                frame_buffer[scanline * 256 + pixel_x] = rgb_palette[color_index];
-            }
-        }
+    // 计算调色板颜色索引
+    uint8_t color_index = 0x00;
+    if (pixel_value != 0x00) {
+        uint16_t addr = 0x3F00 + (palette_index << 2) + pixel_value;
+        color_index = ppu_vram_read(addr);
+    } else {
+        color_index = ppu_vram_read(0x3F00);
     }
+
+    // 计算实际屏幕上的 X 坐标
+    int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0XFF;
+    frame_buffer[scanline * 256 + pixel_x] = rgb_palette[color_index];
 }
 
 /* 根据扫描线来渲染精灵 */
@@ -498,6 +489,7 @@ void render_sprites(uint32_t* frame_buffer, int scanline)
     }
 }
 
+
 void clear_ppu_state()
 {
     ppu.ppustatus &= ~0x80; // 清除VBlank标志
@@ -506,8 +498,10 @@ void clear_ppu_state()
     ppu.in_vblank = 0;
 }
 
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buffer)
+void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
+    static uint32_t frame_buffer[256 * 240] = {0x00};
+
     // 在预渲染扫描线的第一个周期开始新的帧
     if (ppu.scanline == -1) {
 
@@ -523,29 +517,22 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buff
     }
 
     /* 非vblank 期间做修改滚动寄存器 */
-    if (!is_vblank() && is_rendering_enabled()) {
+    if (!is_vblank() && is_rendering_enabled() && !is_post_render_line()) {
 
         // 可见区域, 开始渲染
         if (is_visible_frame()) {
 
-            if (ppu.cycle >= 1 && ppu.cycle < 256) {
-                if (is_visible_background()) {
-                    render_background(frame_buffer, ppu.scanline);
-                }
+            if (is_visible_background()) {
+                render_background_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+            }
 
-                if (is_visible_sprites()) {
-                    render_sprites(frame_buffer, ppu.scanline);
-                }
+            if (is_visible_sprites()) {
+               render_sprites(frame_buffer, ppu.scanline);
             }
         }
 
-        // 在每帧结束时更新屏幕纹理
-        if (ppu.scanline == 240 && ppu.cycle == 0) {
-            SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
-        }
-
         /* 非 vblan 的 这些周期点, 需要做水平更新*/
-        if ((ppu.cycle >= 8 && ppu.cycle <= 248 && ppu.cycle % 8 == 0) || (ppu.cycle == 328 || ppu.cycle == 336)) {
+        if ((ppu.cycle >= 8 && ppu.cycle <= 256 && ppu.cycle % 8 == 0) || (ppu.cycle >= 328 && ppu.cycle % 8 == 0)) {
             ppu.v = increment_horizontal_scroll(ppu.v);
         }
 
@@ -559,6 +546,12 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buff
             ppu.v = (ppu.v & 0x7BE0) | (ppu.t & 0x041F);
         }
     } else {
+
+        if (ppu.scanline == 240 && ppu.cycle == 0) {
+            SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
+            memset(frame_buffer, 0, sizeof(frame_buffer));
+        }
+
         // 在VBlank开始时设置VBlank标志并生成NMI中断
         if (ppu.scanline == 241 && ppu.cycle == 1) {
 

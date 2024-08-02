@@ -176,6 +176,7 @@ typedef struct {
     BYTE ram[CPU_RAM_SIZE];  // 2KB RAM
 }_CPU;
 
+#define WINDOW_SIZE (256 * 240)
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
 #define APU_REG_SIZE 0x20 //APU 的大小
 
@@ -243,7 +244,7 @@ void cpu_init();
 void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
 BYTE step_cpu();
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture, uint32_t *frame_buffer);
+void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
 
 #define BUTTON_A      0x01
 #define BUTTON_B      0x02
