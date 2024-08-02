@@ -257,6 +257,9 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
 
 void handle_key(SDL_Keycode key, BYTE pressed);
 
+#define SCREEN_WIDTH (256)
+#define SCREEN_HEIGHT (240)
+
 #define FREE(p) \
 do { \
     if(!(p)) break;\

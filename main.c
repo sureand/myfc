@@ -100,7 +100,7 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
 void main_loop(SDL_Renderer *renderer)
 {
     uint8_t running = 1;
-    int width = 256, height = 240;
+    int width = SCREEN_WIDTH, height = SCREEN_HEIGHT;
     float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
@@ -112,7 +112,7 @@ void main_loop(SDL_Renderer *renderer)
     }
 
     // 创建一个纹理，用于渲染PPU输出
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     while (running) {
         SDL_Event event;
@@ -130,8 +130,8 @@ void main_loop(SDL_Renderer *renderer)
                     height = event.window.data2;
 
                     // 重新设置渲染器的缩放比例
-                    scale_x = (float)width / 256.0f;
-                    scale_x = (float)height / 240.0f;
+                    scale_x = (float)width / SCREEN_WIDTH;
+                    scale_x = (float)height / SCREEN_HEIGHT;
                     SDL_RenderSetScale(renderer, scale_x, scale_y);
                 }
             }
@@ -154,7 +154,7 @@ int start()
     SDL_Window *window = SDL_CreateWindow("MY FC",
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          512, 480, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
+                                          SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
     if (!window) {
         fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_Quit();
@@ -169,7 +169,7 @@ int start()
         return -1;
     }
 
-    SDL_RenderSetLogicalSize(renderer, 256, 240);
+    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // 启动模拟器主循环
     main_loop(renderer);

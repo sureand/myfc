@@ -57,7 +57,7 @@ static inline BYTE is_post_render_line()
     return ppu.scanline == 240;
 }
 
-#define IS_VISIBLE(x, y) ((x) < 256 && (y) < 240)
+#define IS_VISIBLE(x, y) ((x) < SCREEN_WIDTH && (y) < SCREEN_HEIGHT)
 #define IS_TRANSPARENT(color) ((color) == 0)
 #define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
 
@@ -379,7 +379,7 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 
     // 计算实际屏幕上的 X 坐标
     int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0XFF;
-    frame_buffer[scanline * 256 + pixel_x] = rgb_palette[color_index];
+    frame_buffer[scanline * SCREEN_WIDTH + pixel_x] = rgb_palette[color_index];
 }
 
 void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
@@ -470,11 +470,11 @@ void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
         int screen_x = cycle;
 
         if (IS_VISIBLE(screen_x, scanline)) {
-            uint32_t background_color = frame_buffer[scanline * 256 + screen_x];
+            uint32_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x];
 
             /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
             if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
-                frame_buffer[scanline * 256 + screen_x] = rgb_palette[color_index];
+                frame_buffer[scanline * SCREEN_WIDTH + screen_x] = rgb_palette[color_index];
             }
 
             if (i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
@@ -500,7 +500,7 @@ void clear_ppu_state()
 void display_frame(uint32_t* frame_buffer, SDL_Renderer* renderer, SDL_Texture* texture)
 {
     // 更新纹理
-    SDL_UpdateTexture(texture, NULL, frame_buffer, 256 * sizeof(uint32_t));
+    SDL_UpdateTexture(texture, NULL, frame_buffer, SCREEN_WIDTH * sizeof(uint32_t));
 
     // 清除渲染器
     SDL_RenderClear(renderer);
@@ -514,7 +514,7 @@ void display_frame(uint32_t* frame_buffer, SDL_Renderer* renderer, SDL_Texture* 
 
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
-    static uint32_t frame_buffer[256 * 240] = {0x00};
+    static uint32_t frame_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
 
     // 在预渲染扫描线的第一个周期开始新的帧
     if (ppu.scanline == -1) {
@@ -541,7 +541,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
             }
 
             if (is_visible_sprites()) {
-               render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+                render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
             }
         }
 
