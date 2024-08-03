@@ -545,14 +545,14 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             if (ppu.cycle >= 0 && ppu.cycle < 256) {
                 if (is_visible_background()) {
-                        render_background_pixel(frame_buffer, ppu.cycle, ppu.scanline);
-                    }
+                    render_background_pixel(frame_buffer, ppu.cycle, ppu.scanline);
+                }
 
-                    if (is_visible_sprites()) {
-                        render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
-                    }
+                if (is_visible_sprites()) {
+                    render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
                 }
             }
+        }
 
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {

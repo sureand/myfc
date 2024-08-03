@@ -68,12 +68,10 @@ void wait_for_frame()
     last_frame_time = SDL_GetTicks();
 }
 
-void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
+void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
     const uint64_t CPU_CYCLES_PER_FRAME = NTSC_CPU_CYCLES_PER_FRAME;
     uint64_t total_cpu_cycles = 0; // 用于记录总的CPU周期数
-
-    uint64_t frame_start_cycles = total_cpu_cycles; // 记录每帧开始时的CPU周期数
 
     while (total_cpu_cycles < CPU_CYCLES_PER_FRAME) {
 
@@ -84,27 +82,27 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture)
         int actual_cpu_cycles = step_cpu();
 
         // 根据实际 CPU 周期数执行相应的 PPU 步骤
-        for (int i = 0; i < actual_cpu_cycles; i++) {
-
+        for (int i = 0; i < actual_cpu_cycles * 3; i++) {
             // 执行 PPU 步骤
-            for (int j = 0; j < 3; j++) {
-                step_ppu(renderer, texture);
-            }
+            step_ppu(renderer, texture);
         }
 
         // 更新 CPU 周期计数
        total_cpu_cycles += actual_cpu_cycles;
     }
+
+    // 增加帧计数
+    (*frame_count)++;
 }
 
-void main_loop(SDL_Renderer *renderer)
+void main_loop(SDL_Window * window, SDL_Renderer *renderer)
 {
     uint8_t running = 1;
     int width = SCREEN_WIDTH, height = SCREEN_HEIGHT;
     float scale_x = 1.0f, scale_y = 1.0f;
 
     // 创建一个定时器，每秒触发60次
-    SDL_TimerID timerID = SDL_AddTimer(500 / 60, timer_callback, NULL);
+    SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
 
     if (timerID == 0) {
         fprintf(stderr, "SDL_AddTimer failed! SDL_Error: %s\n", SDL_GetError());
@@ -114,6 +112,10 @@ void main_loop(SDL_Renderer *renderer)
     // 创建一个纹理，用于渲染PPU输出
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+    Uint32 start_time = SDL_GetTicks();
+    int frame_count = 0;
+    char title[256];
+
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -121,7 +123,7 @@ void main_loop(SDL_Renderer *renderer)
                 running = 0;
                 break;
             } else if (event.type == SDL_USEREVENT) {
-                handle_user_event(renderer, texture);
+                handle_user_event(renderer, texture, &frame_count);
             }
             else if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
@@ -135,6 +137,16 @@ void main_loop(SDL_Renderer *renderer)
                     SDL_RenderSetScale(renderer, scale_x, scale_y);
                 }
             }
+        }
+
+        // 每秒更新一次 FPS
+        Uint32 current_time = SDL_GetTicks();
+        if (current_time - start_time >= 1000) {
+            float fps = frame_count / ((current_time - start_time) / 1000.0f);
+            snprintf(title, sizeof(title), "NES Emulator - FPS: %.2f", fps);
+            SDL_SetWindowTitle(window, title);
+            start_time = current_time;
+            frame_count = 0;
         }
 
     }
@@ -151,7 +163,7 @@ int start()
         return -1;
     }
 
-    SDL_Window *window = SDL_CreateWindow("MY FC",
+    SDL_Window *window = SDL_CreateWindow("NES Emulator",
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
@@ -169,10 +181,19 @@ int start()
         return -1;
     }
 
+    SDL_RendererInfo info;
+    SDL_GetRendererInfo(renderer, &info);
+    printf("Renderer name: %s\n", info.name);
+    if (info.flags & SDL_RENDERER_PRESENTVSYNC) {
+        printf("VSync is enabled\n");
+    } else {
+        printf("VSync is not enabled\n");
+    }
+
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // 启动模拟器主循环
-    main_loop(renderer);
+    main_loop(window, renderer);
 
     // 清理资源
     SDL_DestroyRenderer(renderer);
