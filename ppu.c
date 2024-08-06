@@ -113,20 +113,19 @@ void ppu_init()
 // 计算实际的 Name Table 地址
 WORD get_name_table_address(WORD address, BYTE mirroring)
 {
-    address &= 0x0FFF; // 限制在 Name Table 范围内
     switch (mirroring) {
         case HORIZONTAL_MIRRORING:
-            return (address < 0x0800) ? (0x2000 + address) : (0x2400 + (address - 0x0800));
+            return 0x2000 | (address & 0xBFF);
         case VERTICAL_MIRRORING:
-            return (address < 0x0400 || (address >= 0x0800 && address < 0x0C00)) ? (0x2000 + (address & 0x07FF)) : (0x2400 + (address & 0x03FF));
+            return 0x2000 | (address & 0x7FF);
         case SINGLE_SCREEN_MIRRORING_0:
-            return 0x2000 + (address & 0x03FF);
+           return 0x2000 | (address & 0x3FF);
         case SINGLE_SCREEN_MIRRORING_1:
-            return 0x2400 + (address & 0x03FF);
+            return 0x2000 | (address & 0x7FF);
         case FOUR_SCREEN_MIRRORING:
-            return 0x2000 + address;
+            return address;
         default:
-            return 0x2000 + address;
+            return 0x2000 | (address & 0xBFF);
     }
 }
 
