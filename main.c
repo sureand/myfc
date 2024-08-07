@@ -92,7 +92,10 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_
     }
 
     // 增加帧计数
+    ppu.frame_count++;
     (*frame_count)++;
+
+    wait_for_frame();
 }
 
 void main_loop(SDL_Window * window, SDL_Renderer *renderer)
@@ -122,8 +125,6 @@ void main_loop(SDL_Window * window, SDL_Renderer *renderer)
             if (event.type == SDL_QUIT) {
                 running = 0;
                 break;
-            } else if (event.type == SDL_USEREVENT) {
-                handle_user_event(renderer, texture, &frame_count);
             }
             else if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
@@ -149,6 +150,7 @@ void main_loop(SDL_Window * window, SDL_Renderer *renderer)
             frame_count = 0;
         }
 
+        handle_user_event(renderer, texture, &frame_count);
     }
 
     // 清理SDL
@@ -214,12 +216,15 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test/0.nes");
+    ROM *rom = load_rom("test/official_only.nes");
 
     mem_init(rom);
 
-    ppu_init();
+    //ppu_init();
     cpu_init();
+    disassemble();
+
+
 
     return rom;
 }

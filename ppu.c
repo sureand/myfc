@@ -39,12 +39,12 @@ static inline BYTE is_visible_frame()
 
 static inline BYTE is_visible_background()
 {
-    return ppu.ppumask & 0x08;
+    return ppu.ppumask & 0x8;
 }
 
 static inline BYTE is_visible_sprites()
 {
-    return ppu.ppumask & 0x010;
+    return ppu.ppumask & 0x10;
 }
 
 static inline BYTE is_rendering_enabled()
@@ -211,7 +211,7 @@ void ppu_vram_write(WORD old_address, BYTE data)
         // 通常情况下，这里会抛弃写操作或抛出错误
         //chr_rom[address] = data;
         printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
-        exit(1);
+        //exit(1);
 
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
@@ -231,7 +231,6 @@ void ppu_vram_write(WORD old_address, BYTE data)
 BYTE ppu_read(WORD address)
 {
     BYTE data = 0;
-
     switch (address) {
 
         //返回ppu mask 的状态
@@ -277,22 +276,16 @@ void ppu_write(WORD address, uint8_t data)
         case 0x2000: // PPUCTRL
             ppu.ppuctrl = data;
             ppu.t = (ppu.t & 0xF3FF) | ((data & 0x03) << 10); // 更新临时 VRAM 地址
-           // DEBUG_PRINT("Write to PPUCTRL: %02X, t: %04X\n", data, ppu.t);
             break;
         case 0x2001: // PPUMASK
             ppu.ppumask = data;
-           // DEBUG_PRINT("Write to PPUMASK: %02X\n", data);
             break;
-        case 0x2003: // OAMADDR
+        case 0x2003:
             ppu.oamaddr = data;
-            //DEBUG_PRINT("Write to OAMADDR: %02X\n", data);
             break;
         case 0x2004: // OAMDATA
-            if (!is_rendering_enabled()) {
-                ppu.oam[ppu.oamaddr] = data;
-                ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
-            }
-            //DEBUG_PRINT("Write to OAMDATA: %02X, OAMADDR: %02X\n", data, ppu.oamaddr);
+            ppu.oam[ppu.oamaddr] = data;
+            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
             break;
         case 0x2005: // PPUSCROLL
             if (ppu.w == 0) {
@@ -304,9 +297,13 @@ void ppu_write(WORD address, uint8_t data)
                 ppu.t = (ppu.t & 0xFC1F) | ((data & 0xF8) << 2);
                 ppu.w = 0;
             }
-            //printf("Write to PPUSCROLL: scanline: 0x%X, cycle: %d\n", ppu.scanline, ppu.cycle);
             break;
         case 0x2006: // PPUADDR
+
+            if (is_rendering_enabled()) {
+                return;
+            }
+
             if (ppu.w == 0) {
                 ppu.t = (ppu.t & 0x80FF) | ((data & 0x3F) << 8);
                 ppu.w = 1;
@@ -315,9 +312,11 @@ void ppu_write(WORD address, uint8_t data)
                 ppu.v = ppu.t;
                 ppu.w = 0;
             }
-            //printf("Write to PPUADDR: %02X, scanline: %d, cycle: %d\n", data, ppu.scanline, ppu.cycle);
             break;
         case 0x2007: // PPUDATA
+            if (is_rendering_enabled()) {
+                return;
+            }
             ppu_vram_write(ppu.v, data);
             ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
             break;
@@ -326,7 +325,6 @@ void ppu_write(WORD address, uint8_t data)
             break;
     }
 }
-
 
 static inline WORD get_name_table_base()
 {
@@ -338,10 +336,16 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 {
     uint16_t v = ppu.v;
 
+    int fine_x = ppu.x;  // Fine X scroll from PPU's register
+    uint8_t x_offset = cycle % 8 + fine_x;
+
+    if (x_offset > 7) {
+        v = increment_horizontal_scroll(v);
+    }
+
     int fine_y = (v >> 12) & 0x07;
     int coarse_y = (v >> 5) & 0x1F;
     int coarse_x = v & 0x1F;
-    int fine_x = ppu.x;  // Fine X scroll from PPU's register
 
     // 获取名称表地址
     uint16_t name_table_address = 0x2000 | (v & 0x0FFF);
@@ -350,6 +354,8 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 
     // 计算图块索引
     uint8_t tile_index = ppu_vram_read(name_table_address);
+
+    //printf("scanline: %d, cycle: %d, X/Y: %d/%d, tile index: 0x%X,  name_table_address: 0x%X\n", ppu.scanline, ppu.cycle, tile_x, tile_y, tile_index, name_table_address);
 
     // 获取属性表地址
     uint16_t attribute_table_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
@@ -365,7 +371,7 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
     uint8_t tile_msb = ppu_vram_read(pattern_table_address + 8);
 
     // 计算当前像素在图块中的位置
-    int pixel_x_in_tile = (cycle + fine_x) & 0x07;
+    int pixel_x_in_tile = (x_offset) % 8;
     uint8_t pixel_value = ((tile_msb >> (7 - pixel_x_in_tile)) & 1) << 1 | ((tile_lsb >> (7 - pixel_x_in_tile)) & 1);
 
     // 计算调色板颜色索引
@@ -377,8 +383,7 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
     color_index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
-    int pixel_x = (coarse_x * 8 + pixel_x_in_tile) & 0xFF;
-    frame_buffer[scanline * SCREEN_WIDTH + pixel_x] = rgb_palette[color_index];
+    frame_buffer[scanline * SCREEN_WIDTH + cycle] = rgb_palette[color_index];
 }
 
 void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
@@ -579,6 +584,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
             }
         }
     }
+    //printf("scanline: %d, cycle: %d, ppu v: 0x%X, mask: 0x%X\n", ppu.scanline, ppu.cycle, ppu.v, (ppu.ppumask & 0x18));
 
     ppu.cycle++;
     if (ppu.cycle > 340) {
@@ -588,6 +594,9 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         ppu.scanline++;
         if (ppu.scanline > 260) {
             ppu.scanline = -1;
+
+            // 奇数帧需要跳过一个周期
+            ppu.cycle += ppu.frame_count & 1;
         }
     }
 }

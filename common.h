@@ -203,6 +203,10 @@ typedef struct {
 
     uint8_t in_vblank;
 
+    uint8_t draw_x;
+    uint8_t draw_y;
+
+    int frame_count;
 } _PPU;
 
 // APU结构体
@@ -243,6 +247,7 @@ void show_code();
 void cpu_init();
 void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
+void disassemble();
 BYTE step_cpu();
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
 

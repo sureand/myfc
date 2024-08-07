@@ -2328,7 +2328,7 @@ void cpu_interrupt_NMI()
     cpu.IP = nmi_vector;
 
     // 更新 CPU 周期
-    cpu.cycle += 7;  // NMI 处理大约需要 7 个周期
+    cpu.cycle += 6;  // NMI 处理大约需要 7 个周期
 }
 
 BYTE cpu_read_byte(WORD address)

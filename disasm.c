@@ -75,11 +75,8 @@ void do_disassemble(WORD addr, BYTE opcode)
 void disassemble()
 {
     cpu.P = 0x24;
-    cpu.cycle = 7;
 
-    WORD addr = 0xC004;
-    PC = 0xC004;
-
+    WORD addr = PC;
     while (addr) {
 
         BYTE opcode = bus_read(addr);
