@@ -52,6 +52,11 @@ static inline BYTE is_rendering_enabled()
     return (ppu.ppumask & 0x18) != 0;
 }
 
+static inline BYTE is_rendering()
+{
+    return ((ppu.ppumask & 0x18) != 0) && is_visible_frame();
+}
+
 static inline BYTE is_post_render_line()
 {
     return ppu.scanline == 240;
@@ -190,7 +195,7 @@ BYTE ppu_vram_read(WORD address)
         if (address >= 0x3000) {
             address -= 0x1000; // 处理 $3000-$3FFF 镜像到 $2000-$2FFF
         }
-        real_address = get_name_table_address(address - 0x2000, ppu.mirroring);
+        real_address = get_name_table_address(address, ppu.mirroring);
         return ppu.vram[real_address];
     } else {
         // Palette 区域
@@ -218,7 +223,7 @@ void ppu_vram_write(WORD old_address, BYTE data)
         if (address >= 0x3000) {
             address -= 0x1000; // 处理 $3000-$3FFF 镜像到 $2000-$2FFF
         }
-        real_address = get_name_table_address(address - 0x2000, ppu.mirroring);
+        real_address = get_name_table_address(address, ppu.mirroring);
         ppu.vram[real_address] = data;
 
     } else {
@@ -233,10 +238,6 @@ BYTE ppu_read(WORD address)
     BYTE data = 0;
     switch (address) {
 
-        //返回ppu mask 的状态
-        case 0x2001:
-            data = ppu.ppumask;
-            break;
         case 0x2002:
             // 返回PPU状态寄存器的值，并清除VBlank标志位
             data = ppu.ppustatus;
@@ -245,7 +246,7 @@ BYTE ppu_read(WORD address)
             ppu.w = 0;
 
             // 清除 VBlank 标志 (bit 7)
-            ppu.ppustatus &= ~0x80;
+            ppu.ppustatus &= 0x7F;
             break;
         case 0x2004:
             data = ppu.oam[ppu.oamaddr];
@@ -275,48 +276,57 @@ void ppu_write(WORD address, uint8_t data)
     switch (address) {
         case 0x2000: // PPUCTRL
             ppu.ppuctrl = data;
-            ppu.t = (ppu.t & 0xF3FF) | ((data & 0x03) << 10); // 更新临时 VRAM 地址
-            break;
+            //清空bit 10-11
+            ppu.t &= 0xF3FF;
+            ppu.t |= (data & 0x03) << 10; // 设置bit 10-11
+            return;
         case 0x2001: // PPUMASK
             ppu.ppumask = data;
-            break;
+            return;
         case 0x2003:
             ppu.oamaddr = data;
-            break;
+            return;
         case 0x2004: // OAMDATA
             ppu.oam[ppu.oamaddr] = data;
             ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
             break;
         case 0x2005: // PPUSCROLL
             if (ppu.w == 0) {
-                ppu.t = (ppu.t & 0xFFE0) | (data >> 3);
+
+                //清除 ppu.t 的最低 5 位，并将 data 的高 5 位写入 ppu.t 的最低 5 位, 这样设置了水平滚动的粗略部分。
+                ppu.t &= 0xFFE0;
+                ppu.t |= data >> 3;
+
+                // 将 data 的最低 3 位写入 ppu.x，设置水平滚动的精细部分。
                 ppu.x = data & 0x07;
                 ppu.w = 1;
             } else {
-                ppu.t = (ppu.t & 0x8FFF) | ((data & 0x07) << 12);
-                ppu.t = (ppu.t & 0xFC1F) | ((data & 0xF8) << 2);
+
+                //清除 ppu.t 的第 12 到 14 位，并将 data 的最低 3 位写入 ppu.t 的第 12 到 14 位，设置垂直滚动的精细部分。
+                ppu.t &= 0x8FFF;
+                ppu.t |= (data & 0x07) << 12;
+
+                //清除 ppu.t 的第 5 到 9 位，并将 data 的高 5 位写入 ppu.t 的第 5 到 9 位，设置垂直滚动的粗略部分。
+                ppu.t &= 0xFC1F;
+                ppu.t |= (data & 0xF8) << 2;
                 ppu.w = 0;
             }
             break;
         case 0x2006: // PPUADDR
-
-            if (is_rendering_enabled()) {
-                return;
-            }
-
             if (ppu.w == 0) {
-                ppu.t = (ppu.t & 0x80FF) | ((data & 0x3F) << 8);
+                // 清除 ppu.t 的第 8 到 13 位，并将 data 的最低 6 位写入 ppu.t 的第 8 到 13 位。这样设置了 VRAM 地址的高 6 位。
+                ppu.t &= 0x00FF;
+                ppu.t |= (data & 0x3F) << 8;
                 ppu.w = 1;
             } else {
-                ppu.t = (ppu.t & 0xFF00) | data;
+                //清除 ppu.t 的最低 8 位，并将 data 的全部 8 位写入 ppu.t 的最低 8 位，设置 VRAM 地址的低 8 位。
+                ppu.t &= 0xFF00;
+                ppu.t |= data;
                 ppu.v = ppu.t;
                 ppu.w = 0;
             }
             break;
         case 0x2007: // PPUDATA
-            if (is_rendering_enabled()) {
-                return;
-            }
             ppu_vram_write(ppu.v, data);
             ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
             break;
@@ -481,7 +491,7 @@ void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
                 frame_buffer[scanline * SCREEN_WIDTH + screen_x] = rgb_palette[color_index];
             }
 
-            if (i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
+            if (is_visible_background() && i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
                 sprite_0_hit_detected = 1;
             }
         }
@@ -532,7 +542,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         // 复制垂直滚动信息
         if (ppu.cycle >= 280 && ppu.cycle <= 304 && is_rendering_enabled()) {
-            ppu.v = (ppu.v & 0x841F) | (ppu.t & 0x7BE0);
+            ppu.v = (ppu.v & ~0x7BE0) | (ppu.t & 0x7BE0);
         }
     }
 
@@ -560,12 +570,14 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
+            uint16_t old_v = ppu.v;
             ppu.v = increment_vertical_scroll(ppu.v);
+            printf("vert scroll scanline: %d, cycle: %d, old v: 0x%X, new v: 0x%X\n", ppu.scanline, ppu.cycle, old_v, ppu.v);
         }
 
         // 水平滚动信息复制
         if (ppu.cycle == 257) {
-            ppu.v = (ppu.v & 0x7BE0) | (ppu.t & 0x041F);
+            ppu.v = (ppu.v & ~0x041F) | (ppu.t & 0x041F);
         }
     } else {
 
