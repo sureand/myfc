@@ -43,33 +43,38 @@ void parse_code()
 
 }
 
+void print_status_flags(char *buffer, uint8_t P)
+{
+    buffer[0] = (P & 0x80) ? 'N' : 'n'; // Negative Flag
+    buffer[1] = (P & 0x40) ? 'V' : 'v'; // Overflow Flag
+    buffer[2] = 'U';                    // Unused Flag (always 1)
+    buffer[3] = (P & 0x10) ? 'B' : 'b'; // Break Command
+    buffer[4] = (P & 0x08) ? 'D' : 'd'; // Decimal Mode
+    buffer[5] = (P & 0x04) ? 'I' : 'i'; // Interrupt Disable
+    buffer[6] = (P & 0x02) ? 'Z' : 'z'; // Zero Flag
+    buffer[7] = (P & 0x01) ? 'C' : 'c'; // Carry Flag
+    buffer[8] = '\0';                   // Null terminator
+}
+
 void do_disassemble(WORD addr, BYTE opcode)
 {
-    printf("c%I64u           $%04X  %02X", cpu.cycle, addr, opcode);
+    char status_flags[9] = {0}; // 用于存储状态寄存器标志位的字符串
+    print_status_flags(status_flags, cpu.P);
 
-    BYTE operand_length = code_maps[opcode].op_len - 1;
-    BYTE operand1 = 0, operand2 = 0;
-    if (operand_length == 1) {
-        operand1 = bus_read(addr + 1);
-        printf(" %02X", operand1);
-    } else if (operand_length == 2) {
-        operand1 = bus_read(addr + 1);
-        operand2 = bus_read(addr + 2);
-        printf(" %02X %02X", operand1, operand2);
+    printf("c%-10I64u $%04X ", cpu.cycle, addr);
+
+    BYTE operand_length = code_maps[opcode].op_len;
+    char operand_buffer[16] = {0};
+    for (int i = 0; i < operand_length; i++) {
+        sprintf(operand_buffer + i * 3, "%02X ", bus_read(addr + i));
     }
+
+    // 10个字符对齐
+    printf("%-10s", operand_buffer);
 
     printf("  %-4s", code_maps[opcode].op_name);
 
-    if (operand_length == 1) {
-        printf(" $%02X", operand1);
-    } else if (operand_length == 2) {
-        WORD address = (operand2 << 8) | operand1;
-        printf(" $%04X", address);
-    }
-
-    printf("    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  %d,%d\n", \
-            cpu.A, cpu.X, cpu.Y, cpu.P, cpu.SP, ppu.scanline, ppu.cycle);
-
+    printf("    A:%02X X:%02X Y:%02X S:%02X P:%s\n", cpu.A, cpu.X, cpu.Y, cpu.SP, status_flags);
 }
 
 void disassemble()

@@ -130,7 +130,7 @@ static inline WORD indirect_Y_indexed_addressing()
 static inline WORD relative_addressing()
 {
     //先算下一条指令的地址, 再算偏移
-    char of = (char)bus_read(PC + 1);
+    int8_t of = (int8_t)bus_read(PC + 1);
     PC += 2;
 
     WORD addr = PC + of;
@@ -2365,7 +2365,7 @@ BYTE step_cpu()
 {
     BYTE opcode = bus_read(PC);
 
-    //do_disassemble(PC, opcode);
+    do_disassemble(PC, opcode);
 
     // 初始的周期数
     int initial_cycles = cpu.cycle;
