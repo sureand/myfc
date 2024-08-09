@@ -122,20 +122,24 @@ void handler_ADC(WORD address)
 
     WORD ret = cpu.A + value + (test_flag(CARRY) ? 1 : 0);
 
-    cpu.A = ret & 0xFF;
+    BYTE result = ret & 0xFF;
 
-    set_nz(cpu.A);
-
-    BYTE of = (value ^ ret) & (cpu.A & ret) & 0x80;
-    if(of) { set_flag(OF); } else { clear_flag(OF); }
-
-    BYTE cf = ret >> 8;
-    if(cf) {
-        set_flag(CARRY);
-        return;
+    // 正确的溢出标志设置
+    if (((cpu.A ^ result) & 0x80) && !((cpu.A ^ value) & 0x80)) {
+        set_flag(OF);
+    } else {
+        clear_flag(OF);
     }
 
-    clear_flag(CARRY);
+    cpu.A = result;
+    set_nz(cpu.A);
+
+    // 进位标志设置
+    if (ret > 0xFF) {
+        set_flag(CARRY);
+    } else {
+        clear_flag(CARRY);
+    }
 }
 
 void handler_SBC(WORD address)

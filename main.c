@@ -216,15 +216,14 @@ void release_memory(ROM *rom)
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test/official_only.nes");
+    ROM *rom = load_rom("test.nes");
 
     mem_init(rom);
 
-    //ppu_init();
+    ppu_init();
     cpu_init();
-    disassemble();
 
-
+    start();
 
     return rom;
 }

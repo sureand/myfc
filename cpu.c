@@ -2365,7 +2365,7 @@ BYTE step_cpu()
 {
     BYTE opcode = bus_read(PC);
 
-    do_disassemble(PC, opcode);
+    //do_disassemble(PC, opcode);
 
     // 初始的周期数
     int initial_cycles = cpu.cycle;
