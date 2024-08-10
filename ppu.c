@@ -95,7 +95,6 @@ void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
 
-    ppu.scanline = -1;
 
     // 假设 header[6] 的第 0 位决定水平或垂直镜像
     if (mirroring & 0x01) {
@@ -180,6 +179,16 @@ WORD get_palette_address(WORD address)
     return address;
 }
 
+BYTE read_palette(WORD address)
+{
+    if (ppu.ppumask & 0x1) {
+        return 0x30;
+    }
+
+    WORD real_address = get_palette_address(address);
+    return ppu.vram[real_address];
+}
+
 // 读取 VRAM
 BYTE ppu_vram_read(WORD address)
 {
@@ -199,24 +208,21 @@ BYTE ppu_vram_read(WORD address)
         return ppu.vram[real_address];
     } else {
         // Palette 区域
-        real_address = get_palette_address(address);
-        return ppu.vram[real_address];
+        return read_palette(address);
     }
 }
 
 // 写入 VRAM
-void ppu_vram_write(WORD old_address, BYTE data)
+void ppu_vram_write(WORD address, BYTE data)
 {
-    WORD address = old_address & 0x3FFF;
+    address &= 0x3FFF;
 
     WORD real_address = address;
 
     if (address < 0x2000) {
-        // Pattern tables 区域 (通常不允许写入，CHR ROM 是只读的)
         // 通常情况下，这里会抛弃写操作或抛出错误
-        //chr_rom[address] = data;
         printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
-        //exit(1);
+        exit(1);
 
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
@@ -364,8 +370,6 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 
     // 计算图块索引
     uint8_t tile_index = ppu_vram_read(name_table_address);
-
-    //printf("scanline: %d, cycle: %d, X/Y: %d/%d, tile index: 0x%X,  name_table_address: 0x%X\n", ppu.scanline, ppu.cycle, tile_x, tile_y, tile_index, name_table_address);
 
     // 获取属性表地址
     uint16_t attribute_table_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
@@ -570,9 +574,9 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
-            uint16_t old_v = ppu.v;
+            ppu.v = increment_horizontal_scroll(ppu.v);
+
             ppu.v = increment_vertical_scroll(ppu.v);
-            printf("vert scroll scanline: %d, cycle: %d, old v: 0x%X, new v: 0x%X\n", ppu.scanline, ppu.cycle, old_v, ppu.v);
         }
 
         // 水平滚动信息复制
@@ -596,7 +600,6 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
             }
         }
     }
-    //printf("scanline: %d, cycle: %d, ppu v: 0x%X, mask: 0x%X\n", ppu.scanline, ppu.cycle, ppu.v, (ppu.ppumask & 0x18));
 
     ppu.cycle++;
     if (ppu.cycle > 340) {
@@ -609,6 +612,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             // 奇数帧需要跳过一个周期
             ppu.cycle += ppu.frame_count & 1;
+            ppu.frame_count++;
         }
     }
 }

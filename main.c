@@ -70,29 +70,21 @@ void wait_for_frame()
 
 void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
-    const uint64_t CPU_CYCLES_PER_FRAME = NTSC_CPU_CYCLES_PER_FRAME;
-    uint64_t total_cpu_cycles = 0; // 用于记录总的CPU周期数
 
-    while (total_cpu_cycles < CPU_CYCLES_PER_FRAME) {
-
+    int actual_cpu_cycles = 1;
+    do {
         // 处理事件
         process_events();
 
         // 执行 CPU 步骤，并获取执行该指令所需的实际周期数
-        int actual_cpu_cycles = step_cpu();
-
-        // 根据实际 CPU 周期数执行相应的 PPU 步骤
-        for (int i = 0; i < actual_cpu_cycles * 3; i++) {
-            // 执行 PPU 步骤
+        for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
             step_ppu(renderer, texture);
         }
 
-        // 更新 CPU 周期计数
-       total_cpu_cycles += actual_cpu_cycles;
-    }
+        actual_cpu_cycles = step_cpu();
+    }while ((cpu.cycle % NTSC_CPU_CYCLES_PER_FRAME) != 0);
 
     // 增加帧计数
-    ppu.frame_count++;
     (*frame_count)++;
 
     wait_for_frame();
@@ -214,16 +206,27 @@ void release_memory(ROM *rom)
     FREE(prg_rom);
 }
 
+
+// 开机的时候, cpu 和 ppu 也会加载一些初始化指令
+void power_up()
+{
+    cpu_init();
+    cpu.cycle = 8;
+
+    ppu_init();
+    ppu.scanline = 0;
+    ppu.cycle = 24;
+    ppu.frame_count = 1;
+
+    start();
+}
+
 ROM *fc_init()
 {
     ROM *rom = load_rom("test.nes");
-
     mem_init(rom);
 
-    ppu_init();
-    cpu_init();
-
-    start();
+    power_up();
 
     return rom;
 }
