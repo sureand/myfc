@@ -509,9 +509,7 @@ void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
 
 void clear_ppu_state()
 {
-    ppu.ppustatus &= ~0x80; // 清除VBlank标志
-    ppu.ppustatus &= ~0x40; // 清除精灵0命中标志
-    ppu.ppustatus &= ~0x20; // 设置 PPU 状态寄存器的第 5 位
+    ppu.ppustatus &= 0x1F;
 
     ppu.w = 0;
     ppu.in_vblank = 0;
@@ -596,7 +594,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
             ppu.ppustatus |= 0x80;
             if (ppu.ppuctrl & 0x80) {
-                cpu_interrupt_NMI();
+                set_nmi();
             }
         }
     }
@@ -607,12 +605,16 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         // 周期结束, 更新扫描线和重置周期计数
         ppu.cycle = 0;
         ppu.scanline++;
+
+        if (ppu.scanline == 240) {
+            ppu.frame_count++;
+        }
+
         if (ppu.scanline > 260) {
             ppu.scanline = -1;
 
             // 奇数帧需要跳过一个周期
-            ppu.cycle += ppu.frame_count & 1;
-            ppu.frame_count++;
+            //ppu.cycle += ppu.frame_count & 1;
         }
     }
 }

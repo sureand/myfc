@@ -174,6 +174,8 @@ typedef struct {
     BYTE is_lock;
 
     BYTE ram[CPU_RAM_SIZE];  // 2KB RAM
+
+    BYTE interrupt; //这里设置中断的标志, 暂定bit 0 是NMI
 }_CPU;
 
 #define WINDOW_SIZE (256 * 240)
@@ -250,6 +252,7 @@ void do_disassemble(WORD addr, BYTE opcode);
 void disassemble();
 BYTE step_cpu();
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
+void set_nmi();
 
 #define BUTTON_A      0x01
 #define BUTTON_B      0x02

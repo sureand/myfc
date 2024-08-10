@@ -70,9 +70,9 @@ void wait_for_frame()
 
 void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
-
     int actual_cpu_cycles = 1;
-    do {
+    int total_cpu_cycles = 0;
+    for(;;) {
         // 处理事件
         process_events();
 
@@ -82,7 +82,12 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_
         }
 
         actual_cpu_cycles = step_cpu();
-    }while ((cpu.cycle % NTSC_CPU_CYCLES_PER_FRAME) != 0);
+        total_cpu_cycles += actual_cpu_cycles;
+
+        if ((cpu.cycle % NTSC_CPU_CYCLES_PER_FRAME) == 0) {
+            break;
+        }
+    }
 
     // 增加帧计数
     (*frame_count)++;
@@ -177,11 +182,11 @@ int start()
 
     SDL_RendererInfo info;
     SDL_GetRendererInfo(renderer, &info);
-    printf("Renderer name: %s\n", info.name);
+    DEBUG_PRINT("Renderer name: %s\n", info.name);
     if (info.flags & SDL_RENDERER_PRESENTVSYNC) {
-        printf("VSync is enabled\n");
+        DEBUG_PRINT("VSync is enabled\n");
     } else {
-        printf("VSync is not enabled\n");
+        DEBUG_PRINT("VSync is not enabled\n");
     }
 
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -223,7 +228,7 @@ void power_up()
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test.nes");
+    ROM *rom = load_rom("test/scanline.nes");
     mem_init(rom);
 
     power_up();

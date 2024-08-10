@@ -2327,8 +2327,11 @@ void cpu_interrupt_NMI()
     // 加载新的程序计数器地址
     cpu.IP = nmi_vector;
 
+    // 清除NMI 标志
+    cpu.interrupt &= 0xFE;
+
     // 更新 CPU 周期
-    cpu.cycle += 6;  // NMI 处理大约需要 7 个周期
+    cpu.cycle += 7;  // NMI 处理大约需要 7 个周期
 }
 
 BYTE cpu_read_byte(WORD address)
@@ -2361,14 +2364,25 @@ void cpu_write_word(WORD address, WORD data)
     cpu.ram[address + 1] = ptr[0];
 }
 
+void set_nmi()
+{
+    cpu.interrupt |= 0x1;
+}
+
 BYTE step_cpu()
 {
+    // 初始的周期数
+    int initial_cycles = cpu.cycle;
+
+    //触发NMI 中断, 直接执行读取中断向量操作
+    if (cpu.interrupt & 0x1) {
+        cpu_interrupt_NMI();
+        return cpu.cycle - initial_cycles;
+    }
+
     BYTE opcode = bus_read(PC);
 
     //do_disassemble(PC, opcode);
-
-    // 初始的周期数
-    int initial_cycles = cpu.cycle;
 
     // 执行操作码对应的操作函数
     code_maps[opcode].op_func(opcode);
