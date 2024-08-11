@@ -219,8 +219,6 @@ void power_up()
     ppu.scanline = 0;
     ppu.cycle = 24;
     ppu.frame_count = 1;
-
-    start();
 }
 
 ROM *fc_init()
