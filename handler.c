@@ -607,18 +607,24 @@ void handler_JSR(WORD address)
 
 void handler_BRK(WORD address)
 {
-    //CPU 会把PC + 1 这条指令用作填充作用, 并且直接忽略
-    PC++;
-    push(PC >> 8);
-    push(PC & 0xFF);
+    (void)address;
 
-    //设置中断标志
-    set_flag(BRK);
-    push(cpu.P);
-    set_flag(INT);
+    PC += 2;
 
-    //跳到0xFFFE 运行
-    jump(IRQ_vector());
+    BYTE addr1 = PC & 0xFF;
+    BYTE addr2 = (PC >> 8) & 0xFF;
+
+    push(addr2);
+    push(addr1);
+
+    uint8_t flags = cpu.P | 0x30;
+    push(flags);
+
+    cpu.P |= 0x04;
+
+    addr1 = bus_read(0xFFFE);
+    addr2 = bus_read(0xFFFF);
+    PC = (addr2 << 8) | addr1;
 }
 
 void handler_BPL(WORD address)
