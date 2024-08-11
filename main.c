@@ -72,21 +72,18 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_
 {
     int actual_cpu_cycles = 1;
     int total_cpu_cycles = 0;
-    for(;;) {
+
+    while (total_cpu_cycles < NTSC_CPU_CYCLES_PER_FRAME) {
+
         // 处理事件
         process_events();
 
-        // 执行 CPU 步骤，并获取执行该指令所需的实际周期数
+        actual_cpu_cycles = step_cpu();
         for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
             step_ppu(renderer, texture);
         }
 
-        actual_cpu_cycles = step_cpu();
         total_cpu_cycles += actual_cpu_cycles;
-
-        if ((cpu.cycle % NTSC_CPU_CYCLES_PER_FRAME) == 0) {
-            break;
-        }
     }
 
     // 增加帧计数
@@ -228,7 +225,7 @@ void power_up()
 
 ROM *fc_init()
 {
-    ROM *rom = load_rom("test/scanline.nes");
+    ROM *rom = load_rom("test.nes");
     mem_init(rom);
 
     power_up();
