@@ -30,10 +30,10 @@ void handle_key(SDL_Keycode key, BYTE pressed)
         case SDLK_k: set_button_state(1, pressed); break; // B button
         case SDLK_u: set_button_state(2, pressed); break; // Select button
         case SDLK_RETURN: set_button_state(3, pressed); break; // Start button
-        case SDLK_UP: set_button_state(4, pressed); break; // Up button
-        case SDLK_DOWN: set_button_state(5, pressed); break; // Down button
-        case SDLK_LEFT: set_button_state(6, pressed); break; // Left button
-        case SDLK_RIGHT: set_button_state(7, pressed); break; // Right button
+        case SDLK_w: set_button_state(4, pressed); break; // Up button
+        case SDLK_s: set_button_state(5, pressed); break; // Down button
+        case SDLK_a: set_button_state(6, pressed); break; // Left button
+        case SDLK_d: set_button_state(7, pressed); break; // Right button
     }
 }
 
@@ -158,10 +158,7 @@ void bus_write(WORD address, BYTE data)
 
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-
-        WORD address_range = prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
-        prg_rom[address & address_range] = data;
-
+        printf("Attempted write to PRG ROM address 0x%X - 0x%X\n", address, data);
         return;
     }
 
