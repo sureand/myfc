@@ -115,14 +115,16 @@ static inline WORD indexed_X_indirect_addressing()
 }
 
 //Y 间接 变址寻址
-static inline WORD indirect_Y_indexed_addressing()
+static inline WORD indirect_Y_indexed_addressing(BYTE is_load_instr)
 {
     BYTE addr1 = bus_read(PC + 1);
     BYTE addr2 = addr1 + 1;
     WORD addr = (bus_read(addr2) << 8) | bus_read(addr1);
     PC += 2;
 
-    if( (addr >> 8) != (addr + cpu.Y) >> 8) ++cpu.cycle;
+    if (is_load_instr) {
+        if( (addr >> 8) != (addr + cpu.Y) >> 8) ++cpu.cycle;
+    }
 
     return addr + cpu.Y;
 }
@@ -263,7 +265,7 @@ void BPL_10(BYTE op)
 
 void ORA_11(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_ORA(addr);
 }
@@ -277,7 +279,7 @@ void KIL_12(BYTE op)
 
 void SLO_13(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_SLO(addr);
 }
@@ -489,7 +491,7 @@ void BMI_30(BYTE op)
 
 void AND_31(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_AND(addr);
 }
@@ -503,7 +505,7 @@ void KIL_32(BYTE op)
 
 void RLA_33(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_RLA(addr);
 }
@@ -714,7 +716,7 @@ void BVC_50(BYTE op)
 
 void EOR_51(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_EOR(addr);
 }
@@ -728,7 +730,7 @@ void KIL_52(BYTE op)
 
 void SRE_53(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_SRE(addr);
 }
@@ -941,7 +943,7 @@ void BVS_70(BYTE op)
 
 void ADC_71(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_ADC(addr);
 }
@@ -955,7 +957,7 @@ void KIL_72(BYTE op)
 
 void RRA_73(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_RRA(addr);
 }
@@ -1168,7 +1170,7 @@ void BCC_90(BYTE op)
 
 void STA_91(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_STA(addr);
 }
@@ -1182,7 +1184,7 @@ void KIL_92(BYTE op)
 
 void AXA_93(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_AXA(addr);
 }
@@ -1395,7 +1397,7 @@ void BCS_B0(BYTE op)
 
 void LDA_B1(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(1);
 
     handler_LDA(addr);
 }
@@ -1409,7 +1411,7 @@ void KIL_B2(BYTE op)
 
 void LAX_B3(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(1);
 
     handler_LAX(addr);
 }
@@ -1621,7 +1623,7 @@ void BNE_D0(BYTE op)
 
 void CMP_D1(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_CMP(addr);
 }
@@ -1635,7 +1637,7 @@ void KIL_D2(BYTE op)
 
 void DCP_D3(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_DCP(addr);
 }
@@ -1850,7 +1852,7 @@ void BEQ_F0(BYTE op)
 
 void SBC_F1(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_SBC(addr);
 }
@@ -1864,7 +1866,7 @@ void KIL_F2(BYTE op)
 
 void ISC_F3(BYTE op)
 {
-    WORD addr = indirect_Y_indexed_addressing();
+    WORD addr = indirect_Y_indexed_addressing(0);
 
     handler_ISC(addr);
 }

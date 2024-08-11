@@ -19,7 +19,6 @@ BYTE cpu_read_byte(WORD address);
 void cpu_write_byte(WORD address, BYTE data);
 WORD cpu_read_word(WORD address);
 void cpu_write_word(WORD address, WORD data);
-BYTE step_cpu();
 void handle_reset();
 
 #define op(c, s, n, p, func) \

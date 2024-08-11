@@ -169,6 +169,12 @@ void handler_ORA(WORD address)
 
     cpu.A = cpu.A | value;
     set_nz(cpu.A);
+
+    if (cpu.A & 0x80) {
+        cpu.P |= 0x80;
+    } else {
+        cpu.P &= ~0x80; // 清除负标志位
+    }
 }
 
 void handler_SLO(WORD address)
