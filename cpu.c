@@ -1520,6 +1520,8 @@ void DOP_C2(BYTE op)
     WORD addr = immediate_addressing();
 
     handler_DOP(addr);
+
+    PC += 1;
 }
 
 void DCP_C3(BYTE op)
@@ -2383,8 +2385,6 @@ BYTE step_cpu()
     }
 
     BYTE opcode = bus_read(PC);
-
-    //do_disassemble(PC, opcode);
 
     // 执行操作码对应的操作函数
     code_maps[opcode].op_func(opcode);

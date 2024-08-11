@@ -328,36 +328,50 @@ void handler_CMP(WORD address)
 {
     BYTE value = bus_read(address);
 
-    short ret = cpu.A - value;
-
-    set_nz(ret);
-
-    char cf = (ret >= 0) ? 1 : 0;
-
-    if(cf) {
-        set_flag(CARRY);
-        return;
+    if (cpu.A >= value) {
+        cpu.P |= 0x01;  // 设置进位标志
+    } else {
+        cpu.P &= ~0x01; // 清除进位标志
     }
 
-    clear_flag(CARRY);
+    WORD ret = cpu.A - value;
+
+    if ((ret & 0xFF) == 0) {
+        cpu.P |= 0x02;  // 设置零标志
+    } else {
+        cpu.P &= ~0x02; // 清除零标志
+    }
+
+    if (ret & 0x80) {
+        cpu.P |= 0x80;  // 设置负标志
+    } else {
+        cpu.P &= ~0x80; // 清除负标志
+    }
 }
 
 void handler_CPY(WORD address)
 {
     BYTE value = bus_read(address);
 
-    short ret = cpu.Y - value;
+    WORD ret = cpu.Y - value;
 
-    set_nz(ret);
-
-    char cf = (ret >= 0) ? 1 : 0;
-
-    if(cf) {
-        set_flag(CARRY);
-        return;
+    if (cpu.Y >= value) {
+        cpu.P |= 0x01;  // 设置进位标志
+    } else {
+        cpu.P &= ~0x01; // 清除进位标志
     }
 
-    clear_flag(CARRY);
+    if ((ret & 0xFF) == 0) {
+        cpu.P |= 0x02;  // 设置零标志
+    } else {
+        cpu.P &= ~0x02; // 清除零标志
+    }
+
+    if (ret & 0x80) {
+        cpu.P |= 0x80;  // 设置负标志
+    } else {
+        cpu.P &= ~0x80; // 清除负标志
+    }
 }
 
 void handler_DCP(WORD address)
@@ -388,18 +402,25 @@ void handler_CPX(WORD address)
 {
     BYTE value = bus_read(address);
 
-    short ret = cpu.X - value;
+    WORD ret = cpu.X - value;
 
-    set_nz(ret);
-
-    char cf = (ret >= 0) ? 1 : 0;
-
-    if(cf) {
-        set_flag(CARRY);
-        return;
+    if (cpu.X >= value) {
+        cpu.P |= 0x01;  // 设置进位标志
+    } else {
+        cpu.P &= ~0x01; // 清除进位标志
     }
 
-    clear_flag(CARRY);
+    if ((ret & 0xFF) == 0) {
+        cpu.P |= 0x02;  // 设置零标志
+    } else {
+        cpu.P &= ~0x02; // 清除零标志
+    }
+
+    if (ret & 0x80) {
+        cpu.P |= 0x80;  // 设置负标志
+    } else {
+        cpu.P &= ~0x80; // 清除负标志
+    }
 }
 
 void handler_ISC(WORD address)
@@ -495,20 +516,54 @@ void handler_RLA(WORD address)
 
 void handler_ARR(WORD address)
 {
-    handler_AND(address);
+    BYTE value = bus_read(address);
+    cpu.A &= value;
 
-    handler_ROR(address);
+    BYTE carry_in = (cpu.P & 0x01) ? 0x80 : 0x00;  // 进位标志位作为新最高位
+    cpu.P = (cpu.P & ~0x01) | (cpu.A & 0x01);      // 将最低位移入进位标志位
+    cpu.A = (cpu.A >> 1) | carry_in;               // 右移并结合进位标志位
+
+    cpu.P = (cpu.P & ~0xC0) | (cpu.A & 0x80);      // 设置负标志位
+    if (cpu.A == 0) {
+        cpu.P |= 0x02;  // 设置零标志位
+    } else {
+        cpu.P &= ~0x02; // 清除零标志位
+    }
+    if (cpu.A & 0x40) {
+        cpu.P |= 0x01;  // 设置进位标志位
+    } else {
+        cpu.P &= ~0x01; // 清除进位标志位
+    }
+    if ((cpu.A & 0x40) ^ ((cpu.A & 0x20) << 1)) {
+        cpu.P |= 0x40;  // 设置溢出标志位
+    } else {
+        cpu.P &= ~0x40; // 清除溢出标志位
+    }
 }
 
 void handler_AAC(WORD address)
 {
     BYTE value = bus_read(address);
 
-    char ret = value & cpu.A;
-    if(ret < 0) {set_flag(CARRY);}
-    else {clear_flag(CARRY);}
+    cpu.A &= value;
 
-    set_nz(ret);
+    if (cpu.A & 0x80) {
+        cpu.P |= 0x80;  // 设置负标志
+    } else {
+        cpu.P &= ~0x80; // 清除负标志
+    }
+
+    if (cpu.A == 0) {
+        cpu.P |= 0x02;  // 设置零标志
+    } else {
+        cpu.P &= ~0x02; // 清除零标志
+    }
+
+    if (cpu.A & 0x80) {
+        cpu.P |= 0x01;  // 设置进位标志
+    } else {
+        cpu.P &= ~0x01; // 清除进位标志
+    }
 }
 
 void handler_BIT(WORD address)
@@ -724,8 +779,27 @@ void handler_LSR_REG_A(WORD address)
 
 void handler_ASR(WORD address)
 {
-    handler_AND(address);
-    handler_LSR(address);
+    BYTE value = bus_read(address);
+
+    cpu.A &= value;
+
+    BYTE carry = cpu.A & 0x01;
+
+    cpu.A >>= 1;
+
+    if (carry) {
+        cpu.P |= 0x01;
+    } else {
+        cpu.P &= ~0x01;
+    }
+
+    if (cpu.A == 0) {
+        cpu.P |= 0x02;
+    } else {
+        cpu.P &= ~0x02;
+    }
+
+    cpu.P &= ~0x80;
 
     PC += 1;
 }
@@ -879,8 +953,21 @@ void handler_ATX(WORD address)
 {
     BYTE value = bus_read(address);
 
-    cpu.A &= value;
+    cpu.A = value;
     cpu.X = cpu.A;
+
+    if (cpu.A == 0) {
+        cpu.P |= 0x02;
+    } else {
+        cpu.P &= ~0x02;
+    }
+
+    // 更新负标志位 (N)
+    if (cpu.A & 0x80) {
+        cpu.P |= 0x80;
+    } else {
+        cpu.P &= ~0x80;
+    }
 
     PC += 1;
 }
@@ -940,7 +1027,30 @@ void handler_DEX(WORD address)
 
 void handler_AXS(WORD address)
 {
-    bus_write(address, cpu.X & cpu.A);
+    BYTE value = bus_read(address);
+
+    WORD result = (cpu.A & cpu.X) - value;
+
+    cpu.X = result & 0xFF;
+
+    if (result <= 0xFF) {
+        cpu.P |= 0x01;
+    } else {
+        cpu.P &= ~0x01;
+    }
+
+    if (cpu.X == 0) {
+        cpu.P |= 0x02;
+    } else {
+        cpu.P &= ~0x02;
+    }
+
+    // 更新状态寄存器的负标志位 (N)
+    if (cpu.X & 0x80) {
+        cpu.P |= 0x80;
+    } else {
+        cpu.P &= ~0x80;
+    }
 
     PC += 1;
 }
