@@ -199,16 +199,6 @@ int start()
     return 0;
 }
 
-void release_memory(ROM *rom)
-{
-    FREE(rom->header);
-    FREE(rom);
-
-    FREE(chr_rom);
-    FREE(prg_rom);
-}
-
-
 // 开机的时候, cpu 和 ppu 也会加载一些初始化指令
 void power_up()
 {
@@ -234,10 +224,8 @@ ROM *fc_init()
 void fc_release(ROM *rom)
 {
     FREE(rom->header);
+    FREE(rom->body);
     FREE(rom);
-
-    FREE(chr_rom);
-    FREE(prg_rom);
 }
 
 #undef main

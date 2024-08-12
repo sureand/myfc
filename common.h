@@ -181,6 +181,7 @@ typedef struct {
 #define WINDOW_SIZE (256 * 240)
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
 #define APU_REG_SIZE 0x20 //APU 的大小
+#define PPU_RAM_SIZE (0x2000)
 
 typedef struct {
 
@@ -202,6 +203,8 @@ typedef struct {
 
     uint8_t mirroring; //是否支持镜像
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
+
+    uint8_t ram[PPU_RAM_SIZE];
 
     uint8_t in_vblank;
 

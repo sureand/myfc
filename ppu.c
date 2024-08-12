@@ -95,6 +95,8 @@ void ppu_init()
 {
     memset(&ppu, 0, sizeof(_PPU));
 
+    //把CHR ROM 映射到 PPU RAM, 暂时不考虑 超过1页 的 CHR ROM
+    memcpy(ppu.ram, chr_rom, (chr_rom_count & 0x1) * CHR_ROM_PAGE_SIZE);
 
     // 假设 header[6] 的第 0 位决定水平或垂直镜像
     if (mirroring & 0x01) {
@@ -198,7 +200,7 @@ BYTE ppu_vram_read(WORD address)
 
     if (address < 0x2000) {
         // Pattern tables 区域
-        return chr_rom[address];
+        return ppu.ram[address];
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
         if (address >= 0x3000) {
@@ -222,7 +224,7 @@ void ppu_vram_write(WORD address, BYTE data)
     if (address < 0x2000) {
         // 通常情况下，这里会抛弃写操作或抛出错误
         printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
-        exit(1);
+        ppu.ram[address] = data;
 
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域

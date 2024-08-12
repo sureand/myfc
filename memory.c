@@ -54,8 +54,7 @@ BYTE bus_read(WORD address)
 
     /* ppu 的处理 */
     if (address >= 0x2000 && address <= 0x3FFF) {
-        BYTE data = ppu_read(address & 0x2007);
-        return data;
+        return ppu_read(address & 0x2007);
     }
 
     /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
