@@ -46,6 +46,12 @@ ROM_HEADER *parse_header(FILE *fp)
     ROM_HEADER *rom_header = make_header();
     rom_header->version = 1;
     rom_header->prg_rom_count = header[4];
+
+    if(rom_header->prg_rom_count == 0) {
+        fprintf(stderr, "error, is not an nes file!\n");
+        return NULL;
+    }
+
     rom_header->chr_rom_count = header[5];
 
     rom_header->flag1 = header[6];
@@ -78,7 +84,7 @@ ROM *parse_rom(FILE *fp)
     size_t chr_rom_size = header->chr_rom_count * CHR_ROM_PAGE_SIZE;
 
     size_t total_rom_size = prg_rom_size + chr_rom_size;
-    rom->body = (BYTE*)calloc(total_rom_size, 1);
+    rom->body = (BYTE*)calloc(total_rom_size + 1, 1);
     if(!rom->body) {
         fprintf(stderr, "error, malloc failed!\n");
         goto ERR_EXIT;
@@ -101,6 +107,14 @@ ERR_EXIT:
     return NULL;
 }
 
+void show_header_info(ROM_HEADER *header)
+{
+    size_t prg_size = (header->prg_rom_count * PRG_ROM_PAGE_SIZE) >> 10;
+    size_t chr_size = (header->chr_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
+
+    printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
+}
+
 ROM *load_rom(const char *path)
 {
     assert(path);
@@ -120,12 +134,4 @@ ROM *load_rom(const char *path)
     }
 
     return rom;
-}
-
-void show_header_info(ROM_HEADER *header)
-{
-    size_t prg_size = (header->prg_rom_count * PRG_ROM_PAGE_SIZE) >> 10;
-    size_t chr_size = (header->prg_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
-
-    printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
 }
