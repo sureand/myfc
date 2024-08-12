@@ -31,12 +31,22 @@ void process_events()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            exit(0);
-        } else if (event.type == SDL_KEYDOWN) {
-            handle_key(event.key.keysym.sym, 1);
-        } else if (event.type == SDL_KEYUP) {
-            handle_key(event.key.keysym.sym, 0);
+        switch (event.type) {
+            case SDL_QUIT:
+                exit(0);
+                break;
+            case SDL_KEYDOWN:
+                handle_key(event.key.keysym.sym, 1);
+                break;
+            case SDL_KEYUP:
+                handle_key(event.key.keysym.sym, 0);
+                break;
+            case SDL_DROPFILE:
+                printf("Dropped file: %s\n", event.drop.file);
+                SDL_free(event.drop.file); // 释放内存
+                break;
+            default:
+                break;
         }
     }
 }
@@ -116,21 +126,27 @@ void main_loop(SDL_Window * window, SDL_Renderer *renderer)
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = 0;
-                break;
-            }
-            else if (event.type == SDL_WINDOWEVENT) {
-                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                    // 当窗口大小改变时，更新窗口的宽度和高度
-                    width = event.window.data1;
-                    height = event.window.data2;
+            switch (event.type) {
+                case SDL_QUIT:
+                    running = 0;
+                    break;
+                case SDL_DROPFILE:
+                    printf("Dropped file: %s\n", event.drop.file);
+                    SDL_free(event.drop.file); // 释放内存
+                case SDL_WINDOWEVENT:
+                    if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                        // 当窗口大小改变时，更新窗口的宽度和高度
+                        width = event.window.data1;
+                        height = event.window.data2;
 
-                    // 重新设置渲染器的缩放比例
-                    scale_x = (float)width / SCREEN_WIDTH;
-                    scale_x = (float)height / SCREEN_HEIGHT;
-                    SDL_RenderSetScale(renderer, scale_x, scale_y);
-                }
+                        // 重新设置渲染器的缩放比例
+                        scale_x = (float)width / SCREEN_WIDTH;
+                        scale_x = (float)height / SCREEN_HEIGHT;
+                        SDL_RenderSetScale(renderer, scale_x, scale_y);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
