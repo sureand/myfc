@@ -47,8 +47,8 @@ void print_status_flags(char *buffer, uint8_t P)
 {
     buffer[0] = (P & 0x80) ? 'N' : 'n'; // Negative Flag
     buffer[1] = (P & 0x40) ? 'V' : 'v'; // Overflow Flag
-    buffer[2] = 'U';                    // Unused Flag (always 1)
-    buffer[3] = (P & 0x10) ? 'B' : 'b'; // Break Command
+    buffer[2] = '-';                    // Unused Flag (always 1)
+    buffer[3] = '-';
     buffer[4] = (P & 0x08) ? 'D' : 'd'; // Decimal Mode
     buffer[5] = (P & 0x04) ? 'I' : 'i'; // Interrupt Disable
     buffer[6] = (P & 0x02) ? 'Z' : 'z'; // Zero Flag
@@ -61,7 +61,7 @@ void do_disassemble(WORD addr, BYTE opcode)
     char status_flags[9] = {0}; // 用于存储状态寄存器标志位的字符串
     print_status_flags(status_flags, cpu.P);
 
-    printf("c%-10I64u $%04X ", cpu.cycle, addr);
+    printf("%04X  ", addr);
 
     BYTE operand_length = code_maps[opcode].op_len;
     char operand_buffer[16] = {0};
@@ -74,7 +74,7 @@ void do_disassemble(WORD addr, BYTE opcode)
 
     printf("  %-4s", code_maps[opcode].op_name);
 
-    printf("    A:%02X X:%02X Y:%02X S:%02X P:%s\n", cpu.A, cpu.X, cpu.Y, cpu.SP, status_flags);
+    printf("    A:%02X X:%02X Y:%02X S:%02X P:%s V:%-4d   H:%-4d Fr:%d Cycle:%I64d\n", cpu.A, cpu.X, cpu.Y, cpu.SP, status_flags, ppu.scanline, ppu.cycle, ppu.frame_count, cpu.cycle);
 }
 
 void disassemble()
