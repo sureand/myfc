@@ -414,10 +414,32 @@ void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
     frame_buffer[scanline * SCREEN_WIDTH + cycle].value = pixel_value;
 }
 
+void detected_sprite_overflow(int scanline)
+{
+    // 计数在当前扫描线上渲染的精灵数量
+    BYTE sprites_on_scanline = 0;
+
+    /* 遍历64个精灵 */
+    for (int i = 0; i < 64; i++) {
+        uint8_t y_position = ppu.oam[i * 4];
+
+        /* 跳过非扫描线的精灵 */
+        int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
+        if (scanline < y_position || scanline >= (y_position + sprite_height))
+            continue;
+
+        // 增加当前扫描线上的精灵数量
+        sprites_on_scanline++;
+        if (sprites_on_scanline > 8) {
+            // 设置 sprite 溢出 标志
+            ppu.ppustatus |= 0x20; // 设置 PPU 状态寄存器的第 5 位
+        }
+    }
+}
+
 void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 {
     BYTE sprite_0_hit_detected = 0;
-    BYTE sprites_on_scanline = 0; // 计数在当前扫描线上渲染的精灵数量
 
     /* 遍历64个精灵 */
     for (int i = 0; i < 64; i++) {
@@ -434,14 +456,6 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         /* 检查当前PPU周期是否在精灵的水平范围内 */
         if (cycle < x_position || cycle >= (x_position + 8))
             continue;
-
-        // 增加当前扫描线上的精灵数量
-        sprites_on_scanline++;
-        if (sprites_on_scanline > 8) {
-            // 设置 sprite 溢出 标志
-            ppu.ppustatus |= 0x20; // 设置 PPU 状态寄存器的第 5 位
-            return; // 跳出循环，避免继续处理其他精灵
-        }
 
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
         int y_in_tile = scanline - y_position;
@@ -589,6 +603,8 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         // 可见区域, 开始渲染
         if (is_visible_frame()) {
+
+            detected_sprite_overflow(ppu.scanline);
 
             if (ppu.cycle >= 0 && ppu.cycle < 256) {
                 if (is_visible_background()) {
