@@ -89,14 +89,20 @@ uint32_t rgb_palette[64] = {
     0x009FFFF3, 0x00000000, 0x00000000, 0x00000000
 };
 
-void ppu_vram_write(WORD address, BYTE data);
-
-void ppu_init()
+void ppu_reset()
 {
     memset(&ppu, 0, sizeof(_PPU));
 
+    ppu.scanline = 0;
+    ppu.cycle = 24;
+    ppu.frame_count = 1;
+    ppu.in_vblank = 0;
+
     //把CHR ROM 映射到 PPU RAM, 暂时不考虑 超过1页 的 CHR ROM
-    memcpy(ppu.ram, chr_rom, (chr_rom_count & 0x1) * CHR_ROM_PAGE_SIZE);
+    uint8_t chr_rom_count = rom->header->chr_rom_count;
+    memcpy(ppu.ram, rom->chr_rom, (chr_rom_count & 0x1) * CHR_ROM_PAGE_SIZE);
+
+    BYTE mirroring = rom->header->flag1;
 
     // 假设 header[6] 的第 0 位决定水平或垂直镜像
     if (mirroring & 0x01) {
@@ -109,6 +115,11 @@ void ppu_init()
     if (mirroring & 0x08) {
         ppu.mirroring = FOUR_SCREEN_MIRRORING;
     }
+}
+
+void ppu_init()
+{
+    ppu_reset();
 
     // 这里使用rgb 调色板的索引即可.
     for (int i = 0; i < 64; i++) {

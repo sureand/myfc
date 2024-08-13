@@ -30,6 +30,14 @@
 #define WORD uint16_t
 #endif
 
+#ifndef TRUE
+#define TRUE (1)
+#endif
+
+#ifndef FALSE
+#define FALSE (0)
+#endif
+
 //ROM 相关
 #define HEADER_LEN (16)
 
@@ -108,13 +116,7 @@ typedef struct
     BYTE *chr_rom;
 }ROM;
 
-/* PRG ROM, 程序的rom 内容*/
-BYTE prg_rom_count;
-BYTE *prg_rom;
-
-/* CHR ROM, chr 的rom 内容*/
-BYTE chr_rom_count;
-BYTE *chr_rom;
+ROM *rom;
 
 #define HORIZONTAL_MIRRORING 0
 #define VERTICAL_MIRRORING 1
@@ -177,6 +179,8 @@ typedef struct {
 
     BYTE interrupt; //这里设置中断的标志, 暂定bit 0 是NMI
 }_CPU;
+
+char window_title[256];
 
 #define WINDOW_SIZE (256 * 240)
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
@@ -243,9 +247,16 @@ _PPU ppu;
 
 #define PC (cpu.IP)
 
+void fc_init(const char *filename);
+void fc_release();
+void cpu_reset();
+void ppu_reset();
+
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
-void mem_init(ROM *rom);
+
+uint8_t rom_loaded;
+
 //NMI 中断
 void cpu_interrupt_NMI();
 void show_code();

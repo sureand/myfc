@@ -2248,7 +2248,7 @@ static void init_reg()
     cpu.P = 0x24;
     cpu.A = 0;
     cpu.is_lock = 0;
-    cpu.cycle = 0;
+    cpu.cycle = 7;
 }
 
 // 读取复位向量的函数
@@ -2317,6 +2317,11 @@ void cpu_init()
 {
     init_code();
 
+    init_reg();
+}
+
+void cpu_reset()
+{
     init_reg();
 }
 

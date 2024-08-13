@@ -87,8 +87,8 @@ BYTE bus_read(WORD address)
 
     /*PRG ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        WORD address_range = prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
-        return prg_rom[address & address_range];
+        WORD address_range = rom->header->prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
+        return rom->prg_rom[address & address_range];
     }
 
     return 0;
@@ -161,16 +161,4 @@ void bus_write(WORD address, BYTE data)
         return;
     }
 
-}
-
-void mem_init(ROM *rom)
-{
-    /* 储存ROM页面数目和对应的ROM数据 */
-    prg_rom_count = rom->header->prg_rom_count;
-    prg_rom = rom->prg_rom;
-
-    chr_rom_count = rom->header->chr_rom_count;
-    chr_rom = rom->chr_rom;
-
-    mirroring = rom->header->flag1;
 }

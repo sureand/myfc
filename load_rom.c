@@ -130,7 +130,7 @@ ROM *load_rom(const char *path)
 
     if(!rom) {
         fprintf(stderr, "parse rom %s failed!\n", path);
-        return NULL;
+        exit(-1);
     }
 
     return rom;

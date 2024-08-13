@@ -9,6 +9,57 @@
 
 #define FRAME_DURATION 1000 / 60 // 60 FPS
 
+void reload_rom(const char *filename)
+{
+    fc_release();
+
+    rom = load_rom(filename);
+
+    cpu_reset();
+    ppu_reset();
+}
+
+char *get_file_name(char *filename, const char *filepath)
+{
+    assert(filepath);
+
+    #ifdef __WIN32__
+        const char *delim = strrchr(filepath, '\\');
+    #else
+        const char *delim = strrchr(filepath, '/');
+    #endif
+
+    return strcpy(filename, (delim ? delim + 1 : filepath));
+}
+
+static inline SDL_bool is_load_rom()
+{
+    return rom_loaded;
+}
+
+static inline void set_load_rom(SDL_bool state)
+{
+    rom_loaded = state;
+}
+
+void reset_rom(const char *filepath)
+{
+    get_file_name(window_title, filepath);
+
+    // 清除渲染器
+    set_load_rom(SDL_FALSE);
+
+    if (!rom) {
+        fc_init(filepath);
+        set_load_rom(SDL_TRUE);
+        return;
+    }
+
+    reload_rom(filepath);
+
+    set_load_rom(SDL_TRUE);
+}
+
 uint32_t timer_callback(uint32_t interval, void *param)
 {
     SDL_Event event;
@@ -27,7 +78,15 @@ uint32_t timer_callback(uint32_t interval, void *param)
     return interval;
 }
 
-void process_events()
+void reset_windows_size(SDL_Renderer* renderer, int width, int height)
+{
+    float scale_x = (float)width / SCREEN_WIDTH;
+    float scale_y = (float)height / SCREEN_HEIGHT;
+
+    SDL_RenderSetScale(renderer, scale_x, scale_y);
+}
+
+int process_events(SDL_Renderer* renderer)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -42,16 +101,25 @@ void process_events()
                 handle_key(event.key.keysym.sym, 0);
                 break;
             case SDL_DROPFILE:
-                printf("Dropped file: %s\n", event.drop.file);
-                SDL_free(event.drop.file); // 释放内存
+                reset_rom(event.drop.file);
+                return 1;
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                    int width = event.window.data1;
+                    int height = event.window.data2;
+                    reset_windows_size(renderer, width, height);
+                    break;
+                }
                 break;
             default:
                 break;
         }
     }
+
+    return 0;
 }
 
-void wait_for_frame()
+void wait_for_frame(SDL_Renderer* renderer)
 {
     static uint32_t last_frame_time = 0;
     uint32_t current_time = SDL_GetTicks();
@@ -67,7 +135,9 @@ void wait_for_frame()
         while (SDL_GetTicks() - start_wait_time < wait_time) {
 
             // 在等待期间处理事件
-            process_events();
+            if (process_events(renderer)) {
+                return;
+            }
 
             // 为了防止 CPU 占用过高，稍微延迟一下
             SDL_Delay(1);
@@ -86,7 +156,9 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_
     while (total_cpu_cycles < NTSC_CPU_CYCLES_PER_FRAME) {
 
         // 处理事件
-        process_events();
+        if (process_events(renderer)) {
+            return;
+        }
 
         actual_cpu_cycles = step_cpu();
         for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
@@ -99,22 +171,12 @@ void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_
     // 增加帧计数
     (*frame_count)++;
 
-    wait_for_frame();
+    wait_for_frame(renderer);
 }
 
-void main_loop(SDL_Window * window, SDL_Renderer *renderer)
+void main_loop(SDL_Window *window, SDL_Renderer *renderer)
 {
     uint8_t running = 1;
-    int width = SCREEN_WIDTH, height = SCREEN_HEIGHT;
-    float scale_x = 1.0f, scale_y = 1.0f;
-
-    // 创建一个定时器，每秒触发60次
-    SDL_TimerID timerID = SDL_AddTimer(1000 / 60, timer_callback, NULL);
-
-    if (timerID == 0) {
-        fprintf(stderr, "SDL_AddTimer failed! SDL_Error: %s\n", SDL_GetError());
-        return;
-    }
 
     // 创建一个纹理，用于渲染PPU输出
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -124,48 +186,25 @@ void main_loop(SDL_Window * window, SDL_Renderer *renderer)
     char title[256];
 
     while (running) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_QUIT:
-                    running = 0;
-                    break;
-                case SDL_DROPFILE:
-                    printf("Dropped file: %s\n", event.drop.file);
-                    SDL_free(event.drop.file); // 释放内存
-                case SDL_WINDOWEVENT:
-                    if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                        // 当窗口大小改变时，更新窗口的宽度和高度
-                        width = event.window.data1;
-                        height = event.window.data2;
 
-                        // 重新设置渲染器的缩放比例
-                        scale_x = (float)width / SCREEN_WIDTH;
-                        scale_x = (float)height / SCREEN_HEIGHT;
-                        SDL_RenderSetScale(renderer, scale_x, scale_y);
-                    }
-                    break;
-                default:
-                    break;
+        process_events(renderer);
+
+        if (is_load_rom()) {
+            // 每秒更新一次 FPS
+            Uint32 current_time = SDL_GetTicks();
+            if (current_time - start_time >= 1000) {
+                float fps = frame_count / ((current_time - start_time) / 1000.0f);
+                snprintf(title, sizeof(title), "%s - FPS: %.2f", window_title, fps);
+                SDL_SetWindowTitle(window, title);
+                start_time = current_time;
+                frame_count = 0;
             }
+            handle_user_event(renderer, texture, &frame_count);
         }
-
-        // 每秒更新一次 FPS
-        Uint32 current_time = SDL_GetTicks();
-        if (current_time - start_time >= 1000) {
-            float fps = frame_count / ((current_time - start_time) / 1000.0f);
-            snprintf(title, sizeof(title), "NES Emulator - FPS: %.2f", fps);
-            SDL_SetWindowTitle(window, title);
-            start_time = current_time;
-            frame_count = 0;
-        }
-
-        handle_user_event(renderer, texture, &frame_count);
     }
 
     // 清理SDL
     SDL_DestroyTexture(texture);
-    SDL_RemoveTimer(timerID);
 }
 
 int start()
@@ -175,10 +214,11 @@ int start()
         return -1;
     }
 
-    SDL_Window *window = SDL_CreateWindow("NES Emulator",
+    SDL_Window *window = SDL_CreateWindow(window_title,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
+                                          SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2,
+                                          SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
     if (!window) {
         fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_Quit();
@@ -215,43 +255,35 @@ int start()
     return 0;
 }
 
-// 开机的时候, cpu 和 ppu 也会加载一些初始化指令
-void power_up()
-{
-    cpu_init();
-    cpu.cycle = 8;
-
-    ppu_init();
-    ppu.scanline = 0;
-    ppu.cycle = 24;
-    ppu.frame_count = 1;
-}
-
-ROM *fc_init()
-{
-    ROM *rom = load_rom("test.nes");
-    mem_init(rom);
-
-    power_up();
-
-    return rom;
-}
-
-void fc_release(ROM *rom)
+void fc_release()
 {
     FREE(rom->header);
     FREE(rom->body);
     FREE(rom);
 }
 
+void fc_init(const char *filename)
+{
+    rom = load_rom(filename);
+
+    cpu_init();
+    ppu_init();
+}
+
+void set_init_state()
+{
+    set_load_rom(SDL_FALSE);
+    strcpy(window_title,  "NES Emulator");
+}
+
 #undef main
 int main(int argc, char *argv[])
 {
-    ROM *rom = fc_init();
+    set_init_state();
 
     start();
 
-    fc_release(rom);
+    fc_release();
 
     return 0;
 }
