@@ -218,6 +218,12 @@ typedef struct {
     int frame_count;
 } _PPU;
 
+typedef struct
+{
+    uint8_t index;
+    uint8_t value;
+}PIXEL;
+
 // APU结构体
 typedef struct {
     uint8_t registers[APU_REG_SIZE];  // APU寄存器

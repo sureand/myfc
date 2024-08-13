@@ -234,7 +234,7 @@ void ppu_vram_write(WORD address, BYTE data)
 
     if (address < 0x2000) {
         // 通常情况下，这里会抛弃写操作或抛出错误
-        printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
+        //printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
         ppu.ram[address] = data;
 
     } else if (address < 0x3F00) {
@@ -361,7 +361,7 @@ static inline WORD get_name_table_base()
 }
 
 /* 根据扫描线来渲染背景 */
-void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
+void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
 {
     uint16_t v = ppu.v;
 
@@ -403,17 +403,18 @@ void render_background_pixel(uint32_t* frame_buffer, int cycle, int scanline)
 
     // 计算调色板颜色索引
     uint16_t addr = 0x3F00;
-    uint32_t color_index = ppu_vram_read(addr);
+    uint8_t index = ppu_vram_read(addr);
     if (pixel_value != 0x00) {
         addr = 0x3F00 + (palette_index << 2) + pixel_value;
     }
-    color_index = ppu_vram_read(addr);
+    index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
-    frame_buffer[scanline * SCREEN_WIDTH + cycle] = rgb_palette[color_index];
+    frame_buffer[scanline * SCREEN_WIDTH + cycle].index = index;
+    frame_buffer[scanline * SCREEN_WIDTH + cycle].value = pixel_value;
 }
 
-void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
+void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 {
     BYTE sprite_0_hit_detected = 0;
     BYTE sprites_on_scanline = 0; // 计数在当前扫描线上渲染的精灵数量
@@ -501,11 +502,12 @@ void render_sprite_pixel(uint32_t* frame_buffer, int cycle,  int scanline)
         int screen_x = cycle;
 
         if (IS_VISIBLE(screen_x, scanline)) {
-            uint32_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x];
+            uint8_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x].value;
 
             /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
             if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
-                frame_buffer[scanline * SCREEN_WIDTH + screen_x] = rgb_palette[color_index];
+                frame_buffer[scanline * SCREEN_WIDTH + screen_x].index = color_index;
+                frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
             }
 
             if (is_visible_background() && i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
@@ -528,10 +530,26 @@ void clear_ppu_state()
     ppu.in_vblank = 0;
 }
 
-void display_frame(uint32_t* frame_buffer, SDL_Renderer* renderer, SDL_Texture* texture)
+void convert_hex(PIXEL* frame_buffer, uint32_t* render_buffer)
 {
-    // 更新纹理
-    SDL_UpdateTexture(texture, NULL, frame_buffer, SCREEN_WIDTH * sizeof(uint32_t));
+    uint8_t index = 0;
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; ++i) {
+        index = frame_buffer[i].index;
+        render_buffer[i] = rgb_palette[index];
+    }
+}
+
+void display_frame(PIXEL* frame_buffer, SDL_Renderer* renderer, SDL_Texture* texture)
+{
+    static uint32_t render_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
+    convert_hex(frame_buffer, render_buffer);
+
+    uint32_t *pixels;
+    int pitch;
+    if (SDL_LockTexture(texture, NULL, (void**)&pixels, &pitch) == 0) {
+        memcpy(pixels, render_buffer, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(uint32_t));
+        SDL_UnlockTexture(texture);
+    }
 
     // 清除渲染器
     SDL_RenderClear(renderer);
@@ -545,7 +563,7 @@ void display_frame(uint32_t* frame_buffer, SDL_Renderer* renderer, SDL_Texture* 
 
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
-    static uint32_t frame_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
+    static PIXEL frame_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
 
     // 在预渲染扫描线的第一个周期开始新的帧
     if (ppu.scanline == -1) {
@@ -627,7 +645,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
             ppu.scanline = -1;
 
             // 奇数帧需要跳过一个周期
-            //ppu.cycle += ppu.frame_count & 1;
+            ppu.cycle += ppu.frame_count & 1;
         }
     }
 }
