@@ -421,7 +421,7 @@ void detected_sprite_overflow(int scanline)
 
     /* 遍历64个精灵 */
     for (int i = 0; i < 64; i++) {
-        uint8_t y_position = ppu.oam[i * 4];
+        uint8_t y_position = ppu.oam[i * 4] + 1;
 
         /* 跳过非扫描线的精灵 */
         int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
@@ -443,7 +443,7 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 
     /* 遍历64个精灵 */
     for (int i = 0; i < 64; i++) {
-        uint8_t y_position = ppu.oam[i * 4];
+        uint8_t y_position = ppu.oam[i * 4] + 1;
         uint8_t tile_index = ppu.oam[i * 4 + 1];
         uint8_t attributes = ppu.oam[i * 4 + 2];
         uint8_t x_position = ppu.oam[i * 4 + 3];
@@ -457,6 +457,10 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         if (cycle < x_position || cycle >= (x_position + 8))
             continue;
 
+        /* 最左边出现裁切需要跳过*/
+        if (cycle < 8 && ((ppu.ppumask & 0x6) != 0x6))
+            continue;
+
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
         int y_in_tile = scanline - y_position;
 
@@ -466,22 +470,21 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         /* 获取tile 的行偏移 */
         int v_y = flip_vertical ? (sprite_height - 1 - y_in_tile) : y_in_tile;
 
-        /* 计算图案表地址 */
-        uint16_t pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
-
         /* 假如是 8 * 16 的, 需要从新算地址 */
         if (sprite_height == 16) {
             /* 8x16 由两个 8 * 8 tile 组成, 每一帧都是相同大小的精灵, 每次从偶数开始算就是对的。 */
             tile_index &= 0xFE;
-            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
             if (v_y >= 8) {
                 /* 已经渲染到了8 * 16 的下半部分, 那么地址需要 +16 */
-                pattern_table_address += 16;
+                tile_index += 1;
 
                 /* 确保从下一个tile 开始算偏移 */
                 v_y -= 8;
             }
         }
+
+        /* 计算图案表地址 */
+        uint16_t pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
 
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
@@ -526,6 +529,11 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 
             if (is_visible_background() && i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
                 sprite_0_hit_detected = 1;
+            }
+
+            //最右边不能触发命中
+            if (i == 0 && cycle == 255) {
+                sprite_0_hit_detected = 0;
             }
         }
     }
