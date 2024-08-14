@@ -220,7 +220,7 @@ typedef struct {
 
 typedef struct
 {
-    uint8_t index;
+    uint32_t color;
     uint8_t value;
 }PIXEL;
 

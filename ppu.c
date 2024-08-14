@@ -136,9 +136,9 @@ WORD get_name_table_address(WORD address, BYTE mirroring)
         case VERTICAL_MIRRORING:
             return 0x2000 | (address & 0x7FF);
         case SINGLE_SCREEN_MIRRORING_0:
-           return 0x2000 | (address & 0x3FF);
+            return 0x2000 | (address & 0x3FF);
         case SINGLE_SCREEN_MIRRORING_1:
-            return 0x2000 | (address & 0x7FF);
+            return 0x2400 | (address & 0x3FF);
         case FOUR_SCREEN_MIRRORING:
             return address;
         default:
@@ -410,7 +410,7 @@ void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
     index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
-    frame_buffer[scanline * SCREEN_WIDTH + cycle].index = index;
+    frame_buffer[scanline * SCREEN_WIDTH + cycle].color = rgb_palette[index];
     frame_buffer[scanline * SCREEN_WIDTH + cycle].value = pixel_value;
 }
 
@@ -498,8 +498,6 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         /* 处理水平翻转, 分别翻转高低字节的每一个bit */
         int x = cycle - x_position;
 
-        uint8_t color_index = 0x00;
-
         int h_x = flip_horizontal ? (7 - x) : x;
 
         /* 翻转低字节的一个bit */
@@ -511,6 +509,7 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
         uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
 
+        uint8_t color_index = ppu_vram_read(0x3F00);
         if (!IS_TRANSPARENT(pixel_value)) {
             WORD addr = PALETTE_ADDR(palette_index, pixel_value);
             color_index = ppu_vram_read(0x3F00 + addr);
@@ -523,7 +522,7 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 
             /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
             if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
-                frame_buffer[scanline * SCREEN_WIDTH + screen_x].index = color_index;
+                frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[color_index];
                 frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
             }
 
@@ -554,10 +553,8 @@ void clear_ppu_state()
 
 void convert_hex(PIXEL* frame_buffer, uint32_t* render_buffer)
 {
-    uint8_t index = 0;
     for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; ++i) {
-        index = frame_buffer[i].index;
-        render_buffer[i] = rgb_palette[index];
+        render_buffer[i] = frame_buffer[i].color;
     }
 }
 
@@ -628,7 +625,6 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
             ppu.v = increment_horizontal_scroll(ppu.v);
-
             ppu.v = increment_vertical_scroll(ppu.v);
         }
 
@@ -640,6 +636,7 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 
         if (ppu.scanline == 240 && ppu.cycle == 1) {
             display_frame(frame_buffer, renderer, texture);
+            memset(frame_buffer, 0, sizeof(frame_buffer));
         }
 
         // 在VBlank开始时设置VBlank标志并生成NMI中断
