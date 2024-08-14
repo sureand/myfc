@@ -122,7 +122,7 @@ void bus_write(WORD address, BYTE data)
             return;
         }
 
-        memcpy(ppu.oam, cpu.ram + dma_address, OAM_SIZE);
+        memcpy(ppu.oam + ppu.oamaddr, cpu.ram + dma_address, OAM_SIZE);
         return;
     }
 
