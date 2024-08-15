@@ -233,9 +233,11 @@ void ppu_vram_write(WORD address, BYTE data)
     WORD real_address = address;
 
     if (address < 0x2000) {
-        // 通常情况下，这里会抛弃写操作或抛出错误
-        //printf("Attempted write to CHR ROM address 0x%X - 0x%X\n", address, data);
-        //ppu.ram[address] = data;
+
+        //chr rom 组为0 的时候, 表示使用的是CHR RAM
+        if (rom->header->chr_rom_count == 0) {
+            ppu.ram[address] = data;
+        }
 
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
