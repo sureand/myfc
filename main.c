@@ -148,7 +148,7 @@ void wait_for_frame(SDL_Renderer* renderer)
     last_frame_time = SDL_GetTicks();
 }
 
-void handle_user_event(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
+void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
     int actual_cpu_cycles = 1;
     int total_cpu_cycles = 0;
@@ -199,7 +199,7 @@ void main_loop(SDL_Window *window, SDL_Renderer *renderer)
                 start_time = current_time;
                 frame_count = 0;
             }
-            handle_user_event(renderer, texture, &frame_count);
+            fce_execute(renderer, texture, &frame_count);
         }
     }
 
