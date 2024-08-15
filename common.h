@@ -208,8 +208,6 @@ typedef struct {
     uint8_t mirroring; //是否支持镜像
     uint8_t vram[VRAM_SIZE]; // VRAM内存数组，模拟NES的图形存储
 
-    uint8_t ram[PPU_RAM_SIZE];
-
     uint8_t in_vblank;
 
     uint8_t draw_x;
