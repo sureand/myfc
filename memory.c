@@ -117,12 +117,10 @@ void bus_write(WORD address, BYTE data)
     if (address == 0x4014) {
 
         WORD dma_address = data << 8;
-        if (dma_address >= CPU_RAM_SIZE) {
-            printf("Write from unsupported address: %04X\n", dma_address);
-            return;
+	    for (int x = 0; x < 256; x++) {
+            ppu.oam[ppu.oamaddr + x] = bus_read(dma_address + x);
         }
 
-        memcpy(ppu.oam + ppu.oamaddr, cpu.ram + dma_address, OAM_SIZE);
         return;
     }
 
@@ -157,7 +155,6 @@ void bus_write(WORD address, BYTE data)
 
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        printf("Attempted write to PRG ROM address 0x%X - 0x%X\n", address, data);
         return;
     }
 
