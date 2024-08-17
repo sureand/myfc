@@ -150,7 +150,7 @@ void wait_for_frame(SDL_Renderer* renderer)
 
 void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
-    int actual_cpu_cycles = 1;
+    static int actual_cpu_cycles = 1;
     int total_cpu_cycles = 0;
 
     while (total_cpu_cycles < NTSC_CPU_CYCLES_PER_FRAME) {
@@ -160,10 +160,10 @@ void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
             return;
         }
 
-        actual_cpu_cycles = step_cpu();
         for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
             step_ppu(renderer, texture);
         }
+        actual_cpu_cycles = step_cpu();
 
         total_cpu_cycles += actual_cpu_cycles;
     }

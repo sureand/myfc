@@ -599,9 +599,13 @@ void update_timing()
 
     ppu.cycle = 0;
     ppu.scanline++;
+
+    if (ppu.scanline == 240) {
+        ppu.frame_count += 1;
+    }
+
     if (ppu.scanline > 260) {
         ppu.scanline = -1;
-        ppu.frame_count += 1;
     }
 }
 
