@@ -582,6 +582,29 @@ void display_frame(PIXEL* frame_buffer, SDL_Renderer* renderer, SDL_Texture* tex
     SDL_RenderPresent(renderer);
 }
 
+void update_timing()
+{
+    if (ppu.cycle < 340) {
+
+        /* skip odd frame*/
+        if (ppu.cycle == 339 && (ppu.frame_count & 0x1) && ppu.scanline == -1) {
+            ppu.cycle = 0;
+            ppu.scanline = 0;
+            return;
+        }
+
+        ppu.cycle++;
+        return;
+    }
+
+    ppu.cycle = 0;
+    ppu.scanline++;
+    if (ppu.scanline > 260) {
+        ppu.scanline = -1;
+        ppu.frame_count += 1;
+    }
+}
+
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
 {
     static PIXEL frame_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
@@ -653,22 +676,5 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         }
     }
 
-    ppu.cycle++;
-    if (ppu.cycle > 340) {
-
-        // 周期结束, 更新扫描线和重置周期计数
-        ppu.cycle = 0;
-        ppu.scanline++;
-
-        if (ppu.scanline == 240) {
-            ppu.frame_count++;
-        }
-
-        if (ppu.scanline > 260) {
-            ppu.scanline = -1;
-
-            // 奇数帧需要跳过一个周期
-            ppu.cycle += ppu.frame_count & 1;
-        }
-    }
+    update_timing();
 }
