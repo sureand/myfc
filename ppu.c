@@ -446,7 +446,7 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
     /* 遍历64个精灵 */
     for (int i = 0; i < 64; i++) {
         uint8_t y_position = ppu.oam[i * 4] + 1;
-        uint8_t tile_index = ppu.oam[i * 4 + 1];
+        uint8_t tile_id = ppu.oam[i * 4 + 1];
         uint8_t attributes = ppu.oam[i * 4 + 2];
         uint8_t x_position = ppu.oam[i * 4 + 3];
 
@@ -467,26 +467,35 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         int y_in_tile = scanline - y_position;
 
         /* 处理垂直翻转 */
-        BYTE flip_vertical = attributes & 0x80;
+        BYTE flip_vertical = ((attributes & 0x80) == 0x80);
 
         /* 获取tile 的行偏移 */
         int v_y = flip_vertical ? (sprite_height - 1 - y_in_tile) : y_in_tile;
+
+        uint8_t tile_index = tile_id;
+        uint16_t pattern_table_address = 0;
 
         /* 假如是 8 * 16 的, 需要从新算地址 */
         if (sprite_height == 16) {
             /* 8x16 由两个 8 * 8 tile 组成, 每一帧都是相同大小的精灵, 每次从偶数开始算就是对的。 */
             tile_index &= 0xFE;
+
+            /* 需要翻转的时候, 则使用下半部分的地址 */
+            tile_index += (flip_vertical & 0x1);
+
             if (v_y >= 8) {
-                /* 已经渲染到了8 * 16 的下半部分, 那么地址需要 +16 */
-                tile_index += 1;
+
+                /* 需要翻转则使用上半部分, 否则 + 1 取下半部分 */
+                tile_index += (flip_vertical ^ 0x1);
 
                 /* 确保从下一个tile 开始算偏移 */
                 v_y -= 8;
             }
+            pattern_table_address = ((tile_id & 0x01) ? 0x1000 : 0) | (tile_index << 4);
+        }else {
+            /* 计算图案表地址 */
+            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) | (tile_id << 4);
         }
-
-        /* 计算图案表地址 */
-        uint16_t pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) + (tile_index * 16);
 
         uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
         uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
