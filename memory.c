@@ -1,52 +1,14 @@
 #include "memory.h"
 #include "cpu.h"
 #include "ppu.h"
+#include "controller.h"
 
 // TODO: 后期优化, 把整个RAM直接映射64k全部空间
 
-//按键状态寄存器, 手柄这块还没想好放哪里, 先统一放这里
-uint8_t controller_state = 0x00;
-
-//移位寄存器
-uint8_t shift_register = 0x00;
-
-
-void set_button_state(int button, BYTE pressed)
-{
-    if (pressed) {
-        controller_state |= (1 << button);
-        return;
-    }
-
-    controller_state &= ~(1 << button);
-
-    return;
-}
-
-void handle_key(SDL_Keycode key, BYTE pressed)
-{
-    switch (key) {
-        case SDLK_j: set_button_state(0, pressed); break; // A button
-        case SDLK_k: set_button_state(1, pressed); break; // B button
-        case SDLK_u: set_button_state(2, pressed); break; // Select button
-        case SDLK_RETURN: set_button_state(3, pressed); break; // Start button
-        case SDLK_w: set_button_state(4, pressed); break; // Up button
-        case SDLK_s: set_button_state(5, pressed); break; // Down button
-        case SDLK_a: set_button_state(6, pressed); break; // Left button
-        case SDLK_d: set_button_state(7, pressed); break; // Right button
-    }
-}
-
-uint8_t get_button_state()
-{
-    uint8_t state = shift_register & 1;
-    shift_register >>= 1;
-
-    return state;
-}
-
 BYTE bus_read(WORD address)
 {
+    BYTE data = 0;
+
     /* 由于 0x0800 - 0x1FFF 是CPU RAM 的镜像, 直接取模*/
     if (address <= 0x1FFF) {
         return cpu_read_byte(address & 0x7FF);
@@ -59,20 +21,28 @@ BYTE bus_read(WORD address)
 
     /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
     if (address >= 0x4000 && address <= 0x4013) {
-        return 0;
-        //TODO: apu_read(address, data); // 需要实现的函数
+        return data;
     }
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (address == 0x4015) {
-        //printf("Read from unsupported address: %04X\n", address);
-        return 0;
-        //TODO: apu_status_read(address); // 需要实现的函数
+        return data;
     }
 
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
-        return get_button_state();
+        if (address == 0x4016) {
+
+            data = get_pressed_key();
+
+            /* 关闭锁存器, 返回当前的按键状态 */
+            if (!is_controller_latch()) {
+                data = get_button_state();
+            }
+            return data | 0x40;
+        }
+
+        return data;
     }
 
     /* Expansion ROM (可选，用于扩展硬件) */
@@ -108,7 +78,6 @@ void bus_write(WORD address, BYTE data)
 
     /* APU 的读写 */
     if (address >= 0x4000 && address <= 0x4013) {
-        //printf("Write from unsupported address: %04X\n", address);
         //TODO: apu_write(address, data); // 需要实现的函数
         return;
     }
@@ -126,7 +95,6 @@ void bus_write(WORD address, BYTE data)
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (address == 0x4015) {
-        //printf("Write from unsupported address: %04X\n", address);
         //apu_status_write(data); // 需要实现的函数
         return;
     }
@@ -134,9 +102,12 @@ void bus_write(WORD address, BYTE data)
     /* 手柄处理 */
     if (address >= 0x4016 && address <= 0x4017) {
 
-        //重置手柄状态
-        if (address == 0x4016 && (data & 1)) {
-            shift_register = controller_state;
+        uint8_t latch_state = data & 1;
+        set_latch_state(latch_state);
+
+        /* 假如关闭锁存器, 那么更新所有按键状态 */
+        if (address == 0x4016 && !latch_state) {
+            update_controller();
         }
 
         return;
