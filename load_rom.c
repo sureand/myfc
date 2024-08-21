@@ -39,7 +39,7 @@ ROM_HEADER *parse_header(FILE *fp)
     }
 
     if(header[3] != 0x1A) {
-        fprintf(stderr, "error, is not an nes file!\n");
+        fprintf(stderr, "error, is not an iNes file!\n");
         return NULL;
     }
 
@@ -59,6 +59,13 @@ ROM_HEADER *parse_header(FILE *fp)
     //高四位第一位判断是否是1, 是则包含Trainer
     rom_header->type = rom_header->flag1 & (1 << 4);
     rom_header->flag2 = header[7];
+
+    if ((header[7] & 0x0C) == 0x08) {
+        fprintf(stderr, "error, Nes 2.0 is unsupported!\n");
+        return NULL;
+    }
+
+    rom_header->mapper_number = (header[7] & 0xF0) | (header[6] >> 4);
 
     return rom_header;
 }

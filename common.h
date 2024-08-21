@@ -103,6 +103,8 @@ typedef struct
     //是否包含Trainer区域
     BYTE type;
 
+    BYTE mapper_number;
+
     //保留, 默认都是0
     BYTE reserved[8];
 }ROM_HEADER;
