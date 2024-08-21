@@ -86,9 +86,13 @@ void bus_write(WORD address, BYTE data)
     if (address == 0x4014) {
 
         WORD dma_address = data << 8;
+
 	    for (int x = 0; x < 256; x++) {
-            ppu.oam[ppu.oamaddr + x] = bus_read(dma_address + x);
+            ppu.oam[(ppu.oamaddr + x) & 0xFF] = bus_read(dma_address + x);
         }
+
+        cpu.cycle += 513;
+        cpu.cycle += (cpu.cycle & 0x1);
 
         return;
     }
