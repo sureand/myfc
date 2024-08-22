@@ -1,6 +1,7 @@
 #include "load_rom.h"
 #include "cpu.h"
 #include "ppu.h"
+#include "mapper.h"
 
 #define NTSC_CPU_CYCLES_PER_FRAME 29781 // 精确值，以避免窗口卡顿
 #define PAL_CPU_CYCLES_PER_FRAME 33248 // 精确值，以避免窗口卡顿
@@ -13,10 +14,11 @@ void reload_rom(const char *filename)
 {
     fc_release();
 
-    rom = load_rom(filename);
+    set_current_rom(load_rom(filename));
 
     cpu_reset();
     ppu_reset();
+    mapper_reset();
 }
 
 char *get_file_name(char *filename, const char *filepath)
@@ -49,7 +51,7 @@ void reset_rom(const char *filepath)
     // 清除渲染器
     set_load_rom(SDL_FALSE);
 
-    if (!rom) {
+    if (!current_rom) {
         fc_init(filepath);
         set_load_rom(SDL_TRUE);
         return;
@@ -257,14 +259,17 @@ int start()
 
 void fc_release()
 {
-    FREE(rom->header);
-    FREE(rom->body);
-    FREE(rom);
+    FREE(get_current_rom()->header);
+    FREE(get_current_rom()->body);
+    FREE(current_rom);
 }
 
 void fc_init(const char *filename)
 {
-    rom = load_rom(filename);
+    set_current_rom(load_rom(filename));
+
+    //FIXME: 由于链接顺序的问题, 只能放在前面, what the fuck!
+    mapper_init();
 
     cpu_init();
     ppu_init();
@@ -272,6 +277,8 @@ void fc_init(const char *filename)
 
 void set_init_state()
 {
+    set_current_rom(NULL);
+
     set_load_rom(SDL_FALSE);
     strcpy(window_title,  "NES Emulator");
 }

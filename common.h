@@ -61,7 +61,7 @@
 #define APU_REG_SIZE 0x0020  // 32 APU寄存器
 #define OAM_SIZE     0x0100  // 256字节 OAM
 #define VRAM_SIZE    0x4000  // 16KB VRAM
-#define SRAM_SIZE    0x8000  // 32KB PRG ROM
+#define SRAM_SIZE    0x2000  // 8KB SRAM ROM
 #define PRG_ROM_SIZE 0x8000  // 32KB PRG ROM
 #define CHR_ROM_SIZE 0x2000  // 8KB CHR ROM
 
@@ -118,7 +118,10 @@ typedef struct
     BYTE *chr_rom;
 }ROM;
 
-ROM *rom;
+ROM *current_rom;
+
+ROM *get_current_rom();
+void set_current_rom(ROM *rom);
 
 #define HORIZONTAL_MIRRORING 0
 #define VERTICAL_MIRRORING 1
@@ -127,6 +130,9 @@ ROM *rom;
 #define FOUR_SCREEN_MIRRORING 4
 
 BYTE mirroring;
+
+/* 是否使用 PRG RAM*/
+BYTE use_prg_ram;
 
 /* 电池空间, 8k*/
 BYTE sram[SRAM_SIZE];
@@ -217,6 +223,24 @@ typedef struct {
 
     int frame_count;
 } _PPU;
+
+typedef struct {
+    uint8_t number;
+    const char *name;
+    BYTE (*prg_rom_read)(WORD);
+    void (*prg_rom_write)(WORD, BYTE);
+    BYTE (*chr_rom_read)(WORD);
+    void (*chr_rom_write)(WORD, BYTE);
+    void (*mapper_reset)();
+
+}MAPPER;
+
+void mapper_init();
+BYTE prg_rom_read(WORD address);
+void prg_rom_write(WORD address, BYTE data);
+BYTE chr_rom_read(WORD address);
+void chr_rom_write(WORD address, BYTE data);
+void mapper_reset();
 
 typedef struct
 {

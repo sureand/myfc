@@ -142,3 +142,13 @@ ROM *load_rom(const char *path)
 
     return rom;
 }
+
+ROM *get_current_rom()
+{
+    return current_rom;
+}
+
+void set_current_rom(ROM *rom)
+{
+    current_rom = rom;
+}

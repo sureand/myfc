@@ -99,10 +99,10 @@ void ppu_reset()
     ppu.in_vblank = 0;
 
     //把CHR ROM 映射到 PPU RAM, 暂时不考虑 超过1页 的 CHR ROM
-    uint8_t chr_rom_count = rom->header->chr_rom_count;
-    memcpy(ppu.vram, rom->chr_rom, (chr_rom_count & 0x1) * CHR_ROM_PAGE_SIZE);
+    uint8_t chr_rom_count = get_current_rom()->header->chr_rom_count;
+    memcpy(ppu.vram, get_current_rom()->chr_rom, (chr_rom_count & 0x1) * CHR_ROM_PAGE_SIZE);
 
-    BYTE mirroring = rom->header->flag1;
+    BYTE mirroring = get_current_rom()->header->flag1;
 
     // 假设 header[6] 的第 0 位决定水平或垂直镜像
     if (mirroring & 0x01) {
@@ -211,7 +211,7 @@ BYTE ppu_vram_read(WORD address)
 
     if (address < 0x2000) {
         // Pattern tables 区域
-        return ppu.vram[address];
+       return chr_rom_read(address);
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
         if (address >= 0x3000) {
@@ -233,12 +233,7 @@ void ppu_vram_write(WORD address, BYTE data)
     WORD real_address = address;
 
     if (address < 0x2000) {
-
-        //chr rom 组为0 的时候, 表示使用的是CHR RAM
-        if (rom->header->chr_rom_count == 0) {
-            ppu.vram[address] = data;
-        }
-
+        chr_rom_write(address, data);
     } else if (address < 0x3F00) {
         // Name tables 和 Attribute tables 区域
         if (address >= 0x3000) {

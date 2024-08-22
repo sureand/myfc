@@ -57,8 +57,7 @@ BYTE bus_read(WORD address)
 
     /*PRG ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        WORD address_range = rom->header->prg_rom_count > 1 ? 0x7FFF : 0x3FFF;
-        return rom->prg_rom[address & address_range];
+        return prg_rom_read(address);
     }
 
     return 0;
@@ -130,7 +129,7 @@ void bus_write(WORD address, BYTE data)
 
     /*PRG ROM 和 CHR ROM 主程序*/
     if (address >= 0x8000 && address <= 0xFFFF) {
-        return;
+        prg_rom_write(address, data);
     }
 
 }
