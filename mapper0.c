@@ -35,6 +35,11 @@ void chr_rom_write0(WORD address, BYTE data)
     }
 }
 
+void irq_scanline0()
+{
+
+}
+
 void mapper_reset0()
 {
 }

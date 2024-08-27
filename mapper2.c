@@ -44,6 +44,11 @@ void chr_rom_write2(WORD address, BYTE data)
     }
 }
 
+void irq_scanline2()
+{
+    ;
+}
+
 void mapper_reset2()
 {
     bank_select = 0;

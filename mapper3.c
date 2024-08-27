@@ -26,14 +26,24 @@ static inline size_t get_chr_address(WORD address)
 
 BYTE chr_rom_read3(WORD address)
 {
+    if (get_current_rom()->header->chr_rom_count == 0) {
+        return ppu.vram[address];
+    }
+
     size_t _address = get_chr_address(address);
     return get_current_rom()->chr_rom[_address];
 }
 
 void chr_rom_write3(WORD address, BYTE data)
 {
-    (void)address;
-    (void)data;
+    if (get_current_rom()->header->chr_rom_count == 0) {
+        ppu.vram[address] = data;
+    }
+}
+
+void irq_scanline3()
+{
+    ;
 }
 
 void mapper_reset3()

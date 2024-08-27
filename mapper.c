@@ -53,3 +53,8 @@ void mapper_reset()
 {
     get_mapper()->mapper_reset();
 }
+
+void irq_scanline()
+{
+    get_mapper()->irq_scanline();
+}

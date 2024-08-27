@@ -665,6 +665,11 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         if (ppu.cycle == 257) {
             ppu.v = (ppu.v & ~0x041F) | (ppu.t & 0x041F);
         }
+
+        if (ppu.cycle == 260) {
+            irq_scanline();
+        }
+
     } else {
 
         if (ppu.scanline == 240 && ppu.cycle == 1) {

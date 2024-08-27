@@ -231,6 +231,7 @@ typedef struct {
     void (*prg_rom_write)(WORD, BYTE);
     BYTE (*chr_rom_read)(WORD);
     void (*chr_rom_write)(WORD, BYTE);
+    void (*irq_scanline)();
     void (*mapper_reset)();
 
 }MAPPER;
@@ -241,6 +242,7 @@ void prg_rom_write(WORD address, BYTE data);
 BYTE chr_rom_read(WORD address);
 void chr_rom_write(WORD address, BYTE data);
 void mapper_reset();
+void irq_scanline();
 
 typedef struct
 {
@@ -297,6 +299,7 @@ void disassemble();
 BYTE step_cpu();
 void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
 void set_nmi();
+void set_irq();
 
 #define BUTTON_A      0x01
 #define BUTTON_B      0x02

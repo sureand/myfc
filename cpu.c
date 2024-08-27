@@ -2350,6 +2350,23 @@ void cpu_interrupt_NMI()
     cpu.cycle += 7;  // NMI 处理大约需要 7 个周期
 }
 
+void cpu_interrupt_IRQ()
+{
+    //小端压栈, 先处理高字节, 后处理低字节
+    push((cpu.IP >> 8) & 0xFF);
+    push(cpu.IP & 0xFF);
+
+    cpu.P |= 0x24;
+    push(cpu.IP);
+
+    cpu.IP = get_irq_vector();
+
+    // 清除IRQ 标志
+    cpu.interrupt &= 0xFD;
+
+    cpu.cycle += 7;
+}
+
 BYTE cpu_read_byte(WORD address)
 {
     return cpu.ram[address];
@@ -2385,6 +2402,11 @@ void set_nmi()
     cpu.interrupt |= 0x1;
 }
 
+void set_irq()
+{
+    cpu.interrupt |= 0x2;
+}
+
 BYTE step_cpu()
 {
     // 初始的周期数
@@ -2393,6 +2415,11 @@ BYTE step_cpu()
     //触发NMI 中断, 直接执行读取中断向量操作
     if (cpu.interrupt & 0x1) {
         cpu_interrupt_NMI();
+        return cpu.cycle - initial_cycles;
+    }
+
+    if (cpu.interrupt & 0x2) {
+        cpu_interrupt_IRQ();
         return cpu.cycle - initial_cycles;
     }
 

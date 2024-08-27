@@ -1,11 +1,11 @@
 #include "mapper1.h"
 
-static mmc1_regISTER mmc1_reg;
+static MMC1_REGISTER mmc1_reg;
 
 static inline void reset_register()
 {
     mmc1_reg.write_count = 0;
-    mmc1_reg.shift_reg = 0;
+    mmc1_reg.shift_reg = 0x10;
     mmc1_reg.prg_mode = 0x3;
 }
 
@@ -131,9 +131,14 @@ void chr_rom_write1(WORD address, BYTE data)
     }
 }
 
+void irq_scanline1()
+{
+    ;
+}
+
 void mapper_reset1()
 {
-    memset(&mmc1_reg, 0, sizeof(mmc1_regISTER));
+    memset(&mmc1_reg, 0, sizeof(MMC1_REGISTER));
     mmc1_reg.prg_mode = 0x3;
     mmc1_reg.chr_mode = 0x10;
 }
