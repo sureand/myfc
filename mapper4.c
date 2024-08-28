@@ -4,8 +4,8 @@ static MMC4_REGISTER mmc4_reg;
 
 static inline size_t get_prg_address(WORD address)
 {
-    size_t last_bank = (get_current_rom()->header->prg_rom_count - 1) * 0x2000;
-    size_t last_second_bank = (get_current_rom()->header->prg_rom_count - 2) * 0x2000;
+    size_t last_bank = (get_current_rom()->header->prg_rom_count - 1) * PRG_ROM_PAGE_SIZE - 0x4000;
+    size_t last_second_bank = (get_current_rom()->header->prg_rom_count - 2) * PRG_ROM_PAGE_SIZE - 0x2000;
 
     //prg_mode 默认为0, 处理了开机时候默认从最后的两个bank 加载
     if (mmc4_reg.prg_mode == 0) {

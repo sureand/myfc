@@ -1,8 +1,6 @@
 #include "mapper.h"
-#include "mapper0.h"
-#include "mapper1.h"
-#include "mapper2.h"
-#include "mapper3.h"
+
+MAPPER mappers[0x100];
 
 /*
     经过查阅资料, 访问 CPU 地址 0x8000 - 0xFFFF 实际是通过硬件实现映射到PRG ROM 芯片的
@@ -13,6 +11,11 @@ static inline MAPPER *get_mapper()
 {
     BYTE number = get_current_rom()->header->mapper_number;
     MAPPER *mapper = &mappers[number];
+
+    if (!mapper) {
+        fprintf(stderr, "ERROR, mapper: %d is not support!\n", number);
+        exit(-1);
+    }
 
     return mapper;
 }
@@ -25,6 +28,7 @@ void mapper_init()
     CREATE_MAPPER(1, "SxROM");
     CREATE_MAPPER(2, "UXROM");
     CREATE_MAPPER(3, "MMC1");
+    CREATE_MAPPER(4, "MMC3");
 
     get_mapper()->mapper_reset();
 }

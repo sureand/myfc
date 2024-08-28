@@ -13,7 +13,7 @@ typedef struct
     void (*op_func)(BYTE);
 }INS;
 
-INS code_maps[0X100];
+extern INS code_maps[0X100];
 
 BYTE cpu_read_byte(WORD address);
 void cpu_write_byte(WORD address, BYTE data);

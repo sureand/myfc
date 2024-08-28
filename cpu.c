@@ -2,6 +2,8 @@
 #include "handler.h"
 #include "memory.h"
 
+INS code_maps[0X100];
+
 //立即寻址
 static inline WORD immediate_addressing()
 {

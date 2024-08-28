@@ -1,8 +1,13 @@
 #ifndef __MAPPER_HEADER
 #define __MAPPER_HEADER
 #include "common.h"
+#include "mapper0.h"
+#include "mapper1.h"
+#include "mapper2.h"
+#include "mapper3.h"
+#include "mapper4.h"
 
-MAPPER mappers[0x100];
+extern MAPPER mappers[0x100];
 
 #define CREATE_MAPPER(n, s) \
     mappers[n].number = n; \

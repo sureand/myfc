@@ -26,7 +26,7 @@ ROM_HEADER *parse_header(FILE *fp)
     assert(fp);
 
     BYTE header[HEADER_LEN] = {0};
-    size_t len = fread(header, 1, HEADER_LEN, fp);
+    uint32_t len = fread(header, 1, HEADER_LEN, fp);
     if(len != HEADER_LEN) {
         fprintf(stderr, "read game header error, read len:%I64u\n", len);
         return NULL;
@@ -116,8 +116,8 @@ ERR_EXIT:
 
 void show_header_info(ROM_HEADER *header)
 {
-    size_t prg_size = (header->prg_rom_count * PRG_ROM_PAGE_SIZE) >> 10;
-    size_t chr_size = (header->chr_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
+    uint32_t prg_size = (header->prg_rom_count * PRG_ROM_PAGE_SIZE) >> 10;
+    uint32_t chr_size = (header->chr_rom_count * CHR_ROM_PAGE_SIZE) >> 10;
 
     printf("PRG:%I64uk, CHR:%I64uK\n", prg_size, chr_size);
 }

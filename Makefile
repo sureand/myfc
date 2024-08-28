@@ -3,10 +3,10 @@ CC = gcc
 # 定义编译选项
 CFLAGS = -Wall -g -std=c99 -I"SDL2/include" -Dmain=SDL_main
 
-# 定义链接选项
-LDFLAGS = -L"SDL2/lib" -lmingw32 -lSDL2 -lSDL2main
+# 定义链接选项，添加 -static 以静态链接依赖项
+LDFLAGS = -L"SDL2/lib" -lSDL2 -lSDL2main
 
-TARGET = fc
+TARGET = fc.exe
 
 SRCDIR = ./
 DEST_DIR = example
@@ -26,6 +26,6 @@ $(SRCDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	del *.o *.exe
+	rm -f *.o $(TARGET)
 
 .PHONY: all clean

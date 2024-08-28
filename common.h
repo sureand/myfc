@@ -118,8 +118,6 @@ typedef struct
     BYTE *chr_rom;
 }ROM;
 
-ROM *current_rom;
-
 ROM *get_current_rom();
 void set_current_rom(ROM *rom);
 
@@ -128,18 +126,6 @@ void set_current_rom(ROM *rom);
 #define SINGLE_SCREEN_MIRRORING_0 2
 #define SINGLE_SCREEN_MIRRORING_1 3
 #define FOUR_SCREEN_MIRRORING 4
-
-BYTE mirroring;
-
-/* 是否使用 PRG RAM*/
-BYTE use_prg_ram;
-
-/* 电池空间, 8k*/
-BYTE sram[SRAM_SIZE];
-
-/* 拓展rom */
-BYTE extend_rom[0x2000]; // 一般的拓展rom 是8k 左右
-
 
 //CPU 相关
 /*
@@ -180,7 +166,7 @@ typedef struct {
 
     BYTE reversed; //保留, 用来作为结构体对齐使用
 
-    size_t cycle;
+    uint32_t cycle;
     BYTE is_lock;
 
     BYTE ram[CPU_RAM_SIZE];  // 2KB RAM
@@ -188,11 +174,10 @@ typedef struct {
     BYTE interrupt; //这里设置中断的标志, 暂定bit 0 是NMI
 }_CPU;
 
-char window_title[256];
+extern char window_title[256];
 
 #define WINDOW_SIZE (256 * 240)
 #define VRAM_SIZE   0x4000 // VRAM大小为16KB
-#define APU_REG_SIZE 0x20 //APU 的大小
 #define PPU_RAM_SIZE (0x2000)
 
 typedef struct {
@@ -274,11 +259,6 @@ void ppu_init();
 
 #define INLINE_VOID inline void
 
-_CPU cpu;
-_PPU ppu;
-
-#define PC (cpu.IP)
-
 void fc_init(const char *filename);
 void fc_release();
 void cpu_reset();
@@ -286,8 +266,6 @@ void ppu_reset();
 
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
-
-uint8_t rom_loaded;
 
 //NMI 中断
 void cpu_interrupt_NMI();
@@ -321,5 +299,28 @@ do { \
     free((p)); \
     (p) = NULL; \
 }while(0); \
+
+
+//全局变量
+
+extern ROM *current_rom;
+
+extern BYTE mirroring;
+
+/* 是否使用 PRG RAM*/
+extern BYTE use_prg_ram;
+
+/* 电池空间, 8k*/
+extern BYTE sram[SRAM_SIZE];
+
+/* 拓展rom */
+extern BYTE extend_rom[0x2000]; // 一般的拓展rom 是8k 左右
+
+extern uint8_t rom_loaded;
+
+extern _CPU cpu;
+extern _PPU ppu;
+
+#define PC (cpu.IP)
 
 #endif
