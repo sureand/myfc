@@ -653,6 +653,10 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
                     render_sprite_pixel(frame_buffer, ppu.cycle, ppu.scanline);
                 }
             }
+
+            if (ppu.cycle == 260) {
+                irq_scanline();
+            }
         }
 
         // 周期 256 需要做垂直滚动
@@ -664,10 +668,6 @@ void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
         // 水平滚动信息复制
         if (ppu.cycle == 257) {
             ppu.v = (ppu.v & ~0x041F) | (ppu.t & 0x041F);
-        }
-
-        if (ppu.cycle == 260) {
-            irq_scanline();
         }
 
     } else {

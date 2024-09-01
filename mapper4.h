@@ -16,6 +16,9 @@ typedef struct {
     BYTE irq_latch;
     BYTE irq_reload;
     WORD irq_counter;
+
+    uint32_t second_last_bank;
+    uint32_t last_bank;
 }MMC4_REGISTER;
 
 BYTE prg_rom_read4(WORD address);

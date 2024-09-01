@@ -52,7 +52,7 @@ BYTE bus_read(WORD address)
 
     /* SRAM: 0x6000-0x7FFF(用于保存记录) */
     if (address >= 0x6000 && address <= 0x7FFF) {
-        return sram[address - 0x6000];
+        return sram[address & 0x1FFF];
     }
 
     /*PRG ROM 主程序*/
@@ -123,7 +123,7 @@ void bus_write(WORD address, BYTE data)
 
     /* SRAM: 0x6000-0x7FFF(用于保存记录) */
     if (address >= 0x6000 && address <= 0x7FFF) {
-        sram[address - 0x6000] = data;
+        sram[address & 0x1FFF] = data;
         return;
     }
 
