@@ -246,12 +246,19 @@ int start()
 
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+    SDL_AudioSpec audio_spec;
+    if (!init_audio(&audio_spec, _audio_callback)) {
+        SDL_PauseAudio(0);  // 开始播放音频
+    }
+
     // 启动模拟器主循环
     main_loop(window, renderer);
 
     // 清理资源
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+
+    SDL_CloseAudio();
     SDL_Quit();
 
     return 0;

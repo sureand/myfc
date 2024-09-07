@@ -240,6 +240,10 @@ typedef struct {
     uint8_t registers[APU_REG_SIZE];  // APU寄存器
 } APU;
 
+typedef void (*audio_callback)(void*, Uint8*, int);
+void _audio_callback(void* userdata, Uint8* stream, int len);
+int init_audio(SDL_AudioSpec* audio_spec, audio_callback callback);
+
 // 手柄结构体
 typedef struct {
     uint8_t state;
