@@ -22,4 +22,4 @@ uint8_t rom_loaded;
 
 _CPU cpu;
 _PPU ppu;
-
+APU apu;

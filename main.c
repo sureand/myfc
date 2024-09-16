@@ -165,6 +165,12 @@ void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
         for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
             step_ppu(renderer, texture);
         }
+
+        // APU 频率是 CPU 的 2 倍
+        for (int apu_cycles = 0; apu_cycles < 2; apu_cycles++) {
+            step_apu();
+        }
+
         actual_cpu_cycles = step_cpu();
 
         total_cpu_cycles += actual_cpu_cycles;
@@ -211,7 +217,7 @@ void main_loop(SDL_Window *window, SDL_Renderer *renderer)
 
 int start()
 {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_EVENTS) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return -1;
     }
@@ -246,9 +252,8 @@ int start()
 
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    SDL_AudioSpec audio_spec;
-    if (!init_audio(&audio_spec, _audio_callback)) {
-        SDL_PauseAudio(0);  // 开始播放音频
+    if (setup_sdl_audio() == -1) {
+        return -1;
     }
 
     // 启动模拟器主循环
@@ -258,7 +263,7 @@ int start()
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 
-    SDL_CloseAudio();
+    cleanup_sdl_audio();
     SDL_Quit();
 
     return 0;

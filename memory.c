@@ -19,14 +19,10 @@ BYTE bus_read(WORD address)
         return ppu_read(address & 0x2007);
     }
 
-    /* APU寄存器，用于控制音频通道（脉冲波、三角波、噪声、DMC） */
-    if (address >= 0x4000 && address <= 0x4013) {
-        return data;
-    }
-
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
-    if (address == 0x4015) {
-        return data;
+    /*apu 的 $4017 是不可读的, 因此在这里过滤*/
+    if (is_apu_address(address) && address != 0x4017) {
+        return apu_read(address);
     }
 
     /* 手柄处理 */
@@ -75,12 +71,6 @@ void bus_write(WORD address, BYTE data)
         return;
     }
 
-    /* APU 的读写 */
-    if (address >= 0x4000 && address <= 0x4013) {
-        //TODO: apu_write(address, data); // 需要实现的函数
-        return;
-    }
-
     /* OAM DMA 写入 */
     if (address == 0x4014) {
 
@@ -97,13 +87,13 @@ void bus_write(WORD address, BYTE data)
     }
 
     /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
-    if (address == 0x4015) {
-        //apu_status_write(data); // 需要实现的函数
+    if (is_apu_address(address)) {
+        apu_write(address, data);
         return;
     }
 
     /* 手柄处理 */
-    if (address >= 0x4016 && address <= 0x4017) {
+    if (address == 0x4016) {
 
         uint8_t latch_state = data & 1;
         set_latch_state(latch_state);

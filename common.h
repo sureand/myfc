@@ -237,25 +237,25 @@ typedef struct
 
 // APU结构体
 typedef struct {
-    uint8_t registers[APU_REG_SIZE];  // APU寄存器
+    uint8_t status;  // APU寄存器
+    uint32_t cycle;
+    uint8_t mode;
+    uint8_t frame_step;
+    SDL_bool frame_interrupt_enabled;
+    SDL_bool frame_counter_reset;
+    uint8_t frame_interrupt_flag;
+    uint8_t frame_counter;
 } APU;
 
-typedef void (*audio_callback)(void*, Uint8*, int);
-void _audio_callback(void* userdata, Uint8* stream, int len);
-int init_audio(SDL_AudioSpec* audio_spec, audio_callback callback);
+BYTE apu_read(WORD address);
+void apu_write(WORD address, BYTE data);
 
-// 手柄结构体
-typedef struct {
-    uint8_t state;
-} _Joypad;
+void step_apu();
 
-// NES总线结构体，包含各个组件
-typedef struct {
-    _CPU cpu;
-    _PPU ppu;
-    APU apu;
-    _Joypad joypad;
-} NES;
+void queue_audio_sample();
+int setup_sdl_audio();
+void cleanup_sdl_audio();
+SDL_bool is_apu_address(WORD address);
 
 void ppu_init();
 
@@ -324,6 +324,7 @@ extern uint8_t rom_loaded;
 
 extern _CPU cpu;
 extern _PPU ppu;
+extern APU apu;
 
 #define PC (cpu.IP)
 
