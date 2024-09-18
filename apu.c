@@ -6,11 +6,17 @@ NOISE_CHANNEL noise1;
 uint8_t frame_counter;
 DMC_CHANNEL dmc1;
 
-const uint8_t length_table[32] = {
+//引用 https://www.nesdev.org/wiki/APU_Length_Counter
+static const uint8_t length_table[32] = {
     10, 254, 20, 2, 40, 4, 80, 6,
     160, 8, 60, 10, 14, 12, 26, 14,
     12, 16, 24, 18, 48, 20, 96, 22,
     192, 24, 72, 26, 16, 28, 32, 30
+};
+
+// 噪音周期表 https://www.nesdev.org/wiki/APU_Noise
+static const int noise_period_table[16] = {
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
 PULSE_CHANNEL get_pulse(uint16_t channel)
@@ -309,10 +315,9 @@ void update_noise(NOISE_CHANNEL *noise)
         noise->length_counter--;
     }
 
-    // 更新频率计数器，控制噪声生成频率
-    noise->timer--;
-    if (noise->timer == 0) {
-        noise->timer = noise->period;
+    // 更新定时器，控制噪声生成频率
+    if (--noise->timer <= 0) {
+        noise->timer = noise->period;  // 重置定时器为周期值
 
         // 伪随机序列生成
         uint16_t feedback;
@@ -322,11 +327,12 @@ void update_noise(NOISE_CHANNEL *noise)
             feedback = (noise->shift_register >> 1) ^ (noise->shift_register >> 0);  // 模式0
         }
 
+        feedback &= 1;  // 确保反馈位为 0 或 1
         noise->shift_register = (noise->shift_register >> 1) | (feedback << 14);
-        noise->output = ~(noise->shift_register & 1) & 1;  // 根据 LFSR 生成噪音
+        noise->output = ~(noise->shift_register & 1) & 1;  // 根据 LFSR 输出噪声
     }
 
-    // 更新包络，影响音量
+    // 更新包络
     if (noise->envelope_start) {
         noise->envelope_counter = 15;
         noise->envelope_divider = noise->envelope_period;
@@ -343,9 +349,6 @@ void update_noise(NOISE_CHANNEL *noise)
             }
         }
     }
-
-    // 最终的输出音量：根据包络或固定音量
-    noise->output = noise->output ? (noise->constant_volume ? noise->volume : noise->envelope_counter) / 15.0f : 0.0f;
 }
 
 float calculate_noise_waveform()
@@ -436,7 +439,7 @@ float calculate_dmc_waveform()
 void pulse_write(PULSE_CHANNEL *pulse, uint16_t reg, uint8_t data)
 {
     switch (reg) {
-        // 0x4000: 控制包络和占空比
+        // 0x4000: 控制包络和占空比, //https://www.nesdev.org/wiki/APU_Envelope
         case 0x0000:
             pulse->duty = (data >> 6) & 0x03;  // 占空比设置 (2 位)
             pulse->loop_flag = (data >> 5) & 0x01;  // Length counter halt (或 envelope loop flag)
@@ -444,7 +447,7 @@ void pulse_write(PULSE_CHANNEL *pulse, uint16_t reg, uint8_t data)
             pulse->volume = data & 0x0F;  // 音量或包络的初始值 (4 位)
             break;
 
-        // 0x4001: 控制扫频单元（Sweep Unit）
+        // 0x4001: 控制扫频单元（Sweep Unit）https://www.nesdev.org/wiki/APU_Sweep
         case 0x0001:
             pulse->sweep.enable = (data >> 7) & 0x01;  // 是否启用扫频
             pulse->sweep.period = (data >> 4) & 0x07;  // 扫频周期 (3 位)
@@ -513,7 +516,7 @@ void noise_write(NOISE_CHANNEL *noise, uint16_t reg, uint8_t data)
 
         case 2:  // 地址 0x400E：控制噪声模式和频率
             noise->mode_flag = data & 0x80;        // 第 7 位：噪声模式，1 为短模式，0 为长模式
-            noise->period = data & 0x0F;  // 第 0-3 位：选择噪声的频率索引
+            noise->period = noise_period_table[data & 0x0F];  // 从周期表中查找实际的噪声频率
             break;
 
         case 3:  // 地址 0x400F：控制长度计数器加载值和包络启动
@@ -643,6 +646,7 @@ void write_4017(BYTE data)
     }
 }
 
+//引用参考 https://www.nesdev.org/wiki/Nerdy_Nights:_APU_overview
 void write_4015(uint8_t value)
 {
     // 矩形波 1 通道
