@@ -167,7 +167,7 @@ void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
         }
 
         // APU 频率是 CPU 的 2 倍
-        for (int apu_cycles = 0; apu_cycles < 2; apu_cycles++) {
+        for (int apu_cycles = 0; apu_cycles < 2 * actual_cpu_cycles; apu_cycles++) {
             step_apu();
         }
 
@@ -285,6 +285,8 @@ void fc_init(const char *filename)
 
     cpu_init();
     ppu_init();
+
+    apu_init();
 }
 
 void set_init_state()

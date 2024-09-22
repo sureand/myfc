@@ -249,8 +249,8 @@ typedef struct {
 
 BYTE apu_read(WORD address);
 void apu_write(WORD address, BYTE data);
-
 void step_apu();
+void apu_init();
 
 void queue_audio_sample();
 int setup_sdl_audio();

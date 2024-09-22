@@ -19,22 +19,6 @@ static const int noise_period_table[16] = {
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-PULSE_CHANNEL get_pulse(uint16_t channel)
-{
-    channel &= 2;
-    return pulses[channel - 1];
-}
-
-NOISE_CHANNEL *get_noise()
-{
-    return &noise1;
-}
-
-DMC_CHANNEL *get_dmc()
-{
-    return &dmc1;
-}
-
 // 启用矩形波通道，设置启用标志
 void enable_pulse_channel(PULSE_CHANNEL *channel)
 {
@@ -54,30 +38,40 @@ void disable_pulse_channel(PULSE_CHANNEL *channel)
 
 void update_sweep(PULSE_CHANNEL *pulse)
 {
-    if (!pulse->sweep.enable) {
+    // 如果扫频未启用或计数器为零，跳过更新
+    if (!pulse->sweep.enable || pulse->timer < 8 || pulse->timer > 0x7FF) {
         return;
     }
 
     if (pulse->sweep.reload) {
-        // 如果扫频需要重置，重置扫频计数器
+        // 如果扫频需要重置，重置扫频计数器并标记重载完成
         pulse->sweep.reload = 0;
+        pulse->sweep.period = pulse->sweep.period;  // 重置扫频周期
     } else {
         // 扫频计数器递减
         if (pulse->sweep.period > 0) {
             pulse->sweep.period--;
         } else {
             // 当扫频计数器为0时，应用扫频效果
-            pulse->sweep.period = pulse->sweep.shift;
+            pulse->sweep.period = pulse->sweep.shift;  // 重置周期为移位值
 
             // 计算扫频的频率调整
-            uint16_t target_freq = pulse->timer >> pulse->sweep.shift;
+            uint16_t target_freq = pulse->timer >> pulse->sweep.shift;  // 移位调整频率
+
             if (pulse->sweep.negate) {
+                // 扫频负向：计算负向时的频率
                 target_freq = pulse->timer - target_freq;
+
+                // 额外处理通道1负向扫频的特殊情况
+                if (pulse == &pulses[0]) {  // 如果是通道 1
+                    target_freq--;  // 扫频时额外减去 1
+                }
             } else {
+                // 扫频正向：增加频率
                 target_freq = pulse->timer + target_freq;
             }
 
-            // 只在频率有效范围内应用扫频
+            // 确保频率在合法范围内
             if (target_freq >= 8 && target_freq <= 0x7FF) {
                 pulse->timer = target_freq;
             }
@@ -85,86 +79,76 @@ void update_sweep(PULSE_CHANNEL *pulse)
     }
 }
 
-void do_update_pulse(PULSE_CHANNEL *pulse)
+// 更新脉冲波通道的长度计数器
+void update_pulse_length_counter(PULSE_CHANNEL *pulse)
 {
-    // 1. 更新长度计数器
-    // 只有在通道启用且没有“暂停（halt）”时，才会递减长度计数器
+    // 如果“暂停”标志为 false 并且长度计数器大于 0，计数器递减
     if (pulse->enabled && !pulse->halt && pulse->length_counter > 0) {
         pulse->length_counter--;  // 长度计数器递减
     }
+}
 
-    // 2. 更新频率计数器，控制波形周期
+// 更新脉冲波的包络
+void update_pulse_envelope(PULSE_CHANNEL *pulse)
+{
+    // 包络重新开始，重置计数器和分频器
+    if (pulse->envelope_start) {
+        pulse->envelope_counter = 15;
+        pulse->envelope_divider = pulse->envelope_period;
+        pulse->envelope_start = FALSE;
+    } else {
+        if (pulse->envelope_divider > 0) {
+            pulse->envelope_divider--;
+        } else {
+            // 当分频器到达 0，重置分频器并递减包络计数器
+            pulse->envelope_divider = pulse->envelope_period;
+            if (pulse->envelope_counter > 0) {
+                pulse->envelope_counter--;
+            } else if (pulse->loop_flag) {
+                pulse->envelope_counter = 15;  // 如果循环标志为真，包络计数器重新加载
+            }
+        }
+    }
+}
+
+void update_pulse_timer(PULSE_CHANNEL *pulse)
+{
     if (pulse->timer > 0) {
         pulse->timer--;  // 递减定时器计数器
     } else {
         pulse->timer = pulse->timer_period;  // 当计数器为0时，重置计数器
-        pulse->duty = (pulse->duty + 1) % 8;  // 更新占空比步进，循环在8个步骤内
+        pulse->duty_step = (pulse->duty_step + 1) & 7;  // 更新占空比步进，循环在8个步骤内
     }
-
-    // 3. 更新包络 (Envelope)
-    if (pulse->envelope_start) {
-        // 重置包络
-        pulse->envelope_counter = 15;
-        pulse->envelope_divider = pulse->envelope_period;
-        pulse->envelope_start = 0;  // 清除重置标志
-    } else {
-        if (pulse->envelope_divider > 0) {
-            pulse->envelope_divider--;  // 递减包络分频器
-        } else {
-            // 当分频器到达0时，重置为包络周期
-            pulse->envelope_divider = pulse->envelope_period;
-            if (pulse->envelope_counter > 0) {
-                pulse->envelope_counter--;  // 包络计数器递减
-            } else if (pulse->constant_volume == 0 && pulse->loop_flag) {
-                pulse->envelope_counter = 15;  // 如果启用了循环模式，包络计数器重置为15
-            }
-        }
-    }
-
-    // 4. 扫频更新 (Sweep unit)
-    update_sweep(pulse);
 }
 
-void update_pulses()
+float calculate_pulse_waveform(uint8_t channel)
 {
-    do_update_pulse(&pulses[0]);
-    do_update_pulse(&pulses[1]);
-}
+    PULSE_CHANNEL *pulse = &pulses[channel & 1];
 
-float calculate_pulse_waveform(uint16_t channel)
-{
-    // 假设 channel 为 1 或 2，表示第一个或第二个矩形波通道
-    static int phase1 = 0, phase2 = 0;  // 记录相位
+    // 1. 检查长度计数器，如果为 0，则不输出信号
+    if (pulse->length_counter == 0 || !pulse->sweep.enable) {
+        return 0.0f;
+    }
 
-    PULSE_CHANNEL pulse = get_pulse(channel);
+    // 2. 检查频率值是否太低或太高，防止不可听频率
+    if (pulse->timer < 8 || pulse->timer > 0x7FF) {
+        return 0.0f;
+    }
 
-    // 获取当前周期，定时器是 11 位
-    int period = pulse.timer;
-    if (period < 8) return 0.0f;  // NES 的矩形波周期最小值为 8
+    // 占空比表
+    static const uint8_t duty_table[4][8] = {
+        {0, 1, 0, 0, 0, 0, 0, 0},  // 12.5% 占空比
+        {0, 1, 1, 0, 0, 0, 0, 0},  // 25% 占空比
+        {0, 1, 1, 1, 1, 0, 0, 0},  // 50% 占空比
+        {1, 0, 0, 1, 1, 1, 1, 1},  // 75% 占空比
+    };
 
-    // 获取占空比，不需要右移
-    int duty = pulse.duty & 0x03;  // duty 现在是 0 到 3
+    uint8_t duty_output = duty_table[pulse->duty][pulse->duty_step];
 
-    // 计算当前相位值
-    int phase = (channel == 1) ? phase1 : phase2;
-    phase++;
-    if (phase >= period) phase = 0;
+    int volume = pulse->constant_volume ? pulse->volume : pulse->envelope_counter;
+    float output_volume = (float)volume / 15.0f;
 
-    // 占空比数组：{12.5%, 25%, 50%, 75%}
-    static const float duty_table[4] = {0.125f, 0.25f, 0.5f, 0.75f};
-
-    // 确保使用整数进行占空比比较
-    int duty_period = duty_table[duty] * period;
-    float output = (phase < duty_period) ? 1.0f : 0.0f;
-
-    // 处理音量
-    float volume = pulse.constant_volume ? pulse.volume / 15.0f : pulse.envelope_counter / 15.0f;
-    output *= volume;  // 乘以音量
-
-    // 更新相位
-    if (channel == 1) phase1 = phase; else phase2 = phase;
-
-    return output;
+    return duty_output ? output_volume : 0.0f;
 }
 
 // 启用三角波通道
@@ -196,9 +180,6 @@ void disable_triangle_channel(TRIANGLE_CHANNEL* channel)
     // 设置 halt 标志以停止长度计数器的递减
     channel->control |= 0x80;  // 设置控制位的最高位（halt 位）
 
-    // 停止输出
-    channel->output = 0;  // 停止三角波输出
-
     // 清空长度计数器
     channel->length_counter = 0;
 
@@ -213,28 +194,36 @@ void disable_triangle_channel(TRIANGLE_CHANNEL* channel)
     channel->step_direction = 1;  // 确保步进方向为上升
 }
 
-void update_triangle(TRIANGLE_CHANNEL *triangle)
+// 更新三角波的“包络” —— 注意：三角波使用线性计数器，不是真正的包络
+void update_triangle_envelope(TRIANGLE_CHANNEL *triangle)
 {
-    // 1. 更新长度计数器
-    if (!(triangle->control & 0x80) && triangle->length_counter > 0) {  // 检查控制标志的 halt 位是否为 0
-        triangle->length_counter--;  // 递减长度计数器
-    }
-
-    // 2. 更新线性计数器
-    if (triangle->reload) {  // 如果 reload 标志被设置，则重置线性计数器
-        triangle->linear_counter = triangle->initial_linear_counter;  // 重置线性计数器
-        triangle->reload = 0;  // 清除 reload 标志
+    if (triangle->reload) {
+        // 如果线性计数器重载标志为真，重置线性计数器
+        triangle->linear_counter = triangle->initial_linear_counter;
     } else if (triangle->linear_counter > 0) {
-        triangle->linear_counter--;  // 递减线性计数器
+        triangle->linear_counter--;
     }
 
-    // 3. 检查线性计数器和长度计数器
-    if (triangle->linear_counter == 0 || triangle->length_counter == 0) {
-        triangle->output = 0.0f;  // 如果任何一个计数器为 0，三角波无输出
+    if (!triangle->control) {
+        triangle->reload = FALSE;  // 禁用自动重置
+    }
+}
+
+// 更新三角波通道的长度计数器
+void update_triangle_length_counter(TRIANGLE_CHANNEL *triangle)
+{
+    // 如果“暂停”标志为 false 并且长度计数器大于 0，计数器递减
+    if (triangle->length_counter > 0) {
+        triangle->length_counter--;
+    }
+}
+
+void update_triangle_timer(TRIANGLE_CHANNEL *triangle)
+{
+    if (triangle->length_counter == 0 || triangle->linear_counter == 0) {
         return;
     }
 
-    // 4. 更新定时器，生成三角波形
     if (triangle->timer > 0) {
         triangle->timer--;  // 定时器递减
     } else {
@@ -258,20 +247,29 @@ void update_triangle(TRIANGLE_CHANNEL *triangle)
             }
         }
     }
-
-    // 6. 生成三角波输出
-    if (triangle->step < 8) {
-        triangle->output = (float)triangle->step / 7.5f;  // 上升阶段，归一化到 [0, 1]
-    } else {
-        triangle->output = (float)(15 - triangle->step) / 7.5f;  // 下降阶段，归一化到 [0, 1]
-    }
-
-    triangle->output = triangle->output * 2.0f - 1.0f;  // 将输出缩放到 [-1.0, 1.0]
 }
 
 float calculate_triangle_waveform()
 {
-    return triangle1.output;
+    TRIANGLE_CHANNEL *triangle = &triangle1;
+
+    // 如果线性计数器或长度计数器为 0，则无输出
+    if (triangle->linear_counter == 0 || triangle->length_counter == 0) {
+        triangle->output = 0.0f;
+        return triangle->output;
+    }
+
+    // 根据当前步进值生成输出：上升阶段 0-7，下降阶段 8-15
+    if (triangle->step < 8) {
+        triangle->output = (float)triangle->step / 7.0f;  // 上升阶段，归一化到 [0, 1]
+    } else {
+        triangle->output = (float)(15 - triangle->step) / 7.0f;  // 下降阶段，归一化到 [0, 1]
+    }
+
+    // 将输出缩放到 [-1.0, 1.0]，符合音频输出范围
+    triangle->output = triangle->output * 2.0f - 1.0f;
+
+    return triangle->output;
 }
 
 void enable_noise_channel(NOISE_CHANNEL* channel)
@@ -288,8 +286,6 @@ void enable_noise_channel(NOISE_CHANNEL* channel)
         channel->envelope_counter = 15;   // 重置包络计数器
         channel->envelope_divider = channel->envelope_period;  // 重置包络分频器
     }
-
-    // channel->shift_register = 1;  // 通常 NES 硬件不会立即重置移位寄存器
 }
 
 void disable_noise_channel(NOISE_CHANNEL* channel)
@@ -304,36 +300,22 @@ void disable_noise_channel(NOISE_CHANNEL* channel)
 
     // 清除噪声输出
     channel->output = 0;
-
-    // channel->shift_register = 1;  // NES 硬件不会立即清零移位寄存器
 }
 
-void update_noise(NOISE_CHANNEL *noise)
+// 更新噪声通道的长度计数器
+void update_noise_length_counter(NOISE_CHANNEL *noise)
 {
-    // 更新长度计数器
+    // 如果“暂停”标志为 false 并且长度计数器大于 0，计数器递减
     if (!noise->halt && noise->length_counter > 0) {
         noise->length_counter--;
     }
+}
 
-    // 更新定时器，控制噪声生成频率
-    if (--noise->timer <= 0) {
-        noise->timer = noise->period;  // 重置定时器为周期值
-
-        // 伪随机序列生成
-        uint16_t feedback;
-        if (noise->mode_flag) {
-            feedback = (noise->shift_register >> 6) ^ (noise->shift_register >> 0);  // 模式1
-        } else {
-            feedback = (noise->shift_register >> 1) ^ (noise->shift_register >> 0);  // 模式0
-        }
-
-        feedback &= 1;  // 确保反馈位为 0 或 1
-        noise->shift_register = (noise->shift_register >> 1) | (feedback << 14);
-        noise->output = ~(noise->shift_register & 1) & 1;  // 根据 LFSR 输出噪声
-    }
-
-    // 更新包络
+// 更新噪声通道的包络
+void update_noise_envelope(NOISE_CHANNEL *noise)
+{
     if (noise->envelope_start) {
+        // 包络重新开始，重置计数器和分频器
         noise->envelope_counter = 15;
         noise->envelope_divider = noise->envelope_period;
         noise->envelope_start = FALSE;
@@ -341,22 +323,57 @@ void update_noise(NOISE_CHANNEL *noise)
         if (noise->envelope_divider > 0) {
             noise->envelope_divider--;
         } else {
+            // 当分频器到达 0，重置分频器并递减包络计数器
             noise->envelope_divider = noise->envelope_period;
             if (noise->envelope_counter > 0) {
                 noise->envelope_counter--;
-            } else if (noise->constant_volume == 0 && noise->loop_flag) {
-                noise->envelope_counter = 15;  // 包络计数循环
+            } else if (noise->loop_flag) {
+                noise->envelope_counter = 15;  // 如果循环标志为真，包络计数器重新加载
             }
         }
     }
 }
 
-float calculate_noise_waveform()
+void update_noise_shift_register(NOISE_CHANNEL *noise)
 {
-    NOISE_CHANNEL *noise = get_noise();
+    uint16_t feedback;
 
-    // 直接返回生成的 output
-    return noise->output;
+    // 根据模式选择反馈位
+    if (noise->mode_flag) {
+        // 短模式：使用第 6 位和第 0 位进行异或
+        feedback = (noise->shift_register >> 6) ^ (noise->shift_register >> 0);
+    } else {
+        // 长模式：使用第 1 位和第 0 位进行异或
+        feedback = (noise->shift_register >> 1) ^ (noise->shift_register >> 0);
+    }
+
+    feedback &= 1;  // 确保反馈位为 0 或 1
+
+    // 右移 LFSR，并将反馈位写入最高位（第 14 位）
+    noise->shift_register = (noise->shift_register >> 1) | (feedback << 14);
+}
+
+void update_noise_timer(NOISE_CHANNEL *noise)
+{
+    // 更新定时器，控制噪声生成频率
+    if (--noise->timer <= 0) {
+        noise->timer = noise->period;  // 重置定时器为周期值
+
+        // 伪随机序列生成
+        update_noise_shift_register(noise);
+    }
+}
+
+float calculate_noise_waveform() {
+
+    NOISE_CHANNEL *noise = &noise1;
+
+    // 根据移位寄存器的最低位决定是否输出声音
+    float output = (noise->shift_register & 1) ?
+                   (noise->constant_volume ? noise->volume : noise->envelope_counter) : 0.0f;
+
+    // 返回最终的音量输出
+    return output;
 }
 
 void enable_dmc_channel(DMC_CHANNEL *dmc)
@@ -439,15 +456,15 @@ float calculate_dmc_waveform()
 void pulse_write(PULSE_CHANNEL *pulse, uint16_t reg, uint8_t data)
 {
     switch (reg) {
-        // 0x4000: 控制包络和占空比, //https://www.nesdev.org/wiki/APU_Envelope
+        // 0x4000: 控制包络和占空比
         case 0x0000:
             pulse->duty = (data >> 6) & 0x03;  // 占空比设置 (2 位)
-            pulse->loop_flag = (data >> 5) & 0x01;  // Length counter halt (或 envelope loop flag)
-            pulse->constant_volume = (data >> 4) & 0x01;  // 固定音量或包络使能
+            pulse->loop_flag = (data >> 5) & 0x01;   // Length counter halt (或 envelope loop flag)
+            pulse->constant_volume = (data >> 4) & 0x01;  // 固定音量或包络使能, 使用 constant_volume_flag
             pulse->volume = data & 0x0F;  // 音量或包络的初始值 (4 位)
             break;
 
-        // 0x4001: 控制扫频单元（Sweep Unit）https://www.nesdev.org/wiki/APU_Sweep
+        // 0x4001: 控制扫频单元（Sweep Unit）
         case 0x0001:
             pulse->sweep.enable = (data >> 7) & 0x01;  // 是否启用扫频
             pulse->sweep.period = (data >> 4) & 0x07;  // 扫频周期 (3 位)
@@ -526,27 +543,6 @@ void noise_write(NOISE_CHANNEL *noise, uint16_t reg, uint8_t data)
     }
 }
 
-uint8_t is_triangle_active()
-{
-    // 如果控制位为 1，则忽略长度计数器，仅依赖线性计数器
-    if (triangle1.control) {
-        return triangle1.length_counter > 0;
-    }
-
-    // 控制位为 0 时，同时依赖长度计数器和线性计数器
-    return (triangle1.length_counter > 0) && (triangle1.timer > 0);
-}
-
-uint16_t get_triangle_period()
-{
-    return triangle1.timer & 0x7FF;
-}
-
-void set_status(BYTE data)
-{
-    apu.status = data;
-}
-
 uint8_t read_4015()
 {
     uint8_t status = 0;
@@ -581,11 +577,6 @@ uint8_t read_4015()
         status |= 0x40;
     }
 
-    // 位 7: DMC 中断标志
-    if (dmc1.interrupt_flag) {
-        status |= 0x80;
-    }
-
     // 清除帧中断标志（读取时自动清除）
     apu.frame_interrupt_flag = FALSE;
 
@@ -618,8 +609,116 @@ void dmc_write(DMC_CHANNEL *dmc, uint16_t index, BYTE data)
         case 3:
             dmc->length = data & 0xFF;
         break;
-    default: break;
+        default: break;
      }
+}
+
+// 重置 APU 帧计数器
+void reset_apu_frame_counter()
+{
+    apu.frame_counter = 0;  // 将帧计数器重置为 0
+
+    // 如果需要，清除相关状态，准备开始新的帧计数周期
+    if (apu.mode == 5) {
+        apu.frame_step = 1;  // 5 步模式从步骤 1 开始
+    } else {
+        apu.frame_step = 0;  // 4 步模式从步骤 0 开始
+    }
+
+    apu.frame_counter_reset = TRUE;  // 标记帧计数器已重置
+}
+
+void update_envelopes()
+{
+    update_pulse_envelope(&pulses[0]);
+    update_pulse_envelope(&pulses[1]);
+    update_noise_envelope(&noise1);
+    update_triangle_envelope(&triangle1);
+}
+
+void update_length_counters()
+{
+    // 更新脉冲波、三角波、噪声通道的长度计数器
+    update_pulse_length_counter(&pulses[0]);
+    update_pulse_length_counter(&pulses[1]);
+    update_triangle_length_counter(&triangle1);
+    update_noise_length_counter(&noise1);
+}
+
+void trigger_frame_interrupt()
+{
+    // 设置 CPU 中断标志，或者其他需要执行的操作
+    set_irq();
+}
+
+void update_sweep_units()
+{
+    update_sweep(&pulses[0]);
+    update_sweep(&pulses[1]);
+}
+
+void step_apu_frame_counter()
+{
+    apu.frame_counter++;  // 更新帧计数器
+    apu.frame_step = (apu.frame_step % apu.mode) + 1; // 循环步进
+
+    if (apu.mode == 4) {
+        switch (apu.frame_step) {
+            case 1:
+                // 第 1 步：更新包络
+                update_envelopes();
+                break;
+            case 2:
+                // 第 2 步：更新包络、长度计数器和扫频单元
+                update_envelopes();
+                update_length_counters();
+                update_sweep_units();
+                break;
+            case 3:
+                // 第 3 步：更新包络
+                update_envelopes();
+                break;
+            case 4:
+                // 第 4 步：更新包络、长度计数器、扫频单元，并产生中断
+                update_envelopes();
+                update_length_counters();
+                update_sweep_units();
+
+                // 如果启用了中断，产生帧中断
+                if (apu.frame_interrupt_enabled) {
+                    apu.frame_interrupt_flag = TRUE;  // 设置帧中断标志
+                    trigger_frame_interrupt();  // 调用触发中断的函数
+                }
+                break;
+        }
+        return;
+    }
+
+    // 处理 5 步模式的帧步进
+    switch (apu.frame_step) {
+        case 1:
+            // 第 1 步：更新包络、长度计数器和扫频单元
+            update_envelopes();  // 更新所有通道的包络
+            break;
+        case 2:
+            // 第 2 步：更新长度计数器和扫频单元
+            update_envelopes();  // 更新所有通道的包络
+            update_length_counters();
+            update_sweep_units();
+            break;
+        case 3:
+            // 第 3 步：再次更新包络、长度计数器和扫频单元
+            update_envelopes();
+            break;
+        case 4:
+            break;
+        case 5:
+            // 第 5 步：不产生中断，只是更新包络和长度计数器
+            update_envelopes();
+            update_length_counters();
+            update_sweep_units();
+            break;
+    }
 }
 
 void write_4017(BYTE data)
@@ -628,6 +727,7 @@ void write_4017(BYTE data)
     SDL_bool interrupt_inhibit = (data & 0x40) != 0;  // 检查位 6，是否禁用帧中断
     SDL_bool reset_frame_counter = (data & 0x01) != 0;  // 检查位 0，是否重置帧计数器
 
+    // 1. 设置帧计数器的模式（4 步或 5 步）
     if (mode_5_step) {
         // 设置为 5 步模式
         apu.mode = 5;
@@ -636,6 +736,7 @@ void write_4017(BYTE data)
         apu.mode = 4;
     }
 
+    // 2. 更新帧中断的启用状态
     if (interrupt_inhibit) {
         // 禁用帧中断，并清除现有的帧中断标志
         apu.frame_interrupt_enabled = FALSE;
@@ -643,6 +744,13 @@ void write_4017(BYTE data)
     } else {
         // 启用帧中断
         apu.frame_interrupt_enabled = TRUE;
+    }
+
+    // 3. 如果需要，重置帧计数器并立即步进一次
+    if (reset_frame_counter) {
+        // 重置帧计数器，并根据当前模式立即步进一次
+        reset_apu_frame_counter();
+        step_apu_frame_counter();  // 立即步进帧计数器，开始新的周期
     }
 }
 
@@ -690,21 +798,6 @@ void update_frame_counter(BYTE data)
     frame_counter = (data & 0xC0) >> 7;
 }
 
-uint16_t get_dmc_period()
-{
-    return 0;
-}
-
-uint16_t read_dmc_sample()
-{
-    return 1;
-}
-
-uint16_t get_noise_period()
-{
-    return noise1.period;
-}
-
 void apu_write(WORD address, BYTE data)
 {
     switch (address) {
@@ -749,31 +842,50 @@ BYTE apu_read(WORD address)
             return read_4015();
         default:
             printf("Unsupported APU read at address: %04X\n", address);
-            return 0; // 未知地址返回 0
+             return 0xFF;  // 返回默认值
     }
+}
+
+void apu_init()
+{
+    // 初始化脉冲波通道1
+    memset(&pulses, 0, sizeof(PULSE_CHANNEL) * 2);
+
+    memset(&triangle1, 0, sizeof(TRIANGLE_CHANNEL));
+
+    memset(&noise1, 0, sizeof(NOISE_CHANNEL));
+    noise1.shift_register = 1;
+
+    memset(&dmc1, 0, sizeof(DMC_CHANNEL));
+
+    memset(&apu, 0, sizeof(apu));
+    apu.mode = 5;
 }
 
 void step_apu()
 {
-    static double apu_clock_accumulator = 0.0;
-    static const double apu_clock_per_sample = 1789773.0 / 44100.0;  // APU 时钟与采样率之比
+    //三角波的是两个apu 周期
+    if (apu.cycle % 2 == 0) {
+        update_triangle_timer(&triangle1);
+    }
 
-    // 更新其他 APU 通道（矩形波、三角波、噪声等）
-    update_pulses();
-    update_triangle(&triangle1);
-    update_noise(&noise1);
+    //方波和噪音的timer 更新频率是4个cpu 周期
+    if (apu.cycle % 4 == 0) {
+        update_pulse_timer(&pulses[0]);
+        update_pulse_timer(&pulses[1]);
+        update_noise_timer(&noise1);
+    }
 
-    // 更新 DMC 通道
-    update_dmc(&dmc1);
+    // 帧计数器更新步长, 约3728 个 apu 周期更新一次
+    if (apu.cycle % QUARTER_FRAME == 0) {
+        step_apu_frame_counter();  // 更新帧计数器
+    }
 
-    // 累积 APU 时钟周期
-    apu_clock_accumulator += 1.0;
-
-    // 检查是否需要生成多个音频样本（可能某些周期会累积较多时钟）
-    while (apu_clock_accumulator >= apu_clock_per_sample) {
-        apu_clock_accumulator -= apu_clock_per_sample;
-
-        // 生成音频样本并推送到缓冲区
+    //音频样本生成, 约每81个apu 周期采样一次
+    if (apu.cycle % PER_SAMPLE == 0) {
+        // 推送音频样本到缓冲区
         queue_audio_sample();
     }
+
+    apu.cycle++;
 }

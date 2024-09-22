@@ -4,6 +4,17 @@
 #include "SDL2/SDL.h"
 
 #define PULSE_COUNT (2)
+#define SAMPLE_BUFFER_SIZE (512)  //缓冲区大小
+#define SOUND_FREQUENCY (44100)   //音频采样率
+#define APU_FREQUENCY (3579545) //apu 的运行频率
+#define PER_SAMPLE (APU_FREQUENCY / SOUND_FREQUENCY) // APU 频率与音频采样率 ~=81
+
+/*
+* apu 序列器运行速度是240HZ, 因此每帧需要的apu 周期数是 (3579545 /240) ~= 14916
+* 每个frame 分为四步, 因此是 14916 / 4 = 3728
+* 引用 https://www.nesdev.org/wiki/APU_Frame_Counter
+*/
+#define QUARTER_FRAME (3728) //四分之一帧
 
 typedef struct {
     uint8_t enable;   // 是否启用扫频
@@ -14,18 +25,20 @@ typedef struct {
 } SWEEP;
 
 typedef struct {
-    uint8_t enabled;            // 是否启用
+    uint8_t enabled;           // 是否启用
     uint16_t timer;            // 当前定时器值，控制波形频率（11 位）
     uint16_t timer_period;     // 定时器周期，用于控制频率
     uint8_t halt;              // 停止标志，影响长度计数器是否倒计时
     uint8_t constant_volume;   // 是否启用固定音量
     uint8_t volume;            // 音量（4 位，范围0-15）
     uint8_t duty;              // 占空比，2 位（4种模式）
+    uint8_t duty_step;         // 占空比步进
     uint16_t length_counter;   // 长度计数器
     uint8_t envelope_start;    // 是否重置包络
     uint8_t envelope_counter;  // 当前包络计数器
     uint8_t envelope_period;   // 包络周期
     uint8_t envelope_divider;  // 包络分频器
+    uint8_t output;            // 当前的输出值（0或1）
     uint8_t loop_flag;         // 包络循环标志，是否循环播放
     SWEEP sweep;               // 扫频单元
 } PULSE_CHANNEL;
@@ -80,22 +93,9 @@ typedef struct
     uint16_t start_address;
 }DMC_CHANNEL;
 
-
-PULSE_CHANNEL get_pulse(uint16_t channel);
-uint8_t is_triangle_active();
-uint16_t get_triangle_period();
-
-uint16_t get_dmc_period();
-uint16_t read_dmc_sample();
-uint16_t get_noise_period();
-NOISE_CHANNEL *get_noise();
-int16_t generate_audio_sample();
-DMC_CHANNEL *get_dmc();
-
-float calculate_dmc_waveform();
+float calculate_pulse_waveform(uint8_t channel);
 float calculate_noise_waveform();
 float calculate_triangle_waveform();
-float calculate_pulse_waveform(uint16_t channel);
-
+float calculate_dmc_waveform();
 
 #endif
