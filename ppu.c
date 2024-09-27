@@ -2,6 +2,9 @@
 #include "ppu.h"
 #include <SDL2/SDL.h>
 
+SDL_Renderer *current_renderer = NULL;
+SDL_Texture *current_texture = NULL;
+
 void debug_printf(const char* format, ...)
 {
     va_list args;
@@ -613,8 +616,21 @@ void update_timing()
     }
 }
 
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture)
+void set_SDLdevice(SDL_Renderer* renderer, SDL_Texture* texture)
 {
+    current_renderer = renderer;
+    current_texture = texture;
+}
+
+void step_ppu()
+{
+    SDL_Renderer *renderer = current_renderer;
+    SDL_Texture *texture = current_texture;
+
+    if (!renderer || !texture) {
+        return;
+    }
+
     static PIXEL frame_buffer[SCREEN_WIDTH * SCREEN_HEIGHT] = {0x00};
 
     // 在预渲染扫描线的第一个周期开始新的帧

@@ -4,6 +4,33 @@
 
 INS code_maps[0X100];
 
+void cpu_clock()
+{
+    int i;
+    for (i = 0; i < 3; i++) {
+        step_ppu();
+    }
+
+    //APU 频率是 CPU 的 2 倍
+    for (i = 0; i < 2; i++) {
+        step_apu();
+    }
+
+    cpu.cycle++;
+}
+
+BYTE cpu_read(WORD address)
+{
+    cpu_clock();
+    return bus_read(address);
+}
+
+void cpu_write(WORD address, BYTE data)
+{
+    cpu_clock();
+    return bus_write(address, data);
+}
+
 //立即寻址
 static inline WORD immediate_addressing()
 {
@@ -16,8 +43,8 @@ static inline WORD immediate_addressing()
 //绝对寻址
 static inline WORD absolute_addressing()
 {
-    BYTE addr1 = bus_read(PC + 1);
-    BYTE addr2 = bus_read(PC + 2);
+    BYTE addr1 = cpu_read(PC + 1);
+    BYTE addr2 = cpu_read(PC + 2);
     WORD addr = (addr2 << 8 | addr1);
     PC += 3;
 
@@ -27,7 +54,7 @@ static inline WORD absolute_addressing()
 //绝对零页寻址
 static inline WORD zero_absolute_addressing()
 {
-    BYTE addr = bus_read(PC + 1);
+    BYTE addr = cpu_read(PC + 1);
     PC += 2;
 
     return (addr & 0xFF);
@@ -36,14 +63,14 @@ static inline WORD zero_absolute_addressing()
 //绝对 X 变址
 static inline WORD absolute_X_indexed_addressing(BYTE op)
 {
-    BYTE addr1 = bus_read(PC + 1);
-    BYTE addr2 = bus_read(PC + 2);
+    BYTE addr1 = cpu_read(PC + 1);
+    BYTE addr2 = cpu_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
 
     if( code_maps[op].cycle < 5 && (addr >> 8) != ((addr + cpu.X) >> 8) )
-        ++cpu.cycle;
+        cpu_clock();
 
     return (addr + cpu.X);
 }
@@ -51,14 +78,14 @@ static inline WORD absolute_X_indexed_addressing(BYTE op)
 //绝对 Y 变址
 static inline WORD absolute_Y_indexed_addressing(BYTE is_store_instr)
 {
-    BYTE addr1 = bus_read(PC + 1);
-    BYTE addr2 = bus_read(PC + 2);
+    BYTE addr1 = cpu_read(PC + 1);
+    BYTE addr2 = cpu_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
 
     if (!is_store_instr) {
-        if((addr >> 8) != ((addr + cpu.Y) >> 8)) ++cpu.cycle;
+        if((addr >> 8) != ((addr + cpu.Y) >> 8))cpu_clock();
     }
 
     return (addr + cpu.Y);
@@ -67,7 +94,7 @@ static inline WORD absolute_Y_indexed_addressing(BYTE is_store_instr)
 //零页 X 间接寻址
 static inline WORD zero_X_indexed_addressing()
 {
-    BYTE addr = bus_read(PC + 1);
+    BYTE addr = cpu_read(PC + 1);
     addr += cpu.X;
     PC += 2;
 
@@ -77,7 +104,7 @@ static inline WORD zero_X_indexed_addressing()
 //零页 Y 间接 寻址
 static inline WORD zero_Y_indexed_addressing()
 {
-    BYTE addr = bus_read(PC + 1);
+    BYTE addr = cpu_read(PC + 1);
     addr += cpu.Y;
     PC += 2;
 
@@ -86,20 +113,20 @@ static inline WORD zero_Y_indexed_addressing()
 
 static inline WORD indirect_addressing()
 {
-    BYTE addr1 = bus_read(PC + 1);
-    BYTE addr2 = bus_read(PC + 2);
+    BYTE addr1 = cpu_read(PC + 1);
+    BYTE addr2 = cpu_read(PC + 2);
     PC += 3;
 
     WORD addr = (addr2 << 8) | addr1;
 
     //这个是6502CPU的Bug
     if((addr & 0xFF) == 0xFF) {
-        addr = (bus_read(addr & 0xFF00) << 8) + bus_read(addr);
+        addr = (cpu_read(addr & 0xFF00) << 8) + cpu_read(addr);
         return addr;
     }
 
-    BYTE pc1 = bus_read(addr);
-    BYTE pc2 = bus_read(addr + 1);
+    BYTE pc1 = cpu_read(addr);
+    BYTE pc2 = cpu_read(addr + 1);
 
     return (pc2 << 8 )| pc1;
 }
@@ -107,11 +134,11 @@ static inline WORD indirect_addressing()
 // x 变址间接 寻址
 static inline WORD indexed_X_indirect_addressing()
 {
-    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr1 = cpu_read(PC + 1);
     addr1 += cpu.X;
 
     BYTE addr2 = addr1 + 1;
-    WORD addr = (bus_read(addr2) << 8) | bus_read(addr1);
+    WORD addr = (cpu_read(addr2) << 8) | cpu_read(addr1);
 
     PC += 2;
 
@@ -121,15 +148,15 @@ static inline WORD indexed_X_indirect_addressing()
 //Y 间接 变址寻址
 static inline WORD indirect_Y_indexed_addressing(BYTE is_store_instr)
 {
-    BYTE addr1 = bus_read(PC + 1);
+    BYTE addr1 = cpu_read(PC + 1);
     BYTE addr2 = (addr1 + 1) & 0xFF;  // 确保在页面边界正确处理
-    WORD addr = (bus_read(addr2) << 8) | bus_read(addr1);
+    WORD addr = (cpu_read(addr2) << 8) | cpu_read(addr1);
     PC += 2;
 
     if (!is_store_instr) {
         WORD addr_plus_Y = addr + cpu.Y;
         if ((addr & 0xFF00) != (addr_plus_Y & 0xFF00)) {
-            ++cpu.cycle;
+           cpu_clock();
         }
     }
 
@@ -139,7 +166,7 @@ static inline WORD indirect_Y_indexed_addressing(BYTE is_store_instr)
 static inline WORD relative_addressing()
 {
     //先算下一条指令的地址, 再算偏移
-    int8_t of = (int8_t)bus_read(PC + 1);
+    int8_t of = (int8_t)cpu_read(PC + 1);
     PC += 2;
 
     WORD addr = PC + of;
@@ -153,7 +180,14 @@ void BRK_00(BYTE op)
     //这里的addr 没啥用
     WORD addr = 0;
 
+    uint32_t last_cycle = cpu.cycle;
+
     handler_BRK(addr);
+
+    // 补偿周期数, 上一次的cpu cycle, 当前cycle, 预期cycle
+    for (int i = 0; i < last_cycle; i++) {
+       cpu_clock();
+    }
 }
 
 void ORA_01(BYTE op)
@@ -1200,7 +1234,7 @@ void STY_94(BYTE op)
 {
     WORD addr = zero_X_indexed_addressing();
 
-    bus_write(addr, cpu.Y);
+    cpu_write(addr, cpu.Y);
 }
 
 void STA_95(BYTE op)
@@ -2243,7 +2277,7 @@ static void init_code()
 
 static void init_reg()
 {
-    cpu.IP = bus_read(0xFFFC) | (bus_read(0xFFFD) << 8);
+    cpu.IP = cpu_read(0xFFFC) | (cpu_read(0xFFFD) << 8);
     cpu.SP = 0xFD;
     cpu.X = 0;
     cpu.Y = 0;
@@ -2256,8 +2290,8 @@ static void init_reg()
 // 读取复位向量的函数
 uint16_t get_reset_vector()
 {
-    uint8_t low_byte = bus_read(0xFFFC);
-    uint8_t high_byte = bus_read(0xFFFD);
+    uint8_t low_byte = cpu_read(0xFFFC);
+    uint8_t high_byte = cpu_read(0xFFFD);
 
     return (high_byte << 8) | low_byte;
 }
@@ -2265,8 +2299,8 @@ uint16_t get_reset_vector()
 // 读取 NMI 向量的函数
 uint16_t get_nmi_vector()
 {
-    uint8_t low_byte = bus_read(0xFFFA);
-    uint8_t high_byte = bus_read(0xFFFB);
+    uint8_t low_byte = cpu_read(0xFFFA);
+    uint8_t high_byte = cpu_read(0xFFFB);
 
     return (high_byte << 8) | low_byte;
 }
@@ -2274,8 +2308,8 @@ uint16_t get_nmi_vector()
 // 读取 IRQ 向量的函数
 uint16_t get_irq_vector()
 {
-    uint8_t low_byte = bus_read(0xFFFE);
-    uint8_t high_byte = bus_read(0xFFFF);
+    uint8_t low_byte = cpu_read(0xFFFE);
+    uint8_t high_byte = cpu_read(0xFFFF);
 
     return (high_byte << 8) | low_byte;
 }
@@ -2309,8 +2343,8 @@ void handle_reset()
 
 WORD get_start_address()
 {
-    BYTE addr1 = bus_read(0xFFFC);
-    BYTE addr2 = bus_read(0xFFFD);
+    BYTE addr1 = cpu_read(0xFFFC);
+    BYTE addr2 = cpu_read(0xFFFD);
 
     return addr2 << 8 | addr1;
 }
@@ -2340,7 +2374,7 @@ void cpu_interrupt_NMI()
     cpu.P |= 0x04;
 
     // 取出 NMI 向量地址
-    WORD nmi_vector = bus_read(0xFFFA) | (bus_read(0xFFFB) << 8);
+    WORD nmi_vector = cpu_read(0xFFFA) | (cpu_read(0xFFFB) << 8);
 
     // 加载新的程序计数器地址
     cpu.IP = nmi_vector;
@@ -2426,12 +2460,18 @@ BYTE step_cpu()
     }
 
     BYTE opcode = bus_read(PC);
-    //do_disassemble(PC, opcode);
+
+    uint32_t last_cycle = cpu.cycle;
 
     // 执行操作码对应的操作函数
+    uint32_t cycle = code_maps[opcode].cycle;
     code_maps[opcode].op_func(opcode);
 
-    cpu.cycle += code_maps[opcode].cycle;
+    // 补全剩下的cycle
+    while (cycle > (cpu.cycle - last_cycle)) {
+        cpu_clock();
+        cycle -= 1;
+    }
 
     // 计算指令消耗的实际周期数
     int cycles_consumed = cpu.cycle - initial_cycles;

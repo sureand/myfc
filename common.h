@@ -274,8 +274,11 @@ void fc_release();
 void cpu_reset();
 void ppu_reset();
 
+void cpu_clock();
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
+BYTE cpu_read(WORD address);
+void cpu_write(WORD address, BYTE data);
 
 //NMI 中断
 void cpu_interrupt_NMI();
@@ -285,7 +288,8 @@ void ppu_init();
 void do_disassemble(WORD addr, BYTE opcode);
 void disassemble();
 BYTE step_cpu();
-void step_ppu(SDL_Renderer* renderer, SDL_Texture* texture);
+void set_SDLdevice(SDL_Renderer* renderer, SDL_Texture* texture);
+void step_ppu();
 void set_nmi();
 void set_irq();
 

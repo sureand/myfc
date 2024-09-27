@@ -400,7 +400,7 @@ void update_dmc(DMC_CHANNEL *dmc)
     // 如果所有位都处理完毕，读取下一个字节
     if (dmc->remaining_bits == 0) {
         if (dmc->remaining_bytes > 0) {
-            dmc->current_address = bus_read(0xC000 + (dmc->address * 64)); // 计算DMC起始地址
+            dmc->current_address = cpu_read(0xC000 + (dmc->address * 64)); // 计算DMC起始地址
             dmc->remaining_bits = 8;  // 每个字节有8位
             dmc->address++;  // 增加地址
 

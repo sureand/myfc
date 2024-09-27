@@ -152,7 +152,6 @@ void wait_for_frame(SDL_Renderer* renderer)
 
 void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
 {
-    static int actual_cpu_cycles = 1;
     int total_cpu_cycles = 0;
 
     while (total_cpu_cycles < NTSC_CPU_CYCLES_PER_FRAME) {
@@ -161,19 +160,7 @@ void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
         if (process_events(renderer)) {
             return;
         }
-
-        for (int i = 0; i < 3 * actual_cpu_cycles; i++) {
-            step_ppu(renderer, texture);
-        }
-
-        // APU 频率是 CPU 的 2 倍
-        for (int apu_cycles = 0; apu_cycles < 2 * actual_cpu_cycles; apu_cycles++) {
-            step_apu();
-        }
-
-        actual_cpu_cycles = step_cpu();
-
-        total_cpu_cycles += actual_cpu_cycles;
+        total_cpu_cycles += step_cpu();;
     }
 
     // 增加帧计数
@@ -188,6 +175,7 @@ void main_loop(SDL_Window *window, SDL_Renderer *renderer)
 
     // 创建一个纹理，用于渲染PPU输出
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+    set_SDLdevice(renderer, texture);
 
     Uint32 start_time = SDL_GetTicks();
     int frame_count = 0;
@@ -285,8 +273,6 @@ void fc_init(const char *filename)
 
     cpu_init();
     ppu_init();
-
-    apu_init();
 }
 
 void set_init_state()
@@ -300,6 +286,7 @@ void set_init_state()
 #undef main
 int main(int argc, char *argv[])
 {
+    apu_init();
     set_init_state();
 
     start();
