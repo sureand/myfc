@@ -127,8 +127,10 @@ void update_pulse_envelope(PULSE_CHANNEL *pulse)
     }
 }
 
-void update_pulse_timer(PULSE_CHANNEL *pulse)
+void update_pulse_timer(uint8_t channel)
 {
+    PULSE_CHANNEL *pulse = &pulses[channel & 1];
+
     if (pulse->timer > 0) {
         pulse->timer--;  // 递减定时器计数器
     } else {
@@ -223,8 +225,10 @@ void update_triangle_length_counter(TRIANGLE_CHANNEL *triangle)
     }
 }
 
-void update_triangle_timer(TRIANGLE_CHANNEL *triangle)
+void update_triangle_timer()
 {
+    TRIANGLE_CHANNEL *triangle = &triangle1;
+
     if (triangle->length_counter == 0 || triangle->linear_counter == 0) {
         return;
     }
@@ -331,8 +335,10 @@ void update_noise_shift_register(NOISE_CHANNEL *noise)
     noise->shift_register |= (feedback << 14);
 }
 
-void update_noise_timer(NOISE_CHANNEL *noise)
+void update_noise_timer()
 {
+    NOISE_CHANNEL *noise = &noise1;
+
     // 更新定时器，控制噪声生成频率
     if (noise->timer > 0) {
         noise->timer--;
@@ -841,14 +847,14 @@ void step_apu()
 {
     //三角波的是两个apu 周期
     if (apu.cycle % 2 == 0) {
-        update_triangle_timer(&triangle1);
+        update_triangle_timer();
     }
 
     //方波和噪音的timer 更新频率是4个cpu 周期
     if (apu.cycle % 4 == 0) {
-        update_pulse_timer(&pulses[0]);
-        update_pulse_timer(&pulses[1]);
-        update_noise_timer(&noise1);
+        update_pulse_timer(0);
+        update_pulse_timer(1);
+        update_noise_timer();
     }
 
     // 帧计数器更新步长, 约14915 个 apu 周期更新一次

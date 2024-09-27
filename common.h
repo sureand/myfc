@@ -252,6 +252,12 @@ void apu_write(WORD address, BYTE data);
 void step_apu();
 void apu_init();
 
+
+void update_triangle_timer();
+void update_pulse_timer(uint8_t channel);
+void update_noise_timer();
+void step_apu_frame_counter();
+
 void queue_audio_sample();
 int setup_sdl_audio();
 void cleanup_sdl_audio();
