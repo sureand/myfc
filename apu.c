@@ -126,7 +126,7 @@ float calculate_pulse_waveform(uint8_t channel)
     PULSE_CHANNEL *pulse = &pulses[channel & 1];
 
     // 1. 检查长度计数器，如果为 0，则不输出信号
-    if (pulse->length_counter == 0 || !pulse->sweep.enable) {
+    if (pulse->length_counter == 0) {
         return 0.0f;
     }
 
@@ -876,7 +876,7 @@ void step_apu()
         update_noise_timer(&noise1);
     }
 
-    // 帧计数器更新步长, 约3728 个 apu 周期更新一次
+    // 帧计数器更新步长, 约14915 个 apu 周期更新一次
     if (apu.cycle % QUARTER_FRAME == 0) {
         step_apu_frame_counter();  // 更新帧计数器
     }

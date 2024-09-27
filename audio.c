@@ -48,8 +48,8 @@ float clamp(float value, float min_value, float max_value)
 
 void queue_audio_sample()
 {
-    float pulse1 = calculate_pulse_waveform(1);  // 矩形波 1
-    float pulse2 = calculate_pulse_waveform(2);  // 矩形波 2
+    float pulse1 = calculate_pulse_waveform(0);  // 矩形波 1
+    float pulse2 = calculate_pulse_waveform(1);  // 矩形波 2
     float triangle = calculate_triangle_waveform();  // 三角波
     float noise = calculate_noise_waveform();  // 噪声
     float dmc = calculate_dmc_waveform();  // DMC

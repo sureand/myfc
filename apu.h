@@ -10,11 +10,11 @@
 #define PER_SAMPLE (APU_FREQUENCY / SOUND_FREQUENCY) // APU 频率与音频采样率 ~=81
 
 /*
-* apu 序列器运行速度是240HZ, 因此每帧需要的apu 周期数是 (3579545 /240) ~= 14916
-* 每个frame 分为四步, 因此是 14916 / 4 = 3728
-* 引用 https://www.nesdev.org/wiki/APU_Frame_Counter
+* apu 序列器的一帧的周期是29830 cpu 周期, 序列器的频率只有cpu 的一半, 因此是4个apu 周期
+* 每个frame 分为四步, 因此是 (29830 * 2) / 4 = 14915
+* 引用 https://www.nesdev.org/wiki/APU_Frame_Counter, 注意文档上面的apu cycle 指的仅仅是序列器的cycle 只有真实apu 频率的四分之一
 */
-#define QUARTER_FRAME (3728) //四分之一帧
+#define QUARTER_FRAME (14915) //四分之一帧
 
 typedef struct {
     uint8_t enable;   // 是否启用扫频
