@@ -14,6 +14,20 @@ static const uint8_t length_table[32] = {
     192, 24, 72, 26, 16, 28, 32, 30
 };
 
+// 占空比表
+static const uint8_t duty_table[4][8] = {
+    {0, 1, 0, 0, 0, 0, 0, 0},  // 12.5% 占空比
+    {0, 1, 1, 0, 0, 0, 0, 0},  // 25% 占空比
+    {0, 1, 1, 1, 1, 0, 0, 0},  // 50% 占空比
+    {1, 0, 0, 1, 1, 1, 1, 1},  // 75% 占空比
+};
+
+// 三角波的音频表, 引用 https://www.nesdev.org/wiki/APU_Triangle
+static const int triangle_table[32] = {
+    15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+};
+
 // 噪音周期表 https://www.nesdev.org/wiki/APU_Noise
 static const int noise_period_table[16] = {
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
@@ -36,46 +50,48 @@ void disable_pulse_channel(PULSE_CHANNEL *channel)
     channel->length_counter = 0;
 }
 
-void update_sweep(PULSE_CHANNEL *pulse)
+void update_pulse_period(PULSE_CHANNEL *pulse)
 {
-    // 如果扫频未启用或计数器为零，跳过更新
-    if (!pulse->sweep.enable || pulse->timer < 8 || pulse->timer > 0x7FF) {
+    if (pulse->sweep.shift == 0) {
         return;
     }
+
+    // 当扫频计数器为0时，应用扫频效果
+    pulse->sweep.period = pulse->sweep.shift;  // 重置周期为移位值
+
+    // 计算扫频的频率调整
+    uint16_t target_freq = pulse->timer >> pulse->sweep.shift;  // 移位调整频率
+
+    if (pulse->sweep.negate) {
+        // 扫频负向：计算负向时的频率
+        pulse->sweep.target_period = pulse->timer - target_freq;
+
+        // 额外处理通道1负向扫频的特殊情况
+        if (pulse == &pulses[0]) {  // 如果是通道 1
+            pulse->sweep.target_period--;  // 扫频时额外减去 1
+        }
+    } else {
+        // 扫频正向：增加频率
+        pulse->sweep.target_period = pulse->timer + target_freq;
+    }
+
+    // 确保频率在合法范围内
+    if (pulse->sweep.target_period >= 8 && pulse->sweep.target_period <= 0x7FF) {
+        pulse->timer = pulse->sweep.target_period;
+    }
+}
+
+void update_sweep(PULSE_CHANNEL *pulse)
+{
+     pulse->sweep.period--;
+     if (pulse->sweep.period == 0 && pulse->sweep.enable) {
+        update_pulse_period(pulse);
+     }
 
     if (pulse->sweep.reload) {
         // 如果扫频需要重置，重置扫频计数器并标记重载完成
         pulse->sweep.reload = 0;
         pulse->sweep.period = pulse->sweep.period;  // 重置扫频周期
-    } else {
-        // 扫频计数器递减
-        if (pulse->sweep.period > 0) {
-            pulse->sweep.period--;
-        } else {
-            // 当扫频计数器为0时，应用扫频效果
-            pulse->sweep.period = pulse->sweep.shift;  // 重置周期为移位值
-
-            // 计算扫频的频率调整
-            uint16_t target_freq = pulse->timer >> pulse->sweep.shift;  // 移位调整频率
-
-            if (pulse->sweep.negate) {
-                // 扫频负向：计算负向时的频率
-                target_freq = pulse->timer - target_freq;
-
-                // 额外处理通道1负向扫频的特殊情况
-                if (pulse == &pulses[0]) {  // 如果是通道 1
-                    target_freq--;  // 扫频时额外减去 1
-                }
-            } else {
-                // 扫频正向：增加频率
-                target_freq = pulse->timer + target_freq;
-            }
-
-            // 确保频率在合法范围内
-            if (target_freq >= 8 && target_freq <= 0x7FF) {
-                pulse->timer = target_freq;
-            }
-        }
     }
 }
 
@@ -121,41 +137,31 @@ void update_pulse_timer(PULSE_CHANNEL *pulse)
     }
 }
 
-float calculate_pulse_waveform(uint8_t channel)
+uint8_t calculate_pulse_waveform(uint8_t channel)
 {
     PULSE_CHANNEL *pulse = &pulses[channel & 1];
 
     // 1. 检查长度计数器，如果为 0，则不输出信号
     if (pulse->length_counter == 0) {
-        return 0.0f;
+        return 0;
     }
 
     // 2. 检查频率值是否太低或太高，防止不可听频率
-    if (pulse->timer < 8 || pulse->timer > 0x7FF) {
-        return 0.0f;
+    if (pulse->timer < 8 || pulse->sweep.target_period > 0x7FF) {
+        return 0;
     }
 
-    // 占空比表
-    static const uint8_t duty_table[4][8] = {
-        {0, 1, 0, 0, 0, 0, 0, 0},  // 12.5% 占空比
-        {0, 1, 1, 0, 0, 0, 0, 0},  // 25% 占空比
-        {0, 1, 1, 1, 1, 0, 0, 0},  // 50% 占空比
-        {1, 0, 0, 1, 1, 1, 1, 1},  // 75% 占空比
-    };
-
     uint8_t duty_output = duty_table[pulse->duty][pulse->duty_step];
-
     int volume = pulse->constant_volume ? pulse->volume : pulse->envelope_counter;
-    float output_volume = (float)volume / 15.0f;
 
-    return duty_output ? output_volume : 0.0f;
+    return duty_output ? volume : 0;
 }
 
 // 启用三角波通道
 void enable_triangle_channel(TRIANGLE_CHANNEL* channel)
 {
     // 检查是否需要重置长度计数器
-    if (!(channel->control & 0x80) && channel->length_counter == 0) {
+    if (!channel->halt && channel->length_counter == 0) {
         channel->length_counter = channel->initial_length;  // 重置长度计数器
     }
 
@@ -167,7 +173,6 @@ void enable_triangle_channel(TRIANGLE_CHANNEL* channel)
 
     // 清除三角波输出状态
     channel->step = 0;            // 重置三角波步进
-    channel->step_direction = 1;  // 确保三角波初始为上升阶段
     channel->output = 0;          // 清除当前输出
 
     // 重置定时器
@@ -178,9 +183,8 @@ void enable_triangle_channel(TRIANGLE_CHANNEL* channel)
 void disable_triangle_channel(TRIANGLE_CHANNEL* channel)
 {
     // 设置 halt 标志以停止长度计数器的递减
-    channel->control |= 0x80;  // 设置控制位的最高位（halt 位）
+    channel->halt = 1;
 
-    // 清空长度计数器
     channel->length_counter = 0;
 
     // 清空线性计数器
@@ -191,7 +195,6 @@ void disable_triangle_channel(TRIANGLE_CHANNEL* channel)
 
     // 重置步进状态
     channel->step = 0;
-    channel->step_direction = 1;  // 确保步进方向为上升
 }
 
 // 更新三角波的“包络” —— 注意：三角波使用线性计数器，不是真正的包络
@@ -200,11 +203,13 @@ void update_triangle_envelope(TRIANGLE_CHANNEL *triangle)
     if (triangle->reload) {
         // 如果线性计数器重载标志为真，重置线性计数器
         triangle->linear_counter = triangle->initial_linear_counter;
-    } else if (triangle->linear_counter > 0) {
+    }
+
+    if (triangle->linear_counter > 0) {
         triangle->linear_counter--;
     }
 
-    if (!triangle->control) {
+    if (!triangle->halt) {
         triangle->reload = FALSE;  // 禁用自动重置
     }
 }
@@ -212,8 +217,8 @@ void update_triangle_envelope(TRIANGLE_CHANNEL *triangle)
 // 更新三角波通道的长度计数器
 void update_triangle_length_counter(TRIANGLE_CHANNEL *triangle)
 {
-    // 如果“暂停”标志为 false 并且长度计数器大于 0，计数器递减
-    if (triangle->length_counter > 0) {
+    ///如果 halt 标志为 false 并且长度计数器大于 0，计数器递减
+    if (!triangle->halt && triangle->length_counter > 0) {
         triangle->length_counter--;
     }
 }
@@ -229,45 +234,27 @@ void update_triangle_timer(TRIANGLE_CHANNEL *triangle)
     } else {
         // 当定时器到达 0 时，重置定时器并更新波形
         triangle->timer = triangle->timer_period;  // 重新加载定时器值
-
-        // 5. 更新三角波步进
-        if (triangle->step_direction) {
-            if (triangle->step < 15) {
-                triangle->step++;  // 逐步增加到 15
-            } else {
-                triangle->step_direction = 0;  // 达到 15 后改变方向
-                triangle->step--;  // 开始减少
-            }
-        } else {
-            if (triangle->step > 0) {
-                triangle->step--;  // 逐步减少到 0
-            } else {
-                triangle->step_direction = 1;  // 达到 0 后改变方向
-                triangle->step++;  // 开始增加
-            }
-        }
+        triangle->step = (triangle->step + 1) & 31;
     }
 }
 
-float calculate_triangle_waveform()
+uint8_t calculate_triangle_waveform()
 {
     TRIANGLE_CHANNEL *triangle = &triangle1;
 
-    // 如果线性计数器或长度计数器为 0，则无输出
-    if (triangle->linear_counter == 0 || triangle->length_counter == 0) {
-        triangle->output = 0.0f;
+    // 解决频率过低输出爆破音的问题
+    if (triangle->timer_period < 2) {
+        triangle->linear_counter = 0;
         return triangle->output;
     }
 
-    // 根据当前步进值生成输出：上升阶段 0-7，下降阶段 8-15
-    if (triangle->step < 8) {
-        triangle->output = (float)triangle->step / 7.0f;  // 上升阶段，归一化到 [0, 1]
-    } else {
-        triangle->output = (float)(15 - triangle->step) / 7.0f;  // 下降阶段，归一化到 [0, 1]
+    // 如果线性计数器或长度计数器为 0，则无输出
+    if (triangle->linear_counter == 0 || triangle->length_counter == 0) {
+        triangle->output = 0;
+        return triangle->output;
     }
 
-    // 将输出缩放到 [-1.0, 1.0]，符合音频输出范围
-    triangle->output = triangle->output * 2.0f - 1.0f;
+    triangle->output = triangle_table[triangle->step];
 
     return triangle->output;
 }
@@ -336,27 +323,20 @@ void update_noise_envelope(NOISE_CHANNEL *noise)
 
 void update_noise_shift_register(NOISE_CHANNEL *noise)
 {
-    uint16_t feedback;
-
-    // 根据模式选择反馈位
-    if (noise->mode_flag) {
-        // 短模式：使用第 6 位和第 0 位进行异或
-        feedback = (noise->shift_register >> 6) ^ (noise->shift_register >> 0);
-    } else {
-        // 长模式：使用第 1 位和第 0 位进行异或
-        feedback = (noise->shift_register >> 1) ^ (noise->shift_register >> 0);
-    }
-
-    feedback &= 1;  // 确保反馈位为 0 或 1
+    uint8_t mode = noise->mode_flag ? 6 : 1;
+    uint16_t feedback = (noise->shift_register & 0x01) ^ ((noise->shift_register >> mode) & 0x01);
 
     // 右移 LFSR，并将反馈位写入最高位（第 14 位）
-    noise->shift_register = (noise->shift_register >> 1) | (feedback << 14);
+    noise->shift_register >>= 1;
+    noise->shift_register |= (feedback << 14);
 }
 
 void update_noise_timer(NOISE_CHANNEL *noise)
 {
     // 更新定时器，控制噪声生成频率
-    if (--noise->timer <= 0) {
+    if (noise->timer > 0) {
+        noise->timer--;
+    }else {
         noise->timer = noise->period;  // 重置定时器为周期值
 
         // 伪随机序列生成
@@ -364,16 +344,21 @@ void update_noise_timer(NOISE_CHANNEL *noise)
     }
 }
 
-float calculate_noise_waveform() {
-
+uint8_t calculate_noise_waveform()
+{
     NOISE_CHANNEL *noise = &noise1;
 
+    if (noise->length_counter == 0) {
+        return 0;
+    }
+
+    uint8_t volume = noise->constant_volume ? noise->volume : noise->envelope_counter;
+
     // 根据移位寄存器的最低位决定是否输出声音
-    float output = (noise->shift_register & 1) ?
-                   (noise->constant_volume ? noise->volume : noise->envelope_counter) : 0.0f;
+    noise->output = (noise->shift_register & 1) ? 0 : volume;
 
     // 返回最终的音量输出
-    return output;
+    return noise->output;
 }
 
 void enable_dmc_channel(DMC_CHANNEL *dmc)
@@ -447,10 +432,10 @@ void update_dmc(DMC_CHANNEL *dmc)
     dmc->remaining_bits--;
 }
 
-float calculate_dmc_waveform()
+uint8_t calculate_dmc_waveform()
 {
     // 将音量转换为浮点数进行波形输出，范围 [0.0, 1.0]
-    return dmc1.load / 128.0f;
+    return dmc1.load;
 }
 
 void pulse_write(PULSE_CHANNEL *pulse, uint16_t reg, uint8_t data)
@@ -496,7 +481,7 @@ void triangle_write(TRIANGLE_CHANNEL *triangle, uint16_t reg, uint8_t data)
     switch (reg) {
         // 0x4008: 线性计数器控制
         case 0x0000:
-            triangle->control = data & 0x80;  // 最高位表示是否控制长度计数器
+            triangle->halt = (data & 0x80);  // 最高位表示是否控制长度计数器
             triangle->initial_linear_counter = data & 0x7F;  // 线性计数器重载值 (7 位)
             triangle->reload = 1;  // 标记线性计数器需要重置
             break;
@@ -617,14 +602,7 @@ void dmc_write(DMC_CHANNEL *dmc, uint16_t index, BYTE data)
 void reset_apu_frame_counter()
 {
     apu.frame_counter = 0;  // 将帧计数器重置为 0
-
-    // 如果需要，清除相关状态，准备开始新的帧计数周期
-    if (apu.mode == 5) {
-        apu.frame_step = 1;  // 5 步模式从步骤 1 开始
-    } else {
-        apu.frame_step = 0;  // 4 步模式从步骤 0 开始
-    }
-
+    apu.frame_step = 0;
     apu.frame_counter_reset = TRUE;  // 标记帧计数器已重置
 }
 
@@ -727,13 +705,10 @@ void write_4017(BYTE data)
     SDL_bool interrupt_inhibit = (data & 0x40) != 0;  // 检查位 6，是否禁用帧中断
     SDL_bool reset_frame_counter = (data & 0x01) != 0;  // 检查位 0，是否重置帧计数器
 
-    // 1. 设置帧计数器的模式（4 步或 5 步）
+    apu.mode = 4;
     if (mode_5_step) {
         // 设置为 5 步模式
         apu.mode = 5;
-    } else {
-        // 设置为 4 步模式
-        apu.mode = 4;
     }
 
     // 2. 更新帧中断的启用状态
@@ -859,7 +834,7 @@ void apu_init()
     memset(&dmc1, 0, sizeof(DMC_CHANNEL));
 
     memset(&apu, 0, sizeof(apu));
-    apu.mode = 5;
+    apu.mode = 4;
 }
 
 void step_apu()

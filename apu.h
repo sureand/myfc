@@ -17,11 +17,12 @@
 #define QUARTER_FRAME (14915) //四分之一帧
 
 typedef struct {
-    uint8_t enable;   // 是否启用扫频
-    uint8_t period;   // 扫频周期
-    uint8_t negate;   // 是否反转频率变化（负向）
-    uint8_t shift;    // 扫频移位位数
-    uint8_t reload;   // 是否重置扫频计数器
+    uint8_t enable;          // 是否启用扫频
+    uint8_t period;          // 扫频周期
+    uint16_t target_period;  // 扫频器目标周期
+    uint8_t negate;          // 是否反转频率变化（负向）
+    uint8_t shift;           // 扫频移位位数
+    uint8_t reload;          // 是否重置扫频计数器
 } SWEEP;
 
 typedef struct {
@@ -45,7 +46,7 @@ typedef struct {
 
 typedef struct
 {
-    uint8_t control;          // 控制标志 (包括 halt 标志和控制标志)
+    uint8_t halt;             // halt 标志
     uint16_t initial_length;  // 初始长度，用于重置 length_counter
     uint16_t length_counter;  // 长度计数器，控制三角波的播放时间
     uint16_t timer;           // 定时器，用于控制波形频率
@@ -54,7 +55,6 @@ typedef struct
     uint8_t step;             // 当前三角波的步进值 (0-15)
     uint8_t linear_counter;   // 线性计数器
     uint8_t initial_linear_counter; // 初始线性计数器值
-    uint8_t step_direction;   // 三角波方向 (0 为减少, 1 为增加)
     uint8_t output;           // 三角波输出值
 } TRIANGLE_CHANNEL;
 
@@ -93,9 +93,9 @@ typedef struct
     uint16_t start_address;
 }DMC_CHANNEL;
 
-float calculate_pulse_waveform(uint8_t channel);
-float calculate_noise_waveform();
-float calculate_triangle_waveform();
-float calculate_dmc_waveform();
+uint8_t calculate_pulse_waveform(uint8_t channel);
+uint8_t calculate_noise_waveform();
+uint8_t calculate_triangle_waveform();
+uint8_t calculate_dmc_waveform();
 
 #endif

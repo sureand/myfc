@@ -48,14 +48,17 @@ float clamp(float value, float min_value, float max_value)
 
 void queue_audio_sample()
 {
-    float pulse1 = calculate_pulse_waveform(0);  // 矩形波 1
-    float pulse2 = calculate_pulse_waveform(1);  // 矩形波 2
-    float triangle = calculate_triangle_waveform();  // 三角波
-    float noise = calculate_noise_waveform();  // 噪声
-    float dmc = calculate_dmc_waveform();  // DMC
+    // FIXME: 由于cpu 的时钟周期实现的精度不够, 现在输出有杂音, 是否采用相位的计算音色会更好?
+    uint8_t pulse1 = calculate_pulse_waveform(0);  // 矩形波 1
+    uint8_t pulse2 = calculate_pulse_waveform(1);  // 矩形波 2
+    uint8_t triangle = calculate_triangle_waveform();  // 三角波
+    uint8_t noise = calculate_noise_waveform();  // 噪声
+    uint8_t dmc = calculate_dmc_waveform();  // DMC
+
+    //公式参考: https://www.nesdev.org/wiki/APU_Mixer
 
     // 计算 pulse_out
-    float pulse_sum = pulse1 + pulse2;
+    float pulse_sum = (float)(pulse1 + pulse2);
     float pulse_out = (pulse_sum > 0) ? (95.88f / ((8128.0f / pulse_sum) + 100.0f)) : 0.0f;
 
     // 计算 tnd_out
