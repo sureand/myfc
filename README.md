@@ -1,3 +1,10 @@
+当前支持约30%的市面上游戏,  具体是 mapper0 - mapper4
+例如: 超级马里奥、塞尔达传说 等游戏
+![image](https://github.com/user-attachments/assets/2a2f646f-c111-4038-b494-fd1fb8815548)
+![image](https://github.com/user-attachments/assets/a17d4b9d-9070-4b94-988c-31b8151bb18e)
+![image](https://github.com/user-attachments/assets/36a44670-4e5c-4c52-96d0-3075b4e2b3dc)
+![image](https://github.com/user-attachments/assets/642f5196-2ea6-44ce-8ac5-3ec743abdf39)
+
 
 一、编译方式
 1、安装mysys2
