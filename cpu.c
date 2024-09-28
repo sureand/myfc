@@ -200,14 +200,7 @@ void BRK_00(BYTE op)
     //这里的addr 没啥用
     WORD addr = 0;
 
-    uint32_t last_cycle = cpu.cycle;
-
     handler_BRK(addr);
-
-    // 补偿周期数, 上一次的cpu cycle, 当前cycle, 预期cycle
-    for (int i = 0; i < last_cycle; i++) {
-       cpu_clock();
-    }
 }
 
 void ORA_01(BYTE op)
