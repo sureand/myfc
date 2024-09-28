@@ -121,86 +121,30 @@ int process_events(SDL_Renderer* renderer)
     return 0;
 }
 
-void wait_for_frame(SDL_Renderer* renderer)
+int main_loop(void *arg)
 {
-    static uint32_t last_frame_time = 0;
-    uint32_t current_time = SDL_GetTicks();
-
-    // 计算当前帧和上一帧之间的时间差
-    uint32_t frame_time = current_time - last_frame_time;
-
-    // 如果当前帧时间小于每帧的持续时间，则等待
-    if (frame_time < FRAME_DURATION) {
-        uint32_t wait_time = FRAME_DURATION - frame_time;
-        uint32_t start_wait_time = SDL_GetTicks();
-
-        while (SDL_GetTicks() - start_wait_time < wait_time) {
-
-            // 在等待期间处理事件
-            if (process_events(renderer)) {
-                return;
-            }
-
-            // 为了防止 CPU 占用过高，稍微延迟一下
-            SDL_Delay(1);
-        }
-    }
-
-    // 更新上一帧的时间
-    last_frame_time = SDL_GetTicks();
-}
-
-void fce_execute(SDL_Renderer* renderer, SDL_Texture* texture, int* frame_count)
-{
-    int total_cpu_cycles = 0;
-
-    while (total_cpu_cycles < NTSC_CPU_CYCLES_PER_FRAME) {
-
-        // 处理事件
-        if (process_events(renderer)) {
-            return;
-        }
-        total_cpu_cycles += step_cpu();;
-    }
-
-    // 增加帧计数
-    (*frame_count)++;
-
-    wait_for_frame(renderer);
-}
-
-void main_loop(SDL_Window *window, SDL_Renderer *renderer)
-{
-    uint8_t running = 1;
+    EMULATOR_SCREEN *screen = (EMULATOR_SCREEN *)arg;
 
     // 创建一个纹理，用于渲染PPU输出
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-    set_SDLdevice(renderer, texture);
+    SDL_Texture *texture = SDL_CreateTexture(screen->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+    set_SDLdevice(screen->renderer, texture);
 
-    Uint32 start_time = SDL_GetTicks();
-    int frame_count = 0;
-    char title[256];
+    uint32_t total_cpu_cycles = 1;
 
-    while (running) {
+    for (;;) {
 
-        process_events(renderer);
-
-        if (is_load_rom()) {
-            // 每秒更新一次 FPS
-            Uint32 current_time = SDL_GetTicks();
-            if (current_time - start_time >= 1000) {
-                float fps = frame_count / ((current_time - start_time) / 1000.0f);
-                snprintf(title, sizeof(title), "%s - FPS: %.2f", window_title, fps);
-                SDL_SetWindowTitle(window, title);
-                start_time = current_time;
-                frame_count = 0;
-            }
-            fce_execute(renderer, texture, &frame_count);
+        if (!is_load_rom()) {
+            SDL_Delay(1);
+            continue;
         }
+
+        total_cpu_cycles += step_cpu();
     }
 
     // 清理SDL
     SDL_DestroyTexture(texture);
+
+    return 0;
 }
 
 int start()
@@ -244,8 +188,24 @@ int start()
         return -1;
     }
 
-    // 启动模拟器主循环
-    main_loop(window, renderer);
+    // 模拟器的窗口
+    EMULATOR_SCREEN screen;
+    screen.window = window;
+    screen.renderer = renderer;
+
+    SDL_Thread *thread = SDL_CreateThread(main_loop, "main_loop", &screen);
+    if (!thread) {
+        printf("emulator thread creation failed!\n");
+        return -1;
+    }
+
+    for (;;) {
+        process_events(renderer);
+        SDL_Delay(1);
+    }
+
+    int status;
+    SDL_WaitThread(thread, &status);
 
     // 清理资源
     SDL_DestroyRenderer(renderer);
