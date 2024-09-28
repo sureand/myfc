@@ -12,7 +12,7 @@ int setup_sdl_audio()
     SDL_AudioSpec desired_spec;
     SDL_zero(desired_spec);
 
-    desired_spec.freq = SOUND_FREQUENCY;  // 采样率
+    desired_spec.freq = SAMPLE_RATE;  // 采样率
     desired_spec.format = AUDIO_S16SYS;   // 16-bit PCM
     desired_spec.channels = 1;            // 单声道
     desired_spec.samples = 512;           // 每次回调的样本数量

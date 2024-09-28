@@ -4,6 +4,29 @@
 
 INS code_maps[0X100];
 
+static inline void apu_clock()
+{
+    // 三角波的更新周期是1 个cpu  周期
+    update_triangle_timer();
+
+    // 方波和噪音的更新周期是1 个cpu  周期
+    if (cpu.cycle % 2 == 0) {
+         update_pulse_timer(0);
+         update_pulse_timer(1);
+         update_noise_timer();
+    }
+
+    // 每个四分之一帧执行一次更新包络和长度计时器
+    if (cpu.cycle % QUARTER_FRAME == 0) {
+        step_apu_frame_counter();  // 更新帧计数器
+    }
+
+    // 40 个周期, 推送音频样本到缓冲区
+    if (cpu.cycle % PER_SAMPLE == 0) {
+        queue_audio_sample();
+    }
+}
+
 void cpu_clock()
 {
     int i;
@@ -11,10 +34,7 @@ void cpu_clock()
         step_ppu();
     }
 
-    //APU 频率是 CPU 的 2 倍
-    for (i = 0; i < 2; i++) {
-        step_apu();
-    }
+    apu_clock();
 
     cpu.cycle++;
 }
@@ -2314,41 +2334,6 @@ uint16_t get_irq_vector()
     return (high_byte << 8) | low_byte;
 }
 
-// NMI 中断处理函数
-void handle_nmi()
-{
-    uint16_t nmi_address = get_nmi_vector();
-    // 将 CPU 程序计数器设置为 NMI 向量地址
-    cpu.IP = nmi_address;
-    // 处理 NMI 中断的其他操作，如压栈、更新状态等
-}
-
-// IRQ 中断处理函数
-void handle_irq()
-{
-    if (!(cpu.P & 0x04)) { // 检查 I 标志是否被清除
-        uint16_t irq_address = get_irq_vector();
-        // 将 CPU 程序计数器设置为 IRQ 向量地址
-        cpu.IP = irq_address;
-        // 处理 IRQ 中断的其他操作，如压栈、更新状态等
-    }
-}
-
-// Reset 处理函数
-void handle_reset()
-{
-    uint16_t reset_address = get_reset_vector();
-    cpu.IP = reset_address;
-}
-
-WORD get_start_address()
-{
-    BYTE addr1 = cpu_read(0xFFFC);
-    BYTE addr2 = cpu_read(0xFFFD);
-
-    return addr2 << 8 | addr1;
-}
-
 void cpu_init()
 {
     init_code();
@@ -2378,12 +2363,11 @@ void cpu_interrupt_NMI()
 
     // 加载新的程序计数器地址
     cpu.IP = nmi_vector;
+    cpu_clock();
 
     // 清除NMI 标志
     cpu.interrupt &= 0xFE;
-
-    // 更新 CPU 周期
-    cpu.cycle += 7;  // NMI 处理大约需要 7 个周期
+    cpu_clock();
 }
 
 void cpu_interrupt_IRQ()
@@ -2400,7 +2384,7 @@ void cpu_interrupt_IRQ()
     // 清除IRQ 标志
     cpu.interrupt &= 0xFD;
 
-    cpu.cycle += 7;
+    cpu_clock();
 }
 
 BYTE cpu_read_byte(WORD address)
@@ -2461,16 +2445,17 @@ BYTE step_cpu()
 
     BYTE opcode = bus_read(PC);
 
-    uint32_t last_cycle = cpu.cycle;
+    uint32_t start_cycle = cpu.cycle;
 
     // 执行操作码对应的操作函数
-    uint32_t cycle = code_maps[opcode].cycle;
+    uint32_t instr_cycle = code_maps[opcode].cycle;
     code_maps[opcode].op_func(opcode);
 
     // 补全剩下的cycle
-    while (cycle > (cpu.cycle - last_cycle)) {
+    uint32_t end_cycle = cpu.cycle;
+    while (instr_cycle > (end_cycle - start_cycle)) {
         cpu_clock();
-        cycle -= 1;
+        instr_cycle -= 1;
     }
 
     // 计算指令消耗的实际周期数

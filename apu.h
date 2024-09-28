@@ -3,19 +3,6 @@
 #include "common.h"
 #include "SDL2/SDL.h"
 
-#define PULSE_COUNT (2)
-#define SAMPLE_BUFFER_SIZE (512)  //缓冲区大小
-#define SOUND_FREQUENCY (44100)   //音频采样率
-#define APU_FREQUENCY (3579545) //apu 的运行频率
-#define PER_SAMPLE (APU_FREQUENCY / SOUND_FREQUENCY) // APU 频率与音频采样率 ~=81
-
-/*
-* apu 序列器的一帧的周期是29830 cpu 周期, 序列器的频率只有cpu 的一半, 因此是4个apu 周期
-* 每个frame 分为四步, 因此是 (29830 * 2) / 4 = 14915
-* 引用 https://www.nesdev.org/wiki/APU_Frame_Counter, 注意文档上面的apu cycle 指的仅仅是序列器的cycle 只有真实apu 频率的四分之一
-*/
-#define QUARTER_FRAME (14915) //四分之一帧
-
 typedef struct {
     uint8_t enable;          // 是否启用扫频
     uint8_t period;          // 扫频周期

@@ -271,6 +271,7 @@ void fc_init(const char *filename)
     //FIXME: 由于链接顺序的问题, 只能放在前面, what the fuck!
     mapper_init();
 
+    apu_init();
     cpu_init();
     ppu_init();
 }
@@ -286,7 +287,6 @@ void set_init_state()
 #undef main
 int main(int argc, char *argv[])
 {
-    apu_init();
     set_init_state();
 
     start();

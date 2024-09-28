@@ -74,7 +74,7 @@ void do_disassemble(WORD addr, BYTE opcode)
 
     printf("  %-4s", code_maps[opcode].op_name);
 
-    printf("    A:%02X X:%02X Y:%02X S:%02X P:%s V:%-4d   H:%-4d Fr:%d Cycle:%I64d\n", cpu.A, cpu.X, cpu.Y, cpu.SP, status_flags, ppu.scanline, ppu.cycle, ppu.frame_count, cpu.cycle);
+    printf("    A:%02X X:%02X Y:%02X S:%02X P:%s V:%-4d   H:%-4d Fr:%d Cycle:%d\n", cpu.A, cpu.X, cpu.Y, cpu.SP, status_flags, ppu.scanline, ppu.cycle, ppu.frame_count, cpu.cycle);
 }
 
 void disassemble()

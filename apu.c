@@ -643,8 +643,10 @@ void update_sweep_units()
 
 void step_apu_frame_counter()
 {
+    int step_mode = apu.mode ? 5: 4;
+
+    apu.frame_step = (apu.frame_step % step_mode) + 1; // 循环步进
     apu.frame_counter++;  // 更新帧计数器
-    apu.frame_step = (apu.frame_step % apu.mode) + 1; // 循环步进
 
     if (apu.mode == 4) {
         switch (apu.frame_step) {
@@ -707,15 +709,9 @@ void step_apu_frame_counter()
 
 void write_4017(BYTE data)
 {
-    SDL_bool mode_5_step = (data & 0x80) != 0;  // 检查位 7，是否启用 5 步模式
+    apu.mode = (data & 0x80) != 0;  // 检查位 7，是否启用 5 步模式
     SDL_bool interrupt_inhibit = (data & 0x40) != 0;  // 检查位 6，是否禁用帧中断
     SDL_bool reset_frame_counter = (data & 0x01) != 0;  // 检查位 0，是否重置帧计数器
-
-    apu.mode = 4;
-    if (mode_5_step) {
-        // 设置为 5 步模式
-        apu.mode = 5;
-    }
 
     // 2. 更新帧中断的启用状态
     if (interrupt_inhibit) {
@@ -840,9 +836,9 @@ void apu_init()
     memset(&dmc1, 0, sizeof(DMC_CHANNEL));
 
     memset(&apu, 0, sizeof(apu));
-    apu.mode = 4;
 }
 
+// TODO: 该函数暂时废弃
 void step_apu()
 {
     //三角波的是两个apu 周期

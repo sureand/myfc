@@ -77,11 +77,18 @@ void bus_write(WORD address, BYTE data)
         WORD dma_address = data << 8;
 
 	    for (int x = 0; x < 256; x++) {
-            ppu.oam[(ppu.oamaddr + x) & 0xFF] = bus_read(dma_address + x);
+
+            BYTE value = bus_read(dma_address + x);
+            cpu_clock();
+
+            ppu.oam[(ppu.oamaddr + x) & 0xFF] = value;
+            cpu_clock();
         }
 
-        cpu.cycle += 513;
-        cpu.cycle += (cpu.cycle & 0x1);
+        /* 奇数周期需要 + 1*/
+        if (cpu.cycle & 0x1) {
+            cpu_clock();
+        }
 
         return;
     }

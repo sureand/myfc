@@ -235,6 +235,22 @@ typedef struct
     uint8_t value;
 }PIXEL;
 
+
+#define PULSE_COUNT (2)
+#define SAMPLE_BUFFER_SIZE (512)  //缓冲区大小
+#define SAMPLE_RATE (44100)   //音频采样率
+#define APU_FREQUENCY (3579545) //apu 的运行频率
+#define CPU_FREQUENCY (1789773) //cpu 的运行频率
+
+#define PER_SAMPLE (CPU_FREQUENCY / SAMPLE_RATE) // APU 频率与音频采样率 ~=40
+
+/*
+* apu 序列器的一帧的周期是29830 cpu 周期
+* 每个frame 分为四步, 因此是 (29830) / 4 = 7456
+* 引用 https://www.nesdev.org/wiki/APU_Frame_Counter, 注意文档上面的apu cycle 指的仅仅是序列器的cycle 只有真实apu 频率的四分之一
+*/
+#define QUARTER_FRAME (7456) //四分之一帧
+
 // APU结构体
 typedef struct {
     uint8_t status;  // APU寄存器
@@ -337,5 +353,11 @@ extern _PPU ppu;
 extern APU apu;
 
 #define PC (cpu.IP)
+
+typedef struct
+{
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+}EMULATOR_SCREEN;
 
 #endif
