@@ -47,6 +47,7 @@ static inline void set_load_rom(SDL_bool state)
 void reset_rom(const char *filepath)
 {
     get_file_name(window_title, filepath);
+    SDL_SetWindowTitle(current_window, window_title);
 
     // 清除渲染器
     set_load_rom(SDL_FALSE);
@@ -154,21 +155,21 @@ int start()
         return -1;
     }
 
-    SDL_Window *window = SDL_CreateWindow(window_title,
+    current_window = SDL_CreateWindow(window_title,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2,
                                           SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
-    if (!window) {
+    if (!current_window) {
         fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_Quit();
         return -1;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_Renderer *renderer = SDL_CreateRenderer(current_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
+        SDL_DestroyWindow(current_window);
         SDL_Quit();
         return -1;
     }
@@ -190,7 +191,7 @@ int start()
 
     // 模拟器的窗口
     EMULATOR_SCREEN screen;
-    screen.window = window;
+    screen.window = current_window;
     screen.renderer = renderer;
 
     SDL_Thread *thread = SDL_CreateThread(main_loop, "main_loop", &screen);
@@ -209,7 +210,7 @@ int start()
 
     // 清理资源
     SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(current_window);
 
     cleanup_sdl_audio();
     SDL_Quit();

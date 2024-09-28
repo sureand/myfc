@@ -352,6 +352,8 @@ extern _CPU cpu;
 extern _PPU ppu;
 extern APU apu;
 
+extern SDL_Window *current_window;
+
 #define PC (cpu.IP)
 
 typedef struct
