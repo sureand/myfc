@@ -50,6 +50,16 @@ static inline BYTE is_visible_sprites()
     return ppu.ppumask & 0x10;
 }
 
+static inline BYTE is_background_pixel_visible(int x)
+{
+    return is_visible_background() && (x >= 8 || (ppu.ppumask & 0x02));
+}
+
+static inline BYTE is_sprite_pixel_visible(int x)
+{
+    return is_visible_sprites() && (x >= 8 || (ppu.ppumask & 0x04));
+}
+
 static inline BYTE is_rendering_enabled()
 {
     return (ppu.ppumask & 0x18) != 0;
@@ -277,6 +287,7 @@ BYTE ppu_read(WORD address)
             } else {
                 // 直接读取调色板数据，无需缓冲
                 data = ppu_vram_read(ppu.v);
+                ppu.vram_buffer = ppu_vram_read(ppu.v - 0x1000);
             }
 
             ppu.v += (ppu.ppuctrl & 0x04) ? 32 : 1; // 垂直/水平增量模式
@@ -363,10 +374,22 @@ static inline WORD get_name_table_base()
 /* 根据扫描线来渲染背景 */
 void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
 {
+    int screen_x = cycle;
+    if (!IS_VISIBLE(screen_x, scanline)) {
+        return;
+    }
+
+    if (!is_background_pixel_visible(screen_x)) {
+        uint8_t backdrop = ppu_vram_read(0x3F00);
+        frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[backdrop];
+        frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = 0;
+        return;
+    }
+
     uint16_t v = ppu.v;
 
     int fine_x = ppu.x;  // Fine X scroll from PPU's register
-    uint8_t x_offset = cycle % 8 + fine_x;
+    uint8_t x_offset = (screen_x & 0x07) + fine_x;
 
     if (x_offset > 7) {
         v = increment_horizontal_scroll(v);
@@ -410,8 +433,8 @@ void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
     index = ppu_vram_read(addr);
 
     // 计算实际屏幕上的 X 坐标
-    frame_buffer[scanline * SCREEN_WIDTH + cycle].color = rgb_palette[index];
-    frame_buffer[scanline * SCREEN_WIDTH + cycle].value = pixel_value;
+    frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[index];
+    frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
 }
 
 void detected_sprite_overflow(int scanline)
@@ -440,9 +463,16 @@ void detected_sprite_overflow(int scanline)
 void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
 {
     BYTE sprite_0_hit_detected = 0;
+    int screen_x = cycle;
+
+    if (!IS_VISIBLE(screen_x, scanline) || !is_sprite_pixel_visible(screen_x)) {
+        return;
+    }
+
+    uint8_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x].value;
 
     /* 遍历64个精灵 */
-    for (int i = 0; i < 64; i++) {
+    for (int i = 63; i >= 0; i--) {
         uint8_t y_position = ppu.oam[i * 4] + 1;
         uint8_t tile_id = ppu.oam[i * 4 + 1];
         uint8_t attributes = ppu.oam[i * 4 + 2];
@@ -458,8 +488,6 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
             continue;
 
         /* 最左边出现裁切需要跳过*/
-        if (cycle < 8 && ((ppu.ppumask & 0x6) != 0x6))
-            continue;
 
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
         int y_in_tile = scanline - y_position;
@@ -527,15 +555,16 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         int screen_x = cycle;
 
         if (IS_VISIBLE(screen_x, scanline)) {
-            uint8_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x].value;
+            uint8_t bg_color = background_color;
 
             /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
-            if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(background_color))) {
+            if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(bg_color))) {
                 frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[color_index];
                 frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
             }
 
-            if (is_visible_background() && i == 0 && !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(background_color)) {
+            if (is_background_pixel_visible(screen_x) && i == 0 &&
+                !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(bg_color)) {
                 sprite_0_hit_detected = 1;
             }
 
@@ -677,7 +706,6 @@ void step_ppu()
 
         // 周期 256 需要做垂直滚动
         if (ppu.cycle == 256) {
-            ppu.v = increment_horizontal_scroll(ppu.v);
             ppu.v = increment_vertical_scroll(ppu.v);
         }
 

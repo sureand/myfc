@@ -105,13 +105,17 @@ size_t get_chr_address(WORD address)
     // 处理 0x0000 - 0xFFF
     if (address < 0x1000) {
          if (mmc1_reg.chr_mode & 0x1) {
-            return (mmc1_reg.chr_bank_number1 >> 1) * 0x2000 + (address & 0x1FFF);
+            return mmc1_reg.chr_bank_number1 * 0x1000 + (address & 0x0FFF);
          }
-        return mmc1_reg.chr_bank_number1 * 0x1000 + (address & 0xFFF);
+        return (mmc1_reg.chr_bank_number1 >> 1) * 0x2000 + (address & 0x1FFF);
     }
 
     //处理0x1000 - 0x1FFF 的情况
-    return mmc1_reg.chr_bank_number2 * 0x1000 + (address & 0xFFF);
+    if (mmc1_reg.chr_mode & 0x1) {
+        return mmc1_reg.chr_bank_number2 * 0x1000 + (address & 0x0FFF);
+    }
+
+    return (mmc1_reg.chr_bank_number1 >> 1) * 0x2000 + (address & 0x1FFF);
 }
 
 BYTE chr_rom_read1(WORD address)
