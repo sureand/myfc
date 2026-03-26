@@ -490,35 +490,33 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         /* 最左边出现裁切需要跳过*/
 
         /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
-        int y_in_tile = scanline - y_position;
+        int sprite_row = scanline - y_position;
 
         /* 处理垂直翻转 */
         BYTE flip_vertical = ((attributes & 0x80) == 0x80);
+        if (flip_vertical) {
+            sprite_row = sprite_height - 1 - sprite_row;
+        }
 
         /* 获取tile 的行偏移 */
-        int v_y = flip_vertical ? (sprite_height - 1 - y_in_tile) : y_in_tile;
+        int v_y = sprite_row & 0x07;
 
-        uint8_t tile_index = tile_id;
         uint16_t pattern_table_address = 0;
 
         /* 假如是 8 * 16 的, 需要从新算地址 */
         if (sprite_height == 16) {
             /* 8x16 由两个 8 * 8 tile 组成, 每一帧都是相同大小的精灵, 每次从偶数开始算就是对的。 */
-            tile_index &= 0xFE;
+            pattern_table_address = ((tile_id & 0x01) ? 0x1000 : 0x0000) |
+                                    ((tile_id & 0xFE) << 4);
 
             /* 需要翻转的时候, 则使用下半部分的地址 */
-            tile_index += (flip_vertical & 0x1);
+            pattern_table_address += (sprite_row & 0x08) << 1;
 
-            if (v_y >= 8) {
 
                 /* 需要翻转则使用上半部分, 否则 + 1 取下半部分 */
-                tile_index += (flip_vertical ^ 0x1);
 
                 /* 确保从下一个tile 开始算偏移 */
-                v_y -= 8;
-            }
-            pattern_table_address = ((tile_id & 0x01) ? 0x1000 : 0) | (tile_index << 4);
-        }else {
+        } else {
             /* 计算图案表地址 */
             pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) | (tile_id << 4);
         }
