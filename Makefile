@@ -1,46 +1,52 @@
 CC = gcc
 
-# 定义编译选项
-CFLAGS = -Wall -g -std=c99 -I"SDL2/include" -Dmain=SDL_main
+COMMON_CFLAGS = -Wall -std=c99 -I"SDL2/include" -Dmain=SDL_main
+DEBUG_CFLAGS = -g
+RELEASE_CFLAGS = -O2 -DNDEBUG
 
-# 定义链接选项，添加 -static 以静态链接依赖项
 LDFLAGS = -L"SDL2/lib" -lSDL2 -lSDL2main
 
-TARGET = fc.exe
+DEBUG_TARGET = fc.exe
+RELEASE_TARGET = fc-release.exe
 
 SRCDIR = ./
 DEST_DIR = build
+DEBUG_OBJDIR = $(DEST_DIR)/debug
+RELEASE_OBJDIR = $(DEST_DIR)/release
 
-# 指定生成的文件存放的目录
-OBJDIR = $(DEST_DIR)
-
-# 使用通配符获取所有源文件
 SRCS = $(wildcard $(SRCDIR)/*.c)
+SRC_NAMES = $(notdir $(SRCS:.c=.o))
 
-# 生成对象文件列表，并指定在哪个目录下生成
-OBJS = $(addprefix $(OBJDIR)/, $(SRCS:.c=.o))
+DEBUG_OBJS = $(addprefix $(DEBUG_OBJDIR)/, $(SRC_NAMES))
+RELEASE_OBJS = $(addprefix $(RELEASE_OBJDIR)/, $(SRC_NAMES))
 
-# 指定最终目标文件的存放位置
-TARGET_PATH = $(DEST_DIR)/$(TARGET)
+DEBUG_TARGET_PATH = $(DEST_DIR)/$(DEBUG_TARGET)
+RELEASE_TARGET_PATH = $(DEST_DIR)/$(RELEASE_TARGET)
 
-all: $(TARGET_PATH)
+all: debug
 
-# 确保目标文件的目录存在
-$(TARGET_PATH): | $(OBJDIR)
+debug: $(DEBUG_TARGET_PATH)
 
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
+release: $(RELEASE_TARGET_PATH)
 
-# 编译目标，生成可执行文件
-$(TARGET_PATH): $(OBJS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+$(DEST_DIR) $(DEBUG_OBJDIR) $(RELEASE_OBJDIR):
+	mkdir -p $@
 
-# 编译单个源文件，生成对象文件
-$(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(DEBUG_TARGET_PATH): $(DEBUG_OBJS) | $(DEST_DIR)
+	$(CC) $(COMMON_CFLAGS) $(DEBUG_CFLAGS) $^ $(LDFLAGS) -o $@
 
-# 清理编译生成的文件
+$(RELEASE_TARGET_PATH): $(RELEASE_OBJS) | $(DEST_DIR)
+	$(CC) $(COMMON_CFLAGS) $(RELEASE_CFLAGS) $^ $(LDFLAGS) -o $@
+
+$(DEBUG_OBJDIR)/%.o: $(SRCDIR)/%.c | $(DEBUG_OBJDIR)
+	$(CC) $(COMMON_CFLAGS) $(DEBUG_CFLAGS) -c -o $@ $<
+
+$(RELEASE_OBJDIR)/%.o: $(SRCDIR)/%.c | $(RELEASE_OBJDIR)
+	$(CC) $(COMMON_CFLAGS) $(RELEASE_CFLAGS) -c -o $@ $<
+
 clean:
-	rm -f $(OBJDIR)/*.o
+	rm -rf $(DEBUG_OBJDIR) $(RELEASE_OBJDIR)
+	rm -f $(RELEASE_TARGET_PATH)
+	rm -f $(DEST_DIR)/*.o
 
-.PHONY: all clean
+.PHONY: all clean debug release

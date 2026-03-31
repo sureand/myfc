@@ -16,3 +16,6 @@ test*
 .vscode/settings.json
 .nes
 doc/*
+build/debug/
+build/release/
+build/fc-release.exe
