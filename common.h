@@ -318,7 +318,8 @@ void set_irq();
 #define BUTTON_LEFT   0x40
 #define BUTTON_RIGHT  0x80
 
-void handle_key(SDL_Keycode key, BYTE pressed);
+void handle_key(SDL_Keycode key, SDL_Scancode scancode, BYTE pressed);
+void clear_controller_state();
 
 #define SCREEN_WIDTH (256)
 #define SCREEN_HEIGHT (240)

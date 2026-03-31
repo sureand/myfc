@@ -100,10 +100,10 @@ int process_events(SDL_Renderer* renderer)
                 exit(0);
                 break;
             case SDL_KEYDOWN:
-                handle_key(event.key.keysym.sym, 1);
+                handle_key(event.key.keysym.sym, event.key.keysym.scancode, 1);
                 break;
             case SDL_KEYUP:
-                handle_key(event.key.keysym.sym, 0);
+                handle_key(event.key.keysym.sym, event.key.keysym.scancode, 0);
                 break;
             case SDL_DROPFILE:
                 reset_rom(event.drop.file);
@@ -113,6 +113,10 @@ int process_events(SDL_Renderer* renderer)
                     int width = event.window.data1;
                     int height = event.window.data2;
                     reset_windows_size(renderer, width, height);
+                    break;
+                }
+                if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+                    clear_controller_state();
                     break;
                 }
                 break;
