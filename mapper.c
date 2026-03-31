@@ -1,4 +1,5 @@
 #include "mapper.h"
+#include "ppu.h"
 
 MAPPER mappers[0x100];
 
@@ -50,6 +51,7 @@ BYTE prg_rom_read(WORD address)
 void prg_rom_write(WORD address, BYTE data)
 {
     get_active_mapper()->prg_rom_write(address, data);
+    ppu_invalidate_render_cache();
 }
 
 BYTE chr_rom_read(WORD address)

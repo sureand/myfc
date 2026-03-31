@@ -78,6 +78,35 @@ static inline BYTE is_post_render_line()
 #define IS_VISIBLE(x, y) ((x) < SCREEN_WIDTH && (y) < SCREEN_HEIGHT)
 #define IS_TRANSPARENT(color) ((color) == 0)
 #define PALETTE_ADDR(palette, pixel) ((palette) * 4 + (pixel))
+#define BG_TILE_CACHE_SLOTS 33
+#define SPRITE_SCANLINE_CACHE_SLOTS 64
+
+typedef struct {
+    uint32_t key;
+    BYTE valid;
+    BYTE pixel_values[8];
+    BYTE color_indices[8];
+} BG_TILE_CACHE_ENTRY;
+
+typedef struct {
+    int scanline;
+    BG_TILE_CACHE_ENTRY entries[BG_TILE_CACHE_SLOTS];
+} BG_TILE_CACHE;
+
+typedef struct {
+    BYTE sprite_index;
+    BYTE x_position;
+    BYTE sprite_behind_background;
+    BYTE pixel_values[8];
+    BYTE color_indices[8];
+} SPRITE_SCANLINE_CACHE_ENTRY;
+
+typedef struct {
+    int scanline;
+    BYTE valid;
+    BYTE count;
+    SPRITE_SCANLINE_CACHE_ENTRY entries[SPRITE_SCANLINE_CACHE_SLOTS];
+} SPRITE_SCANLINE_CACHE;
 
 /*调色板数据来自官方资料*/
 uint32_t rgb_palette[64] = {
@@ -102,6 +131,27 @@ uint32_t rgb_palette[64] = {
     0x009FFFF3, 0x00000000, 0x00000000, 0x00000000
 };
 
+static BG_TILE_CACHE bg_tile_cache = { .scanline = -1 };
+static SPRITE_SCANLINE_CACHE sprite_scanline_cache = { .scanline = -1 };
+
+static inline void invalidate_bg_tile_cache()
+{
+    bg_tile_cache.scanline = -1;
+}
+
+void ppu_invalidate_sprite_cache()
+{
+    sprite_scanline_cache.scanline = -1;
+    sprite_scanline_cache.valid = 0;
+    sprite_scanline_cache.count = 0;
+}
+
+void ppu_invalidate_render_cache()
+{
+    invalidate_bg_tile_cache();
+    ppu_invalidate_sprite_cache();
+}
+
 void ppu_reset()
 {
     memset(&ppu, 0, sizeof(_PPU));
@@ -110,6 +160,8 @@ void ppu_reset()
     ppu.cycle = 24;
     ppu.frame_count = 1;
     ppu.in_vblank = 0;
+
+    ppu_invalidate_render_cache();
 
     //把CHR ROM 映射到 PPU RAM, 暂时不考虑 超过1页 的 CHR ROM
     uint8_t chr_rom_count = get_current_rom()->header->chr_rom_count;
@@ -245,6 +297,8 @@ void ppu_vram_write(WORD address, BYTE data)
 
     WORD real_address = address;
 
+    invalidate_bg_tile_cache();
+
     if (address < 0x2000) {
         chr_rom_write(address, data);
     } else if (address < 0x3F00) {
@@ -306,6 +360,7 @@ void ppu_write(WORD address, uint8_t data)
     switch (address) {
         case 0x2000: // PPUCTRL
             ppu.ppuctrl = data;
+            ppu_invalidate_render_cache();
             //清空bit 10-11
             ppu.t &= 0xF3FF;
             ppu.t |= (data & 0x03) << 10; // 设置bit 10-11
@@ -318,7 +373,8 @@ void ppu_write(WORD address, uint8_t data)
             return;
         case 0x2004: // OAMDATA
             ppu.oam[ppu.oamaddr] = data;
-            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF; // 循环 OAM 地址
+            ppu.oamaddr = (ppu.oamaddr + 1) & 0xFF;
+            ppu_invalidate_sprite_cache();
             break;
         case 0x2005: // PPUSCROLL
             if (ppu.w == 0) {
@@ -371,6 +427,149 @@ static inline WORD get_name_table_base()
     return 0x2000 | (ppu.v & 0x0FFF);
 }
 
+static inline void ensure_bg_tile_cache(int scanline)
+{
+    if (bg_tile_cache.scanline == scanline) {
+        return;
+    }
+
+    bg_tile_cache.scanline = scanline;
+    memset(bg_tile_cache.entries, 0, sizeof(bg_tile_cache.entries));
+}
+
+static inline uint32_t get_bg_tile_cache_key(uint16_t v)
+{
+    return (uint32_t)v | ((uint32_t)(ppu.ppuctrl & 0x10) << 12);
+}
+
+static BG_TILE_CACHE_ENTRY *get_bg_tile_cache_entry(int screen_x, int scanline)
+{
+    ensure_bg_tile_cache(scanline);
+
+    uint16_t v = ppu.v;
+    uint8_t x_offset = (screen_x & 0x07) + ppu.x;
+    if (x_offset > 7) {
+        v = increment_horizontal_scroll(v);
+    }
+
+    int slot = (screen_x + ppu.x) >> 3;
+    if (slot < 0) {
+        slot = 0;
+    } else if (slot >= BG_TILE_CACHE_SLOTS) {
+        slot = BG_TILE_CACHE_SLOTS - 1;
+    }
+
+    BG_TILE_CACHE_ENTRY *entry = &bg_tile_cache.entries[slot];
+    uint32_t key = get_bg_tile_cache_key(v);
+    if (entry->valid && entry->key == key) {
+        return entry;
+    }
+
+    int fine_y = (v >> 12) & 0x07;
+    int coarse_y = (v >> 5) & 0x1F;
+    int coarse_x = v & 0x1F;
+    uint16_t name_table_address = 0x2000 | (v & 0x0FFF);
+    uint8_t tile_index = ppu_vram_read(name_table_address);
+    uint16_t attribute_table_address = 0x23C0 | (v & 0x0C00) |
+        ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+    uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
+    uint8_t shift = ((coarse_y & 2) << 1) + (coarse_x & 2);
+    uint8_t palette_index = (attribute_byte >> shift) & 0x03;
+    uint16_t pattern_table_address = ((ppu.ppuctrl & 0x10) ? 0x1000 : 0x0000) +
+        tile_index * 16 + fine_y;
+    uint8_t tile_lsb = ppu_vram_read(pattern_table_address);
+    uint8_t tile_msb = ppu_vram_read(pattern_table_address + 8);
+    uint8_t backdrop = ppu_vram_read(0x3F00);
+
+    entry->key = key;
+    entry->valid = 1;
+
+    for (int pixel = 0; pixel < 8; ++pixel) {
+        uint8_t pixel_value = ((tile_msb >> (7 - pixel)) & 1) << 1 |
+            ((tile_lsb >> (7 - pixel)) & 1);
+
+        entry->pixel_values[pixel] = pixel_value;
+        if (pixel_value == 0) {
+            entry->color_indices[pixel] = backdrop;
+        } else {
+            entry->color_indices[pixel] = ppu_vram_read(0x3F00 + (palette_index << 2) + pixel_value);
+        }
+    }
+
+    return entry;
+}
+
+static void prepare_sprite_scanline_cache(int scanline)
+{
+    if (sprite_scanline_cache.valid && sprite_scanline_cache.scanline == scanline) {
+        return;
+    }
+
+    sprite_scanline_cache.scanline = scanline;
+    sprite_scanline_cache.valid = 1;
+    sprite_scanline_cache.count = 0;
+
+    int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
+    BYTE sprites_on_scanline = 0;
+
+    for (int i = 0; i < 64; ++i) {
+        uint8_t y_position = ppu.oam[i * 4] + 1;
+        if (scanline < y_position || scanline >= (y_position + sprite_height)) {
+            continue;
+        }
+
+        sprites_on_scanline++;
+        if (sprites_on_scanline > 8) {
+            ppu.ppustatus |= 0x20;
+        }
+
+        if (sprite_scanline_cache.count >= SPRITE_SCANLINE_CACHE_SLOTS) {
+            continue;
+        }
+
+        SPRITE_SCANLINE_CACHE_ENTRY *entry = &sprite_scanline_cache.entries[sprite_scanline_cache.count++];
+        uint8_t tile_id = ppu.oam[i * 4 + 1];
+        uint8_t attributes = ppu.oam[i * 4 + 2];
+
+        entry->sprite_index = i;
+        entry->x_position = ppu.oam[i * 4 + 3];
+        entry->sprite_behind_background = attributes & 0x20;
+
+        int sprite_row = scanline - y_position;
+        if (attributes & 0x80) {
+            sprite_row = sprite_height - 1 - sprite_row;
+        }
+
+        int v_y = sprite_row & 0x07;
+        uint16_t pattern_table_address = 0;
+        if (sprite_height == 16) {
+            pattern_table_address = ((tile_id & 0x01) ? 0x1000 : 0x0000) |
+                ((tile_id & 0xFE) << 4);
+            pattern_table_address += (sprite_row & 0x08) << 1;
+        } else {
+            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) | (tile_id << 4);
+        }
+
+        uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
+        uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
+        uint8_t palette_index = (attributes & 0x03) + 4;
+        BYTE flip_horizontal = attributes & 0x40;
+
+        for (int x = 0; x < 8; ++x) {
+            int h_x = flip_horizontal ? (7 - x) : x;
+            uint8_t pixel_value = ((tile_msb >> (7 - h_x)) & 1) << 1 |
+                ((tile_lsb >> (7 - h_x)) & 1);
+
+            entry->pixel_values[x] = pixel_value;
+            if (pixel_value == 0) {
+                entry->color_indices[x] = 0;
+            } else {
+                entry->color_indices[x] = ppu_vram_read(0x3F00 + PALETTE_ADDR(palette_index, pixel_value));
+            }
+        }
+    }
+}
+
 /* 根据扫描线来渲染背景 */
 void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
 {
@@ -386,78 +585,18 @@ void render_background_pixel(PIXEL* frame_buffer, int cycle, int scanline)
         return;
     }
 
-    uint16_t v = ppu.v;
+    BG_TILE_CACHE_ENTRY *entry = get_bg_tile_cache_entry(screen_x, scanline);
+    int pixel_x_in_tile = (screen_x + ppu.x) & 0x07;
+    uint8_t pixel_value = entry->pixel_values[pixel_x_in_tile];
+    uint8_t color_index = entry->color_indices[pixel_x_in_tile];
 
-    int fine_x = ppu.x;  // Fine X scroll from PPU's register
-    uint8_t x_offset = (screen_x & 0x07) + fine_x;
-
-    if (x_offset > 7) {
-        v = increment_horizontal_scroll(v);
-    }
-
-    int fine_y = (v >> 12) & 0x07;
-    int coarse_y = (v >> 5) & 0x1F;
-    int coarse_x = v & 0x1F;
-
-    // 获取名称表地址
-    uint16_t name_table_address = 0x2000 | (v & 0x0FFF);
-    int tile_x = coarse_x;
-    int tile_y = coarse_y;
-
-    // 计算图块索引
-    uint8_t tile_index = ppu_vram_read(name_table_address);
-
-    // 获取属性表地址
-    uint16_t attribute_table_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-    uint8_t attribute_byte = ppu_vram_read(attribute_table_address);
-
-    // 计算调色板索引
-    uint8_t shift = ((tile_y & 2) << 1) + (tile_x & 2);
-    uint8_t palette_index = (attribute_byte >> shift) & 0x03;
-
-    // 获取图块数据地址
-    uint16_t pattern_table_address = ((ppu.ppuctrl & 0x10) ? 0x1000 : 0x0000) + tile_index * 16 + fine_y;
-    uint8_t tile_lsb = ppu_vram_read(pattern_table_address);
-    uint8_t tile_msb = ppu_vram_read(pattern_table_address + 8);
-
-    // 计算当前像素在图块中的位置
-    int pixel_x_in_tile = (x_offset) % 8;
-    uint8_t pixel_value = ((tile_msb >> (7 - pixel_x_in_tile)) & 1) << 1 | ((tile_lsb >> (7 - pixel_x_in_tile)) & 1);
-
-    // 计算调色板颜色索引
-    uint16_t addr = 0x3F00;
-    uint8_t index = ppu_vram_read(addr);
-    if (pixel_value != 0x00) {
-        addr = 0x3F00 + (palette_index << 2) + pixel_value;
-    }
-    index = ppu_vram_read(addr);
-
-    // 计算实际屏幕上的 X 坐标
-    frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[index];
+    frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[color_index];
     frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
 }
 
 void detected_sprite_overflow(int scanline)
 {
-    // 计数在当前扫描线上渲染的精灵数量
-    BYTE sprites_on_scanline = 0;
-
-    /* 遍历64个精灵 */
-    for (int i = 0; i < 64; i++) {
-        uint8_t y_position = ppu.oam[i * 4] + 1;
-
-        /* 跳过非扫描线的精灵 */
-        int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
-        if (scanline < y_position || scanline >= (y_position + sprite_height))
-            continue;
-
-        // 增加当前扫描线上的精灵数量
-        sprites_on_scanline++;
-        if (sprites_on_scanline > 8) {
-            // 设置 sprite 溢出 标志
-            ppu.ppustatus |= 0x20; // 设置 PPU 状态寄存器的第 5 位
-        }
-    }
+    prepare_sprite_scanline_cache(scanline);
 }
 
 void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
@@ -469,113 +608,39 @@ void render_sprite_pixel(PIXEL* frame_buffer, int cycle,  int scanline)
         return;
     }
 
+    prepare_sprite_scanline_cache(scanline);
+
     uint8_t background_color = frame_buffer[scanline * SCREEN_WIDTH + screen_x].value;
 
-    /* 遍历64个精灵 */
-    for (int i = 63; i >= 0; i--) {
-        uint8_t y_position = ppu.oam[i * 4] + 1;
-        uint8_t tile_id = ppu.oam[i * 4 + 1];
-        uint8_t attributes = ppu.oam[i * 4 + 2];
-        uint8_t x_position = ppu.oam[i * 4 + 3];
-
-        /* 跳过非扫描线的精灵 */
-        int sprite_height = (ppu.ppuctrl & 0x20) ? 16 : 8;
-        if (scanline < y_position || scanline >= (y_position + sprite_height))
+    for (int idx = sprite_scanline_cache.count - 1; idx >= 0; --idx) {
+        SPRITE_SCANLINE_CACHE_ENTRY *entry = &sprite_scanline_cache.entries[idx];
+        if (cycle < entry->x_position || cycle >= (entry->x_position + 8)) {
             continue;
+        }
 
-        /* 检查当前PPU周期是否在精灵的水平范围内 */
-        if (cycle < x_position || cycle >= (x_position + 8))
+        int x = cycle - entry->x_position;
+        uint8_t pixel_value = entry->pixel_values[x];
+        if (IS_TRANSPARENT(pixel_value)) {
             continue;
-
-        /* 最左边出现裁切需要跳过*/
-
-        /* 计算当前图块与扫描线相对高度, 即在vram 的相对位置, 用来确定渲染的具体的像素 */
-        int sprite_row = scanline - y_position;
-
-        /* 处理垂直翻转 */
-        BYTE flip_vertical = ((attributes & 0x80) == 0x80);
-        if (flip_vertical) {
-            sprite_row = sprite_height - 1 - sprite_row;
         }
 
-        /* 获取tile 的行偏移 */
-        int v_y = sprite_row & 0x07;
-
-        uint16_t pattern_table_address = 0;
-
-        /* 假如是 8 * 16 的, 需要从新算地址 */
-        if (sprite_height == 16) {
-            /* 8x16 由两个 8 * 8 tile 组成, 每一帧都是相同大小的精灵, 每次从偶数开始算就是对的。 */
-            pattern_table_address = ((tile_id & 0x01) ? 0x1000 : 0x0000) |
-                                    ((tile_id & 0xFE) << 4);
-
-            /* 需要翻转的时候, 则使用下半部分的地址 */
-            pattern_table_address += (sprite_row & 0x08) << 1;
-
-
-                /* 需要翻转则使用上半部分, 否则 + 1 取下半部分 */
-
-                /* 确保从下一个tile 开始算偏移 */
-        } else {
-            /* 计算图案表地址 */
-            pattern_table_address = ((ppu.ppuctrl & 0x08) ? 0x1000 : 0) | (tile_id << 4);
+        uint8_t bg_color = background_color;
+        if (!entry->sprite_behind_background || IS_TRANSPARENT(bg_color)) {
+            frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[entry->color_indices[x]];
+            frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
         }
 
-        uint8_t tile_lsb = ppu_vram_read(pattern_table_address + v_y);
-        uint8_t tile_msb = ppu_vram_read(pattern_table_address + v_y + 8);
-
-        /* 取得具体得子调色板的索引, 4 - 7 */
-        uint8_t palette_index = (attributes & 0x03) + 4;
-
-        BYTE flip_horizontal = attributes & 0x40;
-        int sprite_behind_background = attributes & 0x20;
-
-        /* 处理水平翻转, 分别翻转高低字节的每一个bit */
-        int x = cycle - x_position;
-
-        int h_x = flip_horizontal ? (7 - x) : x;
-
-        /* 翻转低字节的一个bit */
-        uint8_t lsb_bit = (tile_lsb >> (7 - h_x)) & 1;
-
-        /* 翻转高字节的一个bit */
-        uint8_t msb_bit = (tile_msb >> (7 - h_x)) & 1;
-
-        /* 每个图块的像素由两个位（bit）组成，这两个位分别来自低位平面和高位平面， 从而取得颜色索引完整字节 */
-        uint8_t pixel_value = (msb_bit << 1) | lsb_bit;
-
-        uint8_t color_index = ppu_vram_read(0x3F00);
-        if (!IS_TRANSPARENT(pixel_value)) {
-            WORD addr = PALETTE_ADDR(palette_index, pixel_value);
-            color_index = ppu_vram_read(0x3F00 + addr);
+        if (is_background_pixel_visible(screen_x) && entry->sprite_index == 0 && !IS_TRANSPARENT(bg_color)) {
+            sprite_0_hit_detected = 1;
         }
 
-        int screen_x = cycle;
-
-        if (IS_VISIBLE(screen_x, scanline)) {
-            uint8_t bg_color = background_color;
-
-            /* 非透明而且(不需要显示在背景前面或者背景是透明的) 那么显示出来 */
-            if (!IS_TRANSPARENT(pixel_value) && (!sprite_behind_background || IS_TRANSPARENT(bg_color))) {
-                frame_buffer[scanline * SCREEN_WIDTH + screen_x].color = rgb_palette[color_index];
-                frame_buffer[scanline * SCREEN_WIDTH + screen_x].value = pixel_value;
-            }
-
-            if (is_background_pixel_visible(screen_x) && i == 0 &&
-                !IS_TRANSPARENT(pixel_value) && !IS_TRANSPARENT(bg_color)) {
-                sprite_0_hit_detected = 1;
-            }
-
-            //最右边不能触发命中
-            if (i == 0 && cycle == 255) {
-                sprite_0_hit_detected = 0;
-            }
+        if (entry->sprite_index == 0 && cycle == 255) {
+            sprite_0_hit_detected = 0;
         }
     }
 
-    // 设置精灵 0 命中标志
     if (sprite_0_hit_detected) {
-        ppu.ppustatus |= 0x40; // 设置 PPU 状态寄存器的第 6 位
+        ppu.ppustatus |= 0x40;
     }
 }
 
@@ -685,7 +750,9 @@ void step_ppu()
         // 可见区域, 开始渲染
         if (is_visible_frame()) {
 
-            detected_sprite_overflow(ppu.scanline);
+            if (ppu.cycle == 0) {
+                detected_sprite_overflow(ppu.scanline);
+            }
 
             if (ppu.cycle >= 0 && ppu.cycle < 256) {
                 if (is_visible_background()) {

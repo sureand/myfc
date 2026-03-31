@@ -69,6 +69,8 @@ static inline void slow_bus_write(WORD address, BYTE data)
             cpu_clock();
         }
 
+        ppu_invalidate_sprite_cache();
+
         if (cpu.cycle & 0x1) {
             cpu_clock();
         }
