@@ -3,81 +3,65 @@
 #include "ppu.h"
 #include "controller.h"
 
-// TODO: 后期优化, 把整个RAM直接映射64k全部空间
+static BYTE *read_page_ptr[0x100];
+static BYTE *write_page_ptr[0x100];
+static BYTE page_cache_ready = 0;
 
-BYTE bus_read(WORD address)
+static inline BYTE read_controller_port(WORD address)
 {
     BYTE data = 0;
 
-    /* 由于 0x0800 - 0x1FFF 是CPU RAM 的镜像, 直接取模*/
-    if (address <= 0x1FFF) {
-        return cpu_read_byte(address & 0x7FF);
+    if (address == 0x4016) {
+        data = get_pressed_key();
+        if (!is_controller_latch()) {
+            data = get_button_state();
+        }
+        return data | 0x40;
     }
 
-    /* ppu 的处理 */
+    return data;
+}
+
+static inline BYTE slow_bus_read(WORD address)
+{
     if (address >= 0x2000 && address <= 0x3FFF) {
         return ppu_read(address & 0x2007);
     }
 
-    /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
-    /*apu 的 $4017 是不可读的, 因此在这里过滤*/
-    if (is_apu_address(address) && address != 0x4017) {
-        return apu_read(address);
-    }
-
-    /* 手柄处理 */
-    if (address >= 0x4016 && address <= 0x4017) {
-        if (address == 0x4016) {
-
-            data = get_pressed_key();
-
-            /* 关闭锁存器, 返回当前的按键状态 */
-            if (!is_controller_latch()) {
-                data = get_button_state();
-            }
-            return data | 0x40;
+    if (address >= 0x4000 && address <= 0x401F) {
+        if (is_apu_address(address) && address != 0x4017) {
+            return apu_read(address);
         }
 
-        return data;
+        if (address >= 0x4016 && address <= 0x4017) {
+            return read_controller_port(address);
+        }
+
+        return 0;
     }
 
-    /* Expansion ROM (可选，用于扩展硬件) */
-    if (address >= 0x4020 && address <= 0x5FFF) {
+    if (address >= 0x4020 && address <= 0x40FF) {
         return extend_rom[address - 0x4020];
     }
 
-    /* SRAM: 0x6000-0x7FFF(用于保存记录) */
-    if (address >= 0x6000 && address <= 0x7FFF) {
-        return sram[address & 0x1FFF];
-    }
-
-    /*PRG ROM 主程序*/
-    if (address >= 0x8000 && address <= 0xFFFF) {
+    if (address >= 0x8000) {
         return prg_rom_read(address);
     }
 
     return 0;
 }
 
-void bus_write(WORD address, BYTE data)
+static inline void slow_bus_write(WORD address, BYTE data)
 {
-    if (address < 0x1FFF) {
-        cpu_write_byte(address & 0x7FF, data);
-        return;
-    }
-
     if (address >= 0x2000 && address <= 0x3FFF) {
         ppu_write(address & 0x2007, data);
         return;
     }
 
-    /* OAM DMA 写入 */
     if (address == 0x4014) {
-
         WORD dma_address = data << 8;
 
-	    for (int x = 0; x < 256; x++) {
-
+        for (int x = 0; x < 256; x++) {
             BYTE value = bus_read(dma_address + x);
             cpu_clock();
 
@@ -85,7 +69,6 @@ void bus_write(WORD address, BYTE data)
             cpu_clock();
         }
 
-        /* 奇数周期需要 + 1*/
         if (cpu.cycle & 0x1) {
             cpu_clock();
         }
@@ -93,40 +76,86 @@ void bus_write(WORD address, BYTE data)
         return;
     }
 
-    /* APU状态寄存器，用于启用或禁用音频通道，并读取APU的状态。*/
     if (is_apu_address(address)) {
         apu_write(address, data);
         return;
     }
 
-    /* 手柄处理 */
     if (address == 0x4016) {
-
         uint8_t latch_state = data & 1;
         set_latch_state(latch_state);
 
-        /* 假如关闭锁存器, 那么更新所有按键状态 */
-        if (address == 0x4016 && !latch_state) {
+        if (!latch_state) {
             update_controller();
         }
 
         return;
     }
 
-    /* Expansion ROM (可选，用于扩展硬件) */
-    if (address >= 0x4020 && address <= 0x5FFF) {
+    if (address >= 0x4020 && address <= 0x40FF) {
         extend_rom[address - 0x4020] = data;
-    }
-
-    /* SRAM: 0x6000-0x7FFF(用于保存记录) */
-    if (address >= 0x6000 && address <= 0x7FFF) {
-        sram[address & 0x1FFF] = data;
         return;
     }
 
-    /*PRG ROM 和 CHR ROM 主程序*/
-    if (address >= 0x8000 && address <= 0xFFFF) {
+    if (address >= 0x8000) {
         prg_rom_write(address, data);
     }
+}
 
+void bus_init_page_cache()
+{
+    memset(read_page_ptr, 0, sizeof(read_page_ptr));
+    memset(write_page_ptr, 0, sizeof(write_page_ptr));
+
+    for (int page = 0x00; page <= 0x1F; ++page) {
+        BYTE *ram_page = cpu.ram + (((page << 8) & 0x7FF));
+        read_page_ptr[page] = ram_page;
+        write_page_ptr[page] = ram_page;
+    }
+
+    for (int page = 0x41; page <= 0x5F; ++page) {
+        BYTE *expansion_page = extend_rom + (((page - 0x40) << 8));
+        read_page_ptr[page] = expansion_page;
+        write_page_ptr[page] = expansion_page;
+    }
+
+    for (int page = 0x60; page <= 0x7F; ++page) {
+        BYTE *sram_page = sram + (((page - 0x60) << 8));
+        read_page_ptr[page] = sram_page;
+        write_page_ptr[page] = sram_page;
+    }
+
+    page_cache_ready = 1;
+}
+
+static inline void ensure_page_cache()
+{
+    if (!page_cache_ready) {
+        bus_init_page_cache();
+    }
+}
+
+BYTE bus_read(WORD address)
+{
+    ensure_page_cache();
+
+    BYTE *page = read_page_ptr[address >> 8];
+    if (page) {
+        return page[address & 0xFF];
+    }
+
+    return slow_bus_read(address);
+}
+
+void bus_write(WORD address, BYTE data)
+{
+    ensure_page_cache();
+
+    BYTE *page = write_page_ptr[address >> 8];
+    if (page) {
+        page[address & 0xFF] = data;
+        return;
+    }
+
+    slow_bus_write(address, data);
 }

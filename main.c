@@ -1,5 +1,6 @@
 #include "load_rom.h"
 #include "cpu.h"
+#include "memory.h"
 #include "ppu.h"
 #include "mapper.h"
 
@@ -15,10 +16,11 @@ void reload_rom(const char *filename)
     fc_release();
 
     set_current_rom(load_rom(filename));
+    bus_init_page_cache();
 
+    mapper_reset();
     cpu_reset();
     ppu_reset();
-    mapper_reset();
 }
 
 char *get_file_name(char *filename, const char *filepath)
@@ -228,6 +230,7 @@ void fc_release()
 void fc_init(const char *filename)
 {
     set_current_rom(load_rom(filename));
+    bus_init_page_cache();
 
     //FIXME: 由于链接顺序的问题, 只能放在前面, what the fuck!
     mapper_init();

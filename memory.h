@@ -4,5 +4,6 @@
 
 BYTE bus_read(WORD address);
 void bus_write(WORD address, BYTE data);
+void bus_init_page_cache();
 
 #endif
